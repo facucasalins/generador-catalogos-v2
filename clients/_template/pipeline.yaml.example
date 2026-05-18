@@ -1,0 +1,123 @@
+# ====================================================================
+# pipeline.yaml — Plantilla para nuevos clientes
+# ====================================================================
+#
+# Copiá esta carpeta entera a clients/{cliente-nuevo}/ y ajustá los valores.
+# Ver docs/ONBOARDING.md para el paso a paso completo.
+#
+# Convenciones:
+# - Nombre del cliente: minúscula, sin espacios. Usá guiones (mi-cliente).
+# - Todos los IDs de Sheets se sacan de la URL del Sheet entre /d/ y /edit
+# - Los nombres "*_secret" son nombres de secrets en GitHub Actions
+# ====================================================================
+
+cliente:
+  nombre: ejemplo                              # ← cambiar
+  brand_name: EJEMPLO                          # ← cambiar (cómo aparece en feed Meta)
+  zona_horaria: America/Argentina/Buenos_Aires
+
+
+# ============ BLOQUE 1: INVENTARIO ============
+# De dónde traemos los productos. Opciones: tiendanube, shopify, csv_manual
+inventario:
+  fuente: tiendanube
+  config:
+    store_id_secret: EJEMPLO_TIENDANUBE_STORE_ID
+    access_token_secret: EJEMPLO_TIENDANUBE_TOKEN
+    sheet_destino:
+      id: REEMPLAZAR_ID                        # ← sheet "Inventario" del cliente
+      pestaña: Inventario
+    filtros:
+      solo_publicados: true
+      solo_con_stock: false
+
+
+# ============ BLOQUE 2: SELECCIÓN ============
+# Qué productos van al feed hoy. Opciones: manual, por_top_ventas, combinado, por_categoria
+seleccion:
+  fuente: manual                               # más simple para arrancar
+  config:
+    sheet:
+      id: REEMPLAZAR_ID                        # ← sheet "Selección" del cliente
+      pestaña: Seleccion
+    # Si querés asignar templates automáticamente según categoría:
+    asignacion_diseño:
+      por_columna: categoria
+      mapeo:
+        # categoria_en_sheet: nombre_template
+      default: default
+
+
+# ============ BLOQUE 3: ENRIQUECIMIENTO (opcional) ============
+# Mejora datos con LLM (tips, título corto, etc.) antes de renderizar.
+# Si no lo querés todavía, dejá habilitado: false
+enriquecimiento:
+  habilitado: false                            # ← cambiar a true para activar
+  proveedor: llm_gemini
+  config:
+    api_key_secret: GEMINI_API_KEY             # secret compartido entre clientes
+    modelo: gemini-2.0-flash
+    sheet_cache:
+      id: REEMPLAZAR_ID
+      pestaña: Enriquecimiento
+    cache_ttl_dias: 30
+    enriquecedores:
+      - tipo: tips_producto
+        cantidad: 3
+        max_palabras_por_tip: 3
+        idioma: es-AR
+      - tipo: titulo_corto
+        max_caracteres: 40
+    fallback:
+      modo: reglas_simples
+
+
+# ============ BLOQUE 4: ESTILO ============
+# Cómo se ven las placas. Opciones: playwright_html (futuro: figma_api, canva_api)
+estilo:
+  motor: playwright_html
+  config:
+    templates_dir: templates/                  # relativo a esta carpeta
+    placa_width: 1080
+    placa_height: 1350
+    variables_globales:
+      logo_url: REEMPLAZAR_URL_LOGO
+      brand_name: EJEMPLO
+
+
+# ============ BLOQUE 5: DISTRIBUCIÓN ============
+# Dónde van las imágenes y feeds.
+distribucion:
+  storage:
+    backend: cloudinary
+    config:
+      cloud_name_secret: CLOUDINARY_CLOUD_NAME
+      api_key_secret: CLOUDINARY_API_KEY
+      api_secret_secret: CLOUDINARY_API_SECRET
+      folder: ejemplo                          # ← carpeta dentro de Cloudinary
+
+  destinos:
+    - tipo: meta_catalog
+      config:
+        sheet:
+          id: REEMPLAZAR_ID                    # ← sheet "Feed-Output"
+          pestaña: Meta
+        formato_precio: "{precio}.00 ARS"
+
+    - tipo: tiktok_catalog
+      config:
+        sheet:
+          id: REEMPLAZAR_ID                    # ← MISMO sheet, otra pestaña
+          pestaña: TikTok
+        formato_precio: "{precio}.00 ARS"
+
+
+# ============ OBSERVABILIDAD (opcional) ============
+notificaciones:
+  habilitado: false
+  on_success:
+    canal: slack
+    webhook_secret: SLACK_WEBHOOK_AGENCY
+  on_error:
+    canal: slack
+    webhook_secret: SLACK_WEBHOOK_AGENCY

@@ -1,0 +1,19 @@
+# ============ Fase A: dependencias mínimas ============
+# Solo lo necesario para que el CI corra y las imports funcionen.
+# A medida que implementemos cada bloque, sumamos dependencias.
+
+# Configuración
+PyYAML==6.0.2
+
+# Google Sheets (lo necesitamos desde Bloque 1)
+gspread==6.1.4
+google-auth==2.35.0
+
+# Procesamiento de datos
+pandas==2.2.3
+requests==2.32.3
+
+# Pendiente (se agrega cuando se implemente cada bloque):
+# - playwright (Bloque 4: Estilo)
+# - cloudinary (Bloque 5: Storage)
+# - google-generativeai (Bloque 3: Enriquecimiento con Gemini)
