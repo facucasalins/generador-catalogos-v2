@@ -1,0 +1,52 @@
+name: CI - Validación general
+
+# Corre en cada push y PR. Valida que el código compila y los tests pasan.
+# NO corre el pipeline real (eso lo hace cada workflow de cliente).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Validar que los módulos compilan
+        run: |
+          python -m py_compile src/cli.py
+          find src -name "*.py" -exec python -m py_compile {} \;
+
+      - name: Correr tests
+        run: |
+          pytest tests/ -v
+
+      - name: Validar estructura del repo
+        run: |
+          echo "Verificando estructura mínima..."
+          for d in src src/core src/inventario src/seleccion src/enriquecimiento src/estilo src/distribucion clients docs tests; do
+            if [ ! -d "$d" ]; then
+              echo "❌ Falta directorio: $d"
+              exit 1
+            fi
+          done
+          echo "✅ Estructura OK"

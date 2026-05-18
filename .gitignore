@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Credenciales locales (NUNCA commitear)
+.env
+.env.local
+*.pem
+*.key
+service-account-*.json
+google-credentials.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Output local del pipeline
+output/
+*.png
+*.jpg
+*.jpeg
+!docs/**/*.png
+!docs/**/*.jpg
+
+# Logs
+*.log
+logs/
+
+# Cache local
+.cache/
+clients/*/cache/
+
+# Coverage
+.coverage
+htmlcov/
