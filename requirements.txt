@@ -17,3 +17,4 @@ requests==2.32.3
 # - playwright (Bloque 4: Estilo)
 # - cloudinary (Bloque 5: Storage)
 # - google-generativeai (Bloque 3: Enriquecimiento con Gemini)
+playwright==1.49.0
