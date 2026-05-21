@@ -1,0 +1,29 @@
+# ====================================================================
+# Pipeline de MoraShop V2
+# ====================================================================
+# En Fase B solo está configurado el Bloque 1 (Inventario).
+# Los demás bloques se completarán en fases siguientes.
+# ====================================================================
+
+cliente:
+  nombre: morashop
+  brand_name: MoraShop
+  zona_horaria: America/Argentina/Buenos_Aires
+
+
+# ============ BLOQUE 1: INVENTARIO ============
+inventario:
+  fuente: tiendanube
+  config:
+    # Nombres de los secrets de GitHub Actions (NO los valores)
+    store_id_secret: MORASHOP_TIENDANUBE_STORE_ID
+    access_token_secret: MORASHOP_TIENDANUBE_TOKEN
+
+    sheet_destino:
+      id: "1902u_7ofkHjRTAa5uClX0Nof5d2JaauJLxNcCPkMagU"
+      pestaña: Inventario
+
+
+# ============ BLOQUES 2-5: pendientes ============
+# Selección, Enriquecimiento, Estilo, Distribución se configuran
+# en fases siguientes. Ver docs/ARCHITECTURE.md sección 11.
