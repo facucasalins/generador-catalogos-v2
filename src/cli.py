@@ -121,14 +121,18 @@ def correr_pipeline(cliente: str, solo_inventario: bool = False) -> ResultadoRun
 
     sheet_sel_id = cfg_sel["config"]["sheet"]["id"]
 
-    # 2a) Inicializar pestaña Seleccion si es la primera vez
-    inicializar_pestaña_seleccion(sheet_id=sheet_sel_id)
-
-    # 2b) Sync Templates (escanea clients/{cliente}/templates/)
+    # ⚠️ ORDEN IMPORTANTE: primero Templates, después Seleccion (el dropdown
+    # de Seleccion referencia la pestaña Templates, así que tiene que existir
+    # antes). Después Catalogo (ese no tiene dependencias).
+    #
+    # 2a) Sync Templates PRIMERO
     templates_dir = Path(__file__).parent.parent / "clients" / cliente / "templates"
     templates_disponibles = sync_templates(
         sheet_id=sheet_sel_id, templates_dir=templates_dir,
     )
+
+    # 2b) Inicializar pestaña Seleccion (con dropdown que apunta a Templates)
+    inicializar_pestaña_seleccion(sheet_id=sheet_sel_id)
 
     # 2c) Sync Catalogo (espejo del inventario)
     sync_catalogo(sheet_id=sheet_sel_id, productos=productos)
