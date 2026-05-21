@@ -1,13 +1,13 @@
 # ====================================================================
 # Pipeline de MoraShop V2
 # ====================================================================
-# Estado: Fases B y C completas (Bloques 1 y 2 funcionando).
-# Próximas fases: Bloques 3, 4, 5.
+# Estado: Fases B, C y D completas (Bloques 1, 2 y 4 funcionando).
+# Próximas fases: Bloque 5 (Distribución).
 # ====================================================================
 
 cliente:
   nombre: morashop
-  brand_name: MoraShop
+  brand_name: MORASHOP
   zona_horaria: America/Argentina/Buenos_Aires
 
 
@@ -33,3 +33,25 @@ seleccion:
       id: "1NOG91buD9co2Er4G0lobFGySyFql1i23vEZSjzqcWCI"
       pestaña: Seleccion
     template_default: default
+
+
+# ============ BLOQUE 4: ESTILO ============
+estilo:
+  motor: playwright_html
+  config:
+    # Dimensiones estándar de feed Meta/TikTok
+    placa_width: 1080
+    placa_height: 1350
+
+    # Si la fuente no provee promo, se aplica este factor sobre precio_lista.
+    # 1.0 = no aplicar descuento adicional (default seguro).
+    hotsale_discount_factor: 1.0
+
+    # Variables disponibles en TODOS los templates del cliente
+    variables_globales:
+      # Branding
+      brand_name: MORASHOP
+      logo_url: "https://acdn-us.mitiendanube.com/stores/002/268/228/themes/toluca/img-479084497-1715570316-13b884ee9ca022bcfa337bfec6db35451715570316.png?3248503917"
+      # Leyenda inferior, configurable por evento.
+      # Ejemplos: "Válido durante Mora Hot.", "Válido hasta el 30/06.", ""
+      evento_legal: "Válido durante Mora Hot."
