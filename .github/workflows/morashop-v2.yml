@@ -2,8 +2,8 @@ name: MoraShop v2 - Pipeline completo
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 12 * * *'  # 09:00 ART (UTC-3) — DESCOMENTAR cuando validemos
+  #schedule:
+  #  - cron: '0 12 * * *'  # 09:00 ART (UTC-3) — DESCOMENTAR cuando validemos
 
 jobs:
   pipeline:
