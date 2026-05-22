@@ -2,14 +2,12 @@ name: MoraShop v2 - Pipeline completo
 
 on:
   workflow_dispatch:
-  #schedule:
-  #  - cron: '0 12 * * *'  # 09:00 ART (UTC-3) — DESCOMENTAR cuando validemos
+  # schedule:
+  #   - cron: '0 12 * * *'  # 09:00 ART (UTC-3) — DESCOMENTAR cuando validemos en prod
 
 jobs:
   pipeline:
     runs-on: ubuntu-latest
-    # Subo el timeout porque Bloque 4 puede tardar 5-20 min según cuántos
-    # SKUs tengan generar=SI en el sheet de Selección.
     timeout-minutes: 45
 
     steps:
@@ -28,11 +26,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Instalar Chromium para Playwright
-        # --with-deps instala las libs de sistema que Chromium necesita en Ubuntu.
-        # Es la primera ejecución que descarga ~150MB; los runs siguientes usan cache.
         run: playwright install --with-deps chromium
 
-      - name: Correr pipeline (Inventario + Selección + Estilo)
+      - name: Correr pipeline (Inventario + Selección + Estilo + Storage)
         env:
           MORASHOP_TIENDANUBE_STORE_ID: ${{ secrets.MORASHOP_TIENDANUBE_STORE_ID }}
           MORASHOP_TIENDANUBE_TOKEN: ${{ secrets.MORASHOP_TIENDANUBE_TOKEN }}
@@ -41,19 +37,13 @@ jobs:
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
           OUTPUT_DIR: ${{ github.workspace }}/placas_output
-          # Forzamos un output dir conocido para poder subirlo como artifact después
-          OUTPUT_DIR: ${{ github.workspace }}/placas_output
         run: |
           python -m src.cli --cliente=morashop --output-dir=$OUTPUT_DIR
 
       - name: Subir placas como artifact (para validación visual)
-        # Si=>el job falla en Bloque 1 o 2, este step se saltea (no hay placas).
-        # if: always() lo correría igual, pero acá no tiene sentido.
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: placas-morashop
           path: ${{ github.workspace }}/placas_output/*.png
-          # Las placas no son sensibles, pero igual: 7 días es suficiente
-          # para revisión visual del run.
           retention-days: 7
