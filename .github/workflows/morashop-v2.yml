@@ -37,6 +37,10 @@ jobs:
           MORASHOP_TIENDANUBE_STORE_ID: ${{ secrets.MORASHOP_TIENDANUBE_STORE_ID }}
           MORASHOP_TIENDANUBE_TOKEN: ${{ secrets.MORASHOP_TIENDANUBE_TOKEN }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          OUTPUT_DIR: ${{ github.workspace }}/placas_output
           # Forzamos un output dir conocido para poder subirlo como artifact después
           OUTPUT_DIR: ${{ github.workspace }}/placas_output
         run: |
