@@ -65,7 +65,7 @@ distribucion:
         sheet:
           # Sheet "MoraShop V2 - Feed-Output"
           # ⚠️ COMPLETAR: pegar el ID del sheet que creaste en Drive
-          id: "REEMPLAZAR_CON_SHEET_ID_DEL_FEED"
+          id: "1oDOXmgeVgSAuC3J20NaQ5t5J8FSuCaH0Gv2lecluqlw"
           pestaña: Meta
         moneda: ARS
         # Si True, availability se calcula del stock real de TN.
