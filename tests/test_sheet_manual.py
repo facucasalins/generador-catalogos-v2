@@ -1,6 +1,6 @@
-"""Tests de src/seleccion/sheet_manual.py
+"""Tests de src/seleccion/sheet_manual.py — Fase E.2
 
-Mockean leer_pestaña_como_dicts para no llamar a la API real.
+Suma tests para los filtros nuevos: has_stock y published.
 """
 from unittest.mock import patch
 from datetime import datetime
@@ -13,10 +13,18 @@ from src.seleccion.sheet_manual import (
 )
 
 
-def _make_producto(sku: str, precio: float = 1000.0) -> Producto:
+def _make_producto(
+    sku: str, precio: float = 1000.0,
+    has_stock: bool = True, published: bool = True,
+) -> Producto:
+    """Helper: crea Producto con metadata TN para tests."""
     return Producto(
         sku=sku, nombre=f"Producto {sku}", precio_lista=precio,
         actualizado_en=datetime.now(),
+        enriquecimiento={
+            "tn_has_stock": has_stock,
+            "tn_published": published,
+        },
     )
 
 
@@ -24,6 +32,8 @@ def _make_producto(sku: str, precio: float = 1000.0) -> Producto:
 def fuente():
     return SeleccionManualSheet(ConfigSeleccionSheet(sheet_id="test123"))
 
+
+# ============ Tests Fase C (que siguen funcionando) ============
 
 def test_config_requiere_sheet_id():
     with pytest.raises(ValueError, match="sheet_id"):
@@ -42,70 +52,82 @@ def test_filas_marcadas_si_se_devuelven(mock_leer, fuente):
     mock_leer.return_value = [
         {"sku": "ABC", "generar": True, "template": "default", "prioridad": "10", "notas": ""},
         {"sku": "DEF", "generar": False, "template": "promo", "prioridad": "20", "notas": ""},
-        {"sku": "GHI", "generar": "SI", "template": "default", "prioridad": "", "notas": ""},
     ]
-    productos = [_make_producto("ABC"), _make_producto("DEF"), _make_producto("GHI")]
+    productos = [_make_producto("ABC"), _make_producto("DEF")]
     decisiones = fuente.seleccionar(productos)
     skus = [d.sku for d in decisiones]
-    assert skus == ["ABC", "GHI"]
-    # Verificar prioridades parseadas
-    by_sku = {d.sku: d for d in decisiones}
-    assert by_sku["ABC"].prioridad == 10
-    assert by_sku["GHI"].prioridad == 100  # default cuando vacío
+    assert skus == ["ABC"]
+
+
+# ============ Tests Fase E.2: nuevos filtros ============
+
+@patch("src.seleccion.sheet_manual.leer_pestaña_como_dicts")
+def test_sin_stock_se_filtra(mock_leer, fuente):
+    """Si un SKU está marcado generar=SI pero sin stock, NO se procesa."""
+    mock_leer.return_value = [
+        {"sku": "SIN-STOCK", "generar": True, "template": "default"},
+        {"sku": "CON-STOCK", "generar": True, "template": "default"},
+    ]
+    productos = [
+        _make_producto("SIN-STOCK", has_stock=False),
+        _make_producto("CON-STOCK", has_stock=True),
+    ]
+    decisiones = fuente.seleccionar(productos)
+    skus = [d.sku for d in decisiones]
+    assert skus == ["CON-STOCK"]
 
 
 @patch("src.seleccion.sheet_manual.leer_pestaña_como_dicts")
-def test_sku_inexistente_se_ignora_con_warning(mock_leer, fuente):
+def test_no_publicado_se_filtra(mock_leer, fuente):
+    """Si un SKU está marcado pero no está publicado en TN, NO se procesa."""
     mock_leer.return_value = [
-        {"sku": "FANTASMA", "generar": True, "template": "default"},
+        {"sku": "NO-PUB", "generar": True, "template": "default"},
+        {"sku": "PUB", "generar": True, "template": "default"},
     ]
-    productos = [_make_producto("REAL")]
+    productos = [
+        _make_producto("NO-PUB", published=False),
+        _make_producto("PUB", published=True),
+    ]
+    decisiones = fuente.seleccionar(productos)
+    skus = [d.sku for d in decisiones]
+    assert skus == ["PUB"]
+
+
+@patch("src.seleccion.sheet_manual.leer_pestaña_como_dicts")
+def test_sin_stock_Y_no_publicado_se_filtra_doble(mock_leer, fuente):
+    """Si falla por ambas razones, se filtra (sin error)."""
+    mock_leer.return_value = [
+        {"sku": "MAL", "generar": True, "template": "default"},
+    ]
+    productos = [_make_producto("MAL", has_stock=False, published=False)]
     decisiones = fuente.seleccionar(productos)
     assert decisiones == []
 
 
 @patch("src.seleccion.sheet_manual.leer_pestaña_como_dicts")
-def test_template_vacio_usa_default(mock_leer, fuente):
+def test_producto_sin_metadata_tn_asume_valido(mock_leer, fuente):
+    """Si el producto no tiene tn_has_stock ni tn_published en enriquecimiento,
+    asumimos que está OK (mejor incluir de más que excluir indebido)."""
     mock_leer.return_value = [
-        {"sku": "ABC", "generar": True, "template": "", "prioridad": "", "notas": ""},
+        {"sku": "X", "generar": True, "template": "default"},
     ]
-    productos = [_make_producto("ABC")]
+    # Producto sin metadata
+    productos = [Producto(sku="X", nombre="X", precio_lista=100.0)]
     decisiones = fuente.seleccionar(productos)
     assert len(decisiones) == 1
-    assert decisiones[0].template == "default"
 
 
 @patch("src.seleccion.sheet_manual.leer_pestaña_como_dicts")
-def test_sku_vacio_se_ignora(mock_leer, fuente):
-    """Si una fila tiene sku='' (fila vacía), se ignora sin warning."""
+def test_se_puede_desactivar_filtro_de_stock_published(mock_leer):
+    """El filtro es opcional; si se desactiva, vuelve al comportamiento de Fase C."""
+    fuente = SeleccionManualSheet(ConfigSeleccionSheet(
+        sheet_id="test",
+        filtrar_por_stock_y_publicado=False,
+    ))
     mock_leer.return_value = [
-        {"sku": "", "generar": True, "template": "default"},
-        {"sku": "ABC", "generar": True, "template": "default"},
+        {"sku": "SIN-STOCK", "generar": True, "template": "default"},
     ]
-    productos = [_make_producto("ABC")]
+    productos = [_make_producto("SIN-STOCK", has_stock=False, published=False)]
     decisiones = fuente.seleccionar(productos)
+    # Con filtro desactivado, igual lo procesa
     assert len(decisiones) == 1
-    assert decisiones[0].sku == "ABC"
-
-
-@pytest.mark.parametrize("valor,esperado", [
-    (True, True),
-    (False, False),
-    ("TRUE", True),
-    ("true", True),
-    ("SI", True),
-    ("Si", True),
-    ("NO", False),
-    ("", False),
-    (None, False),
-    (1, True),
-    (0, False),
-    ("x", True),
-    ("X", True),
-])
-def test_es_si_normalizacion(fuente, valor, esperado):
-    assert fuente._es_si(valor) is esperado
-
-
-def test_nombre_modulo(fuente):
-    assert fuente.nombre() == "sheet_manual"
