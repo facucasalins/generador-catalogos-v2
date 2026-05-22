@@ -1,9 +1,10 @@
 """CLI principal del generador de catálogos v2.
 
 Uso:
-    python -m src.cli --cliente=morashop [--solo-inventario] [--solo-seleccion]
+    python -m src.cli --cliente=morashop [flags]
 
-Fase D: implementa Bloques 1 (Inventario), 2 (Selección) y 4 (Estilo).
+Fase E.2: implementa Bloques 1, 2, 4, 5.1 (Storage) y 5.2 (Destino Meta).
+Pendiente: 5.3 (Destino TikTok).
 """
 from __future__ import annotations
 import argparse
@@ -30,6 +31,14 @@ from src.estilo.playwright_html import (
     ConfigPlaywrightHtml, PlaywrightHtmlEstilo,
 )
 from src.estilo.base import ErrorEstilo
+from src.distribucion.storage.cloudinary import (
+    ConfigCloudinary, CloudinaryStorage,
+)
+from src.distribucion.storage.base import ErrorStorage
+from src.distribucion.destinos.meta_catalog import (
+    ConfigMetaCatalog, MetaCatalogDestino,
+)
+from src.distribucion.destinos.base import ErrorDestino
 
 
 logging.basicConfig(
@@ -44,15 +53,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cliente", type=str, default=os.environ.get("CLIENTE"))
     parser.add_argument(
         "--solo-inventario", action="store_true",
-        help="Corre solo el Bloque 1 (no toca Selección ni Estilo).",
+        help="Corre solo el Bloque 1.",
     )
     parser.add_argument(
         "--solo-seleccion", action="store_true",
-        help="Corre Bloques 1 + 2, sin renderizar placas.",
+        help="Corre Bloques 1 + 2.",
+    )
+    parser.add_argument(
+        "--sin-storage", action="store_true",
+        help="No sube placas a Cloudinary ni escribe feeds.",
+    )
+    parser.add_argument(
+        "--sin-feeds", action="store_true",
+        help="Sube a Cloudinary pero NO escribe feeds (Meta/TikTok).",
     )
     parser.add_argument(
         "--output-dir", type=str, default=None,
-        help="Override del directorio de placas. Default: temporal.",
     )
     return parser.parse_args()
 
@@ -87,10 +103,60 @@ def construir_fuente_inventario(cfg_inv: dict):
     sys.exit(20)
 
 
+def construir_storage(cfg_storage: dict):
+    backend = cfg_storage.get("backend")
+    if backend != "cloudinary":
+        log.error("Storage backend no soportado: %s", backend)
+        sys.exit(40)
+
+    inner = cfg_storage.get("config", {})
+    cloud_name = os.environ.get(inner.get("cloud_name_secret", "CLOUDINARY_CLOUD_NAME"))
+    api_key = os.environ.get(inner.get("api_key_secret", "CLOUDINARY_API_KEY"))
+    api_secret = os.environ.get(inner.get("api_secret_secret", "CLOUDINARY_API_SECRET"))
+
+    if not cloud_name or not api_key or not api_secret:
+        log.error("Faltan credenciales de Cloudinary (revisar secrets de GitHub)")
+        sys.exit(41)
+
+    folder = inner.get("folder")
+    if not folder:
+        log.error("Falta 'folder' en config de storage")
+        sys.exit(42)
+
+    return CloudinaryStorage(ConfigCloudinary(
+        cloud_name=str(cloud_name),
+        api_key=str(api_key),
+        api_secret=str(api_secret),
+        folder=folder,
+    ))
+
+
+def construir_destino(destino_config: dict):
+    """Construye un destino concreto según su tipo."""
+    tipo = destino_config.get("tipo")
+    inner = destino_config.get("config", {})
+
+    if tipo == "meta_catalog":
+        sheet = inner.get("sheet", {})
+        return MetaCatalogDestino(ConfigMetaCatalog(
+            sheet_id=sheet.get("id", ""),
+            pestaña=sheet.get("pestaña", "Meta"),
+            moneda=inner.get("moneda", "ARS"),
+            calcular_availability_por_stock=inner.get(
+                "calcular_availability_por_stock", True
+            ),
+        ))
+
+    log.error("Destino no soportado: %s", tipo)
+    sys.exit(50)
+
+
 def correr_pipeline(
     cliente: str,
     solo_inventario: bool = False,
     solo_seleccion: bool = False,
+    sin_storage: bool = False,
+    sin_feeds: bool = False,
     output_dir: str | None = None,
 ) -> ResultadoRun:
     """Ejecuta el pipeline para un cliente."""
@@ -126,21 +192,20 @@ def correr_pipeline(
     log.info("[Bloque 1] OK")
 
     if solo_inventario:
-        log.info("--solo-inventario: salgo sin tocar Selección ni Estilo")
+        log.info("--solo-inventario: salgo")
         resultado.fin = datetime.now()
         return resultado
 
     # ============ BLOQUE 2: SELECCIÓN ============
     cfg_sel = pipeline.get("seleccion")
     if not cfg_sel:
-        log.info("[Bloque 2] No configurado en pipeline.yaml, salteo")
+        log.info("[Bloque 2] No configurado, salteo")
         resultado.fin = datetime.now()
         return resultado
 
     sheet_sel_id = cfg_sel["config"]["sheet"]["id"]
     templates_dir = base_repo / "clients" / cliente / "templates"
 
-    # Orden importante (ver Fase C): Templates → Seleccion → Catalogo
     templates_disponibles = sync_templates(
         sheet_id=sheet_sel_id, templates_dir=templates_dir,
     )
@@ -153,9 +218,9 @@ def correr_pipeline(
     ))
     decisiones = fuente_sel.seleccionar(productos)
     resultado.productos_seleccionados = len(decisiones)
-    log.info("[Bloque 2] Decisiones generar=SI: %d", len(decisiones))
+    log.info("[Bloque 2] Decisiones válidas (con stock+published+marcadas): %d",
+             len(decisiones))
 
-    # Validar templates referenciados
     templates_set = set(templates_disponibles)
     decisiones_validas = []
     for d in decisiones:
@@ -170,29 +235,22 @@ def correr_pipeline(
             continue
         decisiones_validas.append(d)
 
-    log.info("[Bloque 2] Decisiones válidas: %d", len(decisiones_validas))
     log.info("[Bloque 2] OK")
 
     if solo_seleccion:
-        log.info("--solo-seleccion: salgo sin renderizar placas")
+        log.info("--solo-seleccion: salgo")
         resultado.fin = datetime.now()
         return resultado
 
     # ============ BLOQUE 4: ESTILO ============
     cfg_estilo = pipeline.get("estilo")
     if not cfg_estilo:
-        log.info("[Bloque 4] No configurado en pipeline.yaml, salteo")
+        log.info("[Bloque 4] No configurado, salteo")
         resultado.fin = datetime.now()
         return resultado
 
-    motor_tipo = cfg_estilo.get("motor")
-    if motor_tipo != "playwright_html":
-        log.error("Motor de estilo no soportado: %s", motor_tipo)
-        sys.exit(30)
-
     cfg_estilo_inner = cfg_estilo.get("config", {})
 
-    # Output dir: arg CLI > env > temporal
     if output_dir:
         output_path = Path(output_dir)
     elif os.environ.get("OUTPUT_DIR"):
@@ -202,11 +260,7 @@ def correr_pipeline(
     output_path.mkdir(parents=True, exist_ok=True)
     log.info("[Bloque 4] Output dir: %s", output_path)
 
-    # Indexar productos por SKU para lookup rápido
     productos_por_sku = {p.sku: p for p in productos}
-
-    # Ordenar decisiones por prioridad (1 = alta) para que las importantes
-    # se generen primero. Si falla a mitad, al menos las prioritarias están.
     decisiones_ordenadas = sorted(decisiones_validas, key=lambda d: d.prioridad)
 
     motor_config = ConfigPlaywrightHtml(
@@ -219,11 +273,11 @@ def correr_pipeline(
     )
 
     placas_generadas = []
+    productos_renderizados: list = []  # productos que efectivamente tienen placa
     with PlaywrightHtmlEstilo(motor_config) as motor:
         for i, decision in enumerate(decisiones_ordenadas, start=1):
             producto = productos_por_sku.get(decision.sku)
             if not producto:
-                # Defensive: ya filtramos en Bloque 2, pero por las dudas
                 log.warning("SKU %s no está en inventario. Salteado.", decision.sku)
                 resultado.errores.append((decision.sku, "no está en inventario"))
                 continue
@@ -231,11 +285,11 @@ def correr_pipeline(
             try:
                 placa = motor.renderizar(producto, decision)
                 placas_generadas.append(placa)
+                productos_renderizados.append(producto)
                 log.info("[%d/%d] %s → %s",
                          i, len(decisiones_ordenadas),
                          producto.sku, placa.path_local)
             except ErrorEstilo as e:
-                # Fail-fast (decisión de Faco): propagar y romper el run.
                 log.error("Falló render de %s: %s", producto.sku, e)
                 resultado.errores.append((producto.sku, str(e)))
                 raise
@@ -243,6 +297,65 @@ def correr_pipeline(
     resultado.placas_generadas = len(placas_generadas)
     log.info("[Bloque 4] %d placas generadas", len(placas_generadas))
     log.info("[Bloque 4] OK")
+
+    # ============ BLOQUE 5.1: STORAGE (Cloudinary) ============
+    if sin_storage:
+        log.info("--sin-storage: salgo sin subir ni publicar feeds")
+        resultado.fin = datetime.now()
+        return resultado
+
+    cfg_dist = pipeline.get("distribucion", {})
+    cfg_storage = cfg_dist.get("storage")
+    if not cfg_storage:
+        log.info("[Bloque 5.1] Storage no configurado, salteo")
+        resultado.fin = datetime.now()
+        return resultado
+
+    storage = construir_storage(cfg_storage)
+    log.info("[Bloque 5.1] Storage: %s", storage.nombre())
+
+    placas_subidas = []
+    for i, placa in enumerate(placas_generadas, start=1):
+        try:
+            subida = storage.subir(placa)
+            placas_subidas.append(subida)
+            log.info("[%d/%d] Subido: %s → %s",
+                     i, len(placas_generadas), subida.sku, subida.url_publica)
+        except ErrorStorage as e:
+            log.error("Falló subida de %s: %s", placa.sku, e)
+            resultado.errores.append((placa.sku, f"storage: {e}"))
+
+    resultado.placas_subidas = len(placas_subidas)
+    log.info("[Bloque 5.1] %d placas subidas a %s",
+             len(placas_subidas), storage.nombre())
+    log.info("[Bloque 5.1] OK")
+
+    # ============ BLOQUE 5.2: DESTINOS (Meta, TikTok, ...) ============
+    if sin_feeds:
+        log.info("--sin-feeds: salgo sin publicar feeds")
+        resultado.fin = datetime.now()
+        return resultado
+
+    destinos_cfg = cfg_dist.get("destinos", [])
+    if not destinos_cfg:
+        log.info("[Bloque 5.2] No hay destinos configurados, salteo")
+        resultado.fin = datetime.now()
+        return resultado
+
+    feeds_publicados = 0
+    for destino_config in destinos_cfg:
+        destino = construir_destino(destino_config)
+        log.info("[Bloque 5.2] Destino: %s", destino.nombre())
+        try:
+            n = destino.publicar(productos_renderizados, placas_subidas)
+            log.info("[Bloque 5.2] %s: %d filas publicadas", destino.nombre(), n)
+            feeds_publicados += 1
+        except ErrorDestino as e:
+            log.error("Falló destino %s: %s", destino.nombre(), e)
+            resultado.errores.append((destino.nombre(), str(e)))
+
+    resultado.feeds_publicados = feeds_publicados
+    log.info("[Bloque 5.2] OK (%d destinos publicados)", feeds_publicados)
 
     resultado.fin = datetime.now()
     return resultado
@@ -259,13 +372,17 @@ def main() -> None:
         args.cliente,
         solo_inventario=args.solo_inventario,
         solo_seleccion=args.solo_seleccion,
+        sin_storage=args.sin_storage,
+        sin_feeds=args.sin_feeds,
         output_dir=args.output_dir,
     )
     log.info(
-        "=== Fin: inventario=%d, seleccionados=%d, placas=%d, errores=%d, %.1fs ===",
+        "=== Fin: inventario=%d, seleccionados=%d, placas=%d, subidas=%d, feeds=%d, errores=%d, %.1fs ===",
         resultado.productos_inventario,
         resultado.productos_seleccionados,
         resultado.placas_generadas,
+        resultado.placas_subidas,
+        resultado.feeds_publicados,
         len(resultado.errores),
         resultado.duracion_segundos or 0,
     )
