@@ -1,8 +1,8 @@
 # ====================================================================
 # Pipeline de MoraShop V2
 # ====================================================================
-# Estado: Fases B, C y D completas (Bloques 1, 2 y 4 funcionando).
-# Próximas fases: Bloque 5 (Distribución).
+# Estado: Fases B, C, D y E.1 (Storage Cloudinary).
+# Próximos pasos: E.2 (Destino Meta), E.3 (Destino TikTok).
 # ====================================================================
 
 cliente:
@@ -19,7 +19,6 @@ inventario:
     access_token_secret: MORASHOP_TIENDANUBE_TOKEN
 
     sheet_destino:
-      # Sheet "MoraShop V2 - Inventario"
       id: "1902u_7ofkHjRTAa5uClX0Nof5d2JaauJLxNcCPkMagU"
       pestaña: Inventario
 
@@ -29,7 +28,6 @@ seleccion:
   fuente: sheet_manual
   config:
     sheet:
-      # Sheet "MoraShop V2 - Selección" (SEPARADO del de Inventario)
       id: "1NOG91buD9co2Er4G0lobFGySyFql1i23vEZSjzqcWCI"
       pestaña: Seleccion
     template_default: default
@@ -39,19 +37,33 @@ seleccion:
 estilo:
   motor: playwright_html
   config:
-    # Dimensiones estándar de feed Meta/TikTok
     placa_width: 1080
     placa_height: 1350
-
-    # Si la fuente no provee promo, se aplica este factor sobre precio_lista.
-    # 1.0 = no aplicar descuento adicional (default seguro).
     hotsale_discount_factor: 1.0
 
-    # Variables disponibles en TODOS los templates del cliente
     variables_globales:
-      # Branding
       brand_name: MORASHOP
       logo_url: "https://acdn-us.mitiendanube.com/stores/002/268/228/themes/toluca/img-479084497-1715570316-13b884ee9ca022bcfa337bfec6db35451715570316.png?3248503917"
-      # Leyenda inferior, configurable por evento.
-      # Ejemplos: "Válido durante Mora Hot.", "Válido hasta el 30/06.", ""
       evento_legal: "Válido durante Mora Hot."
+
+
+# ============ BLOQUE 5: DISTRIBUCIÓN ============
+distribucion:
+  # 5.1 — Storage: dónde se suben las placas para tener URL pública
+  storage:
+    backend: cloudinary
+    config:
+      # Las credenciales vienen de GitHub Secrets (no acá).
+      # El YAML solo nombra qué secret usar (default funciona para Mora).
+      cloud_name_secret: CLOUDINARY_CLOUD_NAME
+      api_key_secret: CLOUDINARY_API_KEY
+      api_secret_secret: CLOUDINARY_API_SECRET
+      # Folder dentro de Cloudinary. NO es "morashop" (v1) — v2 vive aparte.
+      folder: morashop-v2
+
+  # 5.2 — Destinos: pendientes (Meta, TikTok). Se agregan acá cuando se implementen.
+  # destinos:
+  #   - tipo: meta_catalog
+  #     ...
+  #   - tipo: tiktok_catalog
+  #     ...
