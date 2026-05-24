@@ -1,8 +1,8 @@
 # ====================================================================
 # Pipeline de MoraShop V2
 # ====================================================================
-# Estado: Fases B, C, D, E.1 y E.2 (Meta feed).
-# Próximo: E.3 (Destino TikTok).
+# Estado: Fases B, C, D, E.1, E.2 (refactor) y E.3 (TikTok).
+# Cada destino genera N pestañas, una por template usado.
 # ====================================================================
 
 cliente:
@@ -17,7 +17,6 @@ inventario:
   config:
     store_id_secret: MORASHOP_TIENDANUBE_STORE_ID
     access_token_secret: MORASHOP_TIENDANUBE_TOKEN
-
     sheet_destino:
       id: "1902u_7ofkHjRTAa5uClX0Nof5d2JaauJLxNcCPkMagU"
       pestaña: Inventario
@@ -40,7 +39,6 @@ estilo:
     placa_width: 1080
     placa_height: 1350
     hotsale_discount_factor: 1.0
-
     variables_globales:
       brand_name: MORASHOP
       logo_url: "https://acdn-us.mitiendanube.com/stores/002/268/228/themes/toluca/img-479084497-1715570316-13b884ee9ca022bcfa337bfec6db35451715570316.png?3248503917"
@@ -58,17 +56,22 @@ distribucion:
       api_secret_secret: CLOUDINARY_API_SECRET
       folder: morashop-v2
 
-  # 5.2 — Destinos: dónde se publica el feed
+  # 5.2 — Destinos: cada uno escribe N pestañas en su sheet, 1 por template.
+  # Ejemplo: si hay 2 templates (default, electrohogar):
+  #   - Meta crea pestañas: Meta_default, Meta_electrohogar
+  #   - TikTok crea pestañas: TikTok_default, TikTok_electrohogar
+  # Las pestañas se crean automáticamente si no existen.
   destinos:
     - tipo: meta_catalog
       config:
-        sheet:
-          # Sheet "MoraShop V2 - Feed-Output"
-          # ⚠️ COMPLETAR: pegar el ID del sheet que creaste en Drive
-          id: "1oDOXmgeVgSAuC3J20NaQ5t5J8FSuCaH0Gv2lecluqlw"
-          pestaña: Meta
+        # Sheet "MoraShop V2 - Feed-Output" (mismo sheet para Meta y TikTok)
+        sheet_id: "REEMPLAZAR_CON_SHEET_ID_DEL_FEED"
         moneda: ARS
-        # Si True, availability se calcula del stock real de TN.
         calcular_availability_por_stock: true
 
-    # E.3 pendiente: agregar destino tiktok_catalog acá
+    - tipo: tiktok_catalog
+      config:
+        # Mismo sheet que Meta. Las pestañas Meta_* y TikTok_* conviven.
+        sheet_id: "REEMPLAZAR_CON_SHEET_ID_DEL_FEED"
+        moneda: ARS
+        calcular_availability_por_stock: true
