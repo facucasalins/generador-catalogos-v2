@@ -1,8 +1,8 @@
 # ====================================================================
 # Pipeline de MoraShop V2
 # ====================================================================
-# Estado: Fases B, C, D, E.1, E.2 (refactor) y E.3 (TikTok).
-# Cada destino genera N pestañas, una por template usado.
+# Estado: Fases B, C, D, E.1, E.2 (refactor), E.3 (TikTok), F (diff +
+# Telegram), G (enriquecimiento Gemini).
 # ====================================================================
 
 cliente:
@@ -32,6 +32,22 @@ seleccion:
     template_default: default
 
 
+# ============ BLOQUE 3: ENRIQUECIMIENTO (Fase G) ============
+# Llama a Gemini para generar titulo_corto + descripcion_corta + tips.
+# Cache en pestaña 'Enriquecimiento' del sheet de Inventario.
+# Si Gemini falla en un SKU → ese SKU NO entra al feed.
+enriquecimiento:
+  proveedor: gemini
+  config:
+    api_key_secret: GEMINI_API_KEY
+    modelo: gemini-2.0-flash
+    max_chars_titulo: 60
+    max_chars_descripcion: 200
+    cantidad_tips: 3
+    max_chars_tip: 40
+    tono: "Argentino. Usa voseo cuando corresponda (ej: 'llevátelo', 'es para vos'). Lenguaje natural, sin extranjerismos innecesarios."
+
+
 # ============ BLOQUE 4: ESTILO ============
 estilo:
   motor: playwright_html
@@ -47,7 +63,6 @@ estilo:
 
 # ============ BLOQUE 5: DISTRIBUCIÓN ============
 distribucion:
-  # 5.1 — Storage
   storage:
     backend: cloudinary
     config:
@@ -56,22 +71,15 @@ distribucion:
       api_secret_secret: CLOUDINARY_API_SECRET
       folder: morashop-v2
 
-  # 5.2 — Destinos: cada uno escribe N pestañas en su sheet, 1 por template.
-  # Ejemplo: si hay 2 templates (default, electrohogar):
-  #   - Meta crea pestañas: Meta_default, Meta_electrohogar
-  #   - TikTok crea pestañas: TikTok_default, TikTok_electrohogar
-  # Las pestañas se crean automáticamente si no existen.
   destinos:
     - tipo: meta_catalog
       config:
-        # Sheet "MoraShop V2 - Feed-Output" (mismo sheet para Meta y TikTok)
         sheet_id: "1oDOXmgeVgSAuC3J20NaQ5t5J8FSuCaH0Gv2lecluqlw"
         moneda: ARS
         calcular_availability_por_stock: true
 
     - tipo: tiktok_catalog
       config:
-        # Mismo sheet que Meta. Las pestañas Meta_* y TikTok_* conviven.
         sheet_id: "1oDOXmgeVgSAuC3J20NaQ5t5J8FSuCaH0Gv2lecluqlw"
         moneda: ARS
         calcular_availability_por_stock: true
