@@ -98,6 +98,9 @@ def formatear_resumen_exito(
     feeds_resumen: dict[str, int],
     skus_regenerados: list[str],
     motivos_regeneracion: dict[str, str] | None = None,
+    enriq_nuevos: int = 0,
+    enriq_reusados: int = 0,
+    enriq_fallidos: int = 0,
 ) -> str:
     """Arma el mensaje de éxito para Telegram (formato Markdown).
 
@@ -105,6 +108,7 @@ def formatear_resumen_exito(
         feeds_resumen: {nombre_pestaña: cantidad_filas}
         skus_regenerados: lista de SKUs que se re-renderizaron
         motivos_regeneracion: {sku: "precio: $8500 → $7999"} (opcional)
+        enriq_*: contadores de Bloque 3 (Fase G). Se muestran solo si > 0.
     """
     duracion = f"{int(duracion_segundos // 60)}m {int(duracion_segundos % 60)}s"
 
@@ -114,11 +118,23 @@ def formatear_resumen_exito(
         "",
         f"📦 Inventario: *{inventario}* productos",
         f"✓ Seleccionados: *{seleccionados}* SKUs",
+    ]
+
+    # Sección de enriquecimiento (solo si el bloque corrió)
+    if (enriq_nuevos + enriq_reusados + enriq_fallidos) > 0:
+        lineas.append("")
+        lineas.append("🤖 Enriquecimiento:")
+        lineas.append(f"  • *{enriq_nuevos}* nuevos")
+        lineas.append(f"  • *{enriq_reusados}* reusados")
+        if enriq_fallidos:
+            lineas.append(f"  • ⚠️ *{enriq_fallidos}* fallidos (no entran al feed)")
+
+    lineas.extend([
         "",
         "🎨 Placas:",
         f"  • *{placas_regeneradas}* regeneradas",
         f"  • *{placas_reusadas}* reusadas",
-    ]
+    ])
 
     if feeds_resumen:
         lineas.append("")
