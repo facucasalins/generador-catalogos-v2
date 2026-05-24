@@ -241,3 +241,37 @@ def test_meta_y_tiktok_pueden_compartir_sheet(mock_sheets_class):
     # Las pestañas no se solapan
     assert set(r_meta.keys()) == {"Meta_default"}
     assert set(r_tiktok.keys()) == {"TikTok_default"}
+
+
+# ============ Integración con enriquecimiento (Fase G) ============
+
+def test_fila_usa_titulo_corto_si_hay_enriquecimiento():
+    """Si producto.enriquecimiento tiene titulo_corto, lo usa en el feed."""
+    from src.distribucion.destinos._common import producto_a_fila
+
+    p = _producto("A")
+    p.nombre = "Nombre LARGO y aburrido del producto original"
+    p.descripcion = "Descripción larga aburrida del producto original"
+    p.enriquecimiento = {
+        "titulo_corto": "Título Punchy 60ch",
+        "descripcion_corta": "Descripción optimizada 200ch",
+        "tips": ["a", "b", "c"],
+    }
+
+    fila = producto_a_fila(p, "https://cdn/x.png", "ARS", True)
+    assert fila[1] == "Título Punchy 60ch"      # title
+    assert fila[2] == "Descripción optimizada 200ch"  # description
+
+
+def test_fila_fallback_a_nombre_si_no_hay_enriquecimiento():
+    """Sin enriquecimiento: usa el nombre/descripción originales (retrocompat)."""
+    from src.distribucion.destinos._common import producto_a_fila
+
+    p = _producto("A")
+    p.nombre = "Producto Original"
+    p.descripcion = "Desc Original"
+    p.enriquecimiento = {}  # vacío
+
+    fila = producto_a_fila(p, "https://cdn/x.png", "ARS", True)
+    assert fila[1] == "Producto Original"
+    assert fila[2] == "Desc Original"
