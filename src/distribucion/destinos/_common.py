@@ -54,11 +54,23 @@ def producto_a_fila(
     Orden de columnas fijo: id, title, description, availability, condition,
     price, link, image_link, brand. El header del 'id' cambia (id vs sku_id)
     pero la estructura es la misma para Meta y TikTok.
+
+    Si el producto fue enriquecido (Fase G), usa titulo_corto / descripcion_corta
+    del campo .enriquecimiento. Si no, usa nombre / descripcion crudos
+    (retrocompat con runs sin Bloque 3).
     """
+    enriq = producto.enriquecimiento or {}
+    title = enriq.get("titulo_corto") or producto.nombre
+    description = (
+        enriq.get("descripcion_corta")
+        or producto.descripcion
+        or producto.nombre
+    )
+
     return [
         producto.sku,                                              # id / sku_id
-        producto.nombre,                                           # title
-        producto.descripcion or producto.nombre,                   # description
+        title,                                                     # title
+        description,                                               # description
         calcular_availability(producto, calcular_availability_por_stock),  # availability
         "new",                                                     # condition
         formatear_precio(producto.precio_efectivo, moneda),        # price
