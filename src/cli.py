@@ -18,7 +18,7 @@ from pathlib import Path
 import yaml
 
 from src.core.modelo_datos import (
-    ResultadoRun, Producto, Placa, PlacaSubida, DecisionSeleccion,
+    ResultadoRun, Producto, PlacaGenerada, PlacaSubida, DecisionSeleccion,
 )
 from src.core.sheets_client import ConfigSheets, SheetsClient
 from src.inventario.tiendanube import ConfigTiendanube, TiendanubeInventario
@@ -48,6 +48,12 @@ from src.distribucion.historial import (
     HistorialPlacas, EntradaHistorial, calcular_hash, ahora_iso,
 )
 from src.distribucion import telegram_notifier
+from src.enriquecimiento.base import ErrorEnriquecimiento
+from src.enriquecimiento.gemini import ConfigGemini, GeminiEnriquecimiento
+from src.enriquecimiento.sheet_cache import (
+    CacheEnriquecimiento, calcular_hash_input,
+    enriquecimiento_a_entrada_cache,
+)
 
 
 logging.basicConfig(
@@ -66,6 +72,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sin-feeds", action="store_true")
     parser.add_argument("--sin-telegram", action="store_true",
                         help="No mandar mensaje a Telegram al final")
+    parser.add_argument("--sin-enriquecimiento", action="store_true",
+                        help="Skipear Bloque 3 (usar nombre/desc crudos de TN)")
     parser.add_argument("--output-dir", type=str, default=None)
     return parser.parse_args()
 
@@ -166,6 +174,7 @@ def correr_pipeline(
     solo_seleccion: bool = False,
     sin_storage: bool = False,
     sin_feeds: bool = False,
+    sin_enriquecimiento: bool = False,
     output_dir: str | None = None,
 ) -> tuple[ResultadoRun, dict]:
     """Corre el pipeline. Devuelve resultado + métricas extra para Telegram."""
@@ -180,6 +189,9 @@ def correr_pipeline(
         "skus_regenerados": [],       # lista de SKUs que se re-renderizaron
         "motivos_regeneracion": {},   # {sku: "precio: $X → $Y"}
         "feeds_resumen": {},          # {nombre_pestaña: filas}
+        "enriquecimientos_nuevos": 0,
+        "enriquecimientos_reusados": 0,
+        "enriquecimientos_fallidos": 0,
     }
 
     # ============ BLOQUE 1: INVENTARIO ============
@@ -253,6 +265,103 @@ def correr_pipeline(
         resultado.fin = datetime.now()
         return resultado, metricas
 
+    # ============ BLOQUE 3: ENRIQUECIMIENTO ============
+    # Mergea titulo_corto / descripcion_corta / tips dentro de
+    # producto.enriquecimiento. Si Gemini falla en un SKU, ese SKU se quita
+    # de las decisiones (no entra al feed).
+    cfg_enriq = pipeline.get("enriquecimiento")
+    if cfg_enriq and not sin_enriquecimiento:
+        proveedor_tipo = cfg_enriq.get("proveedor")
+        inner = cfg_enriq.get("config", {})
+
+        if proveedor_tipo != "gemini":
+            log.error("Proveedor de enriquecimiento no soportado: %s", proveedor_tipo)
+            sys.exit(60)
+
+        api_key_secret = inner.get("api_key_secret", "GEMINI_API_KEY")
+        api_key = os.environ.get(api_key_secret)
+        if not api_key:
+            log.error("Falta env var %s para Gemini", api_key_secret)
+            sys.exit(61)
+
+        proveedor = GeminiEnriquecimiento(ConfigGemini(
+            api_key=str(api_key),
+            modelo=inner.get("modelo", "gemini-2.0-flash"),
+            max_chars_titulo=inner.get("max_chars_titulo", 60),
+            max_chars_descripcion=inner.get("max_chars_descripcion", 200),
+            cantidad_tips=inner.get("cantidad_tips", 3),
+            max_chars_tip=inner.get("max_chars_tip", 40),
+            tono=inner.get("tono", ConfigGemini.__dataclass_fields__["tono"].default),
+        ))
+        log.info("[Bloque 3] Proveedor: %s", proveedor.nombre())
+
+        # Cache: lee la pestaña Enriquecimiento del sheet de Inventario
+        cache = CacheEnriquecimiento(sheet_id=inv_dest["id"])
+        cache_actual = cache.leer_todo()
+
+        productos_por_sku_para_enriq = {p.sku: p for p in productos}
+        cache_nuevo = dict(cache_actual)  # copia para mutar
+
+        decisiones_post_enriq = []
+        for decision in decisiones_validas:
+            producto = productos_por_sku_para_enriq.get(decision.sku)
+            if not producto:
+                continue
+
+            hash_actual = calcular_hash_input(producto, proveedor.nombre())
+            entrada_vieja = cache_actual.get(decision.sku)
+
+            if entrada_vieja and entrada_vieja.hash_input == hash_actual and not entrada_vieja.error:
+                # Cache hit: reusar
+                enr = entrada_vieja.a_enriquecimiento()
+                metricas["enriquecimientos_reusados"] += 1
+            else:
+                # Cache miss: llamar a Gemini
+                try:
+                    enr = proveedor.enriquecer(producto)
+                    enr.hash_input = hash_actual
+                    cache_nuevo[decision.sku] = enriquecimiento_a_entrada_cache(
+                        enr, hash_actual,
+                    )
+                    metricas["enriquecimientos_nuevos"] += 1
+                    log.info("[Bloque 3] %s enriquecido: %s",
+                             decision.sku, enr.titulo_corto)
+                except ErrorEnriquecimiento as e:
+                    log.error("[Bloque 3] Falló %s: %s", decision.sku, e)
+                    resultado.errores.append((decision.sku, f"enriquecimiento: {e}"))
+                    metricas["enriquecimientos_fallidos"] += 1
+                    # Decisión del usuario: SKU NO entra al feed
+                    continue
+
+            # Mergear enriquecimiento en producto.enriquecimiento (dict)
+            producto.enriquecimiento = {
+                "titulo_corto": enr.titulo_corto,
+                "descripcion_corta": enr.descripcion_corta,
+                "tips": enr.tips,
+                "proveedor": enr.proveedor,
+            }
+            decisiones_post_enriq.append(decision)
+
+        # Reemplazamos decisiones_validas con las que sí pasaron Bloque 3
+        decisiones_validas = decisiones_post_enriq
+
+        # Guardamos cache (incluso si algunos SKUs fallaron, los exitosos se guardan)
+        try:
+            cache.escribir_todo(cache_nuevo)
+        except Exception as e:
+            log.error("[Bloque 3] No pude guardar el cache: %s", e)
+            resultado.errores.append(("cache_enriquecimiento", str(e)))
+
+        log.info(
+            "[Bloque 3] OK: %d nuevos, %d reusados, %d fallidos",
+            metricas["enriquecimientos_nuevos"],
+            metricas["enriquecimientos_reusados"],
+            metricas["enriquecimientos_fallidos"],
+        )
+    else:
+        log.info("[Bloque 3] Skipeado (sin_enriquecimiento=%s, cfg=%s)",
+                 sin_enriquecimiento, bool(cfg_enriq))
+
     # ============ HISTORIAL: cargar antes de Bloque 4 ============
     historial = HistorialPlacas(sheet_id=inv_dest["id"])
     historial_actual = historial.leer_todo()
@@ -310,7 +419,7 @@ def correr_pipeline(
              len(a_regenerar), len(a_reusar))
 
     # Renderizar solo los que cambiaron
-    placas_generadas: list[Placa] = []
+    placas_generadas: list[PlacaGenerada] = []
     productos_renderizados: list[Producto] = []
     decisiones_renderizadas: list[DecisionSeleccion] = []
     hashes_nuevos: dict[str, str] = {}  # {sku: hash_nuevo}
@@ -493,6 +602,7 @@ def main() -> None:
             solo_seleccion=args.solo_seleccion,
             sin_storage=args.sin_storage,
             sin_feeds=args.sin_feeds,
+            sin_enriquecimiento=args.sin_enriquecimiento,
             output_dir=args.output_dir,
         )
     except Exception as e:
@@ -511,10 +621,14 @@ def main() -> None:
         raise  # re-raisear para que GitHub Actions marque rojo
 
     log.info(
-        "=== Fin: inventario=%d, seleccionados=%d, regeneradas=%d, reusadas=%d, "
-        "subidas=%d, feeds=%d, errores=%d, %.1fs ===",
+        "=== Fin: inventario=%d, seleccionados=%d, "
+        "enriq=%d nuevos/%d reusados/%d fallidos, "
+        "placas=%d regen/%d reus, subidas=%d, feeds=%d, errores=%d, %.1fs ===",
         resultado.productos_inventario,
         resultado.productos_seleccionados,
+        metricas["enriquecimientos_nuevos"],
+        metricas["enriquecimientos_reusados"],
+        metricas["enriquecimientos_fallidos"],
         metricas["placas_regeneradas"],
         metricas["placas_reusadas"],
         resultado.placas_subidas,
@@ -536,6 +650,9 @@ def main() -> None:
             feeds_resumen=metricas["feeds_resumen"],
             skus_regenerados=metricas["skus_regenerados"],
             motivos_regeneracion=metricas["motivos_regeneracion"],
+            enriq_nuevos=metricas["enriquecimientos_nuevos"],
+            enriq_reusados=metricas["enriquecimientos_reusados"],
+            enriq_fallidos=metricas["enriquecimientos_fallidos"],
         )
         telegram_notifier.notificar(msg)
 
