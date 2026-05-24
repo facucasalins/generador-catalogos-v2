@@ -40,7 +40,7 @@ enriquecimiento:
   proveedor: gemini
   config:
     api_key_secret: GEMINI_API_KEY
-    modelo: gemini-2.0-flash
+    modelo: gemini-2.5-flash
     max_chars_titulo: 60
     max_chars_descripcion: 200
     cantidad_tips: 3
