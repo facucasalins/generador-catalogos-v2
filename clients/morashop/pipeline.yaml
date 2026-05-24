@@ -65,13 +65,13 @@ distribucion:
     - tipo: meta_catalog
       config:
         # Sheet "MoraShop V2 - Feed-Output" (mismo sheet para Meta y TikTok)
-        sheet_id: "REEMPLAZAR_CON_SHEET_ID_DEL_FEED"
+        sheet_id: "1oDOXmgeVgSAuC3J20NaQ5t5J8FSuCaH0Gv2lecluqlw"
         moneda: ARS
         calcular_availability_por_stock: true
 
     - tipo: tiktok_catalog
       config:
         # Mismo sheet que Meta. Las pestañas Meta_* y TikTok_* conviven.
-        sheet_id: "REEMPLAZAR_CON_SHEET_ID_DEL_FEED"
+        sheet_id: "1oDOXmgeVgSAuC3J20NaQ5t5J8FSuCaH0Gv2lecluqlw"
         moneda: ARS
         calcular_availability_por_stock: true
