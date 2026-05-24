@@ -18,7 +18,7 @@ from pathlib import Path
 import yaml
 
 from src.core.modelo_datos import (
-    ResultadoRun, Producto, PlacaGenerada, PlacaSubida, DecisionSeleccion,
+    ResultadoRun, Producto, Placa, PlacaSubida, DecisionSeleccion,
 )
 from src.core.sheets_client import ConfigSheets, SheetsClient
 from src.inventario.tiendanube import ConfigTiendanube, TiendanubeInventario
@@ -419,7 +419,7 @@ def correr_pipeline(
              len(a_regenerar), len(a_reusar))
 
     # Renderizar solo los que cambiaron
-    placas_generadas: list[PlacaGenerada] = []
+    placas_generadas: list[Placa] = []
     productos_renderizados: list[Producto] = []
     decisiones_renderizadas: list[DecisionSeleccion] = []
     hashes_nuevos: dict[str, str] = {}  # {sku: hash_nuevo}
