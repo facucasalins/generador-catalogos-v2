@@ -6,7 +6,7 @@ o leen de Sheets (Inventario, Selección, Enriquecimiento, Feed-Output).
 Diseño:
 - Autenticación: Service Account vía JSON (env var o archivo)
 - Modo de escritura: replace (limpia la pestaña y reescribe todo)
-- Crea la pestaña si no existe
+- Crea la pestaña si no existe (en escritura)
 - Maneja cuotas de Google (1 batch update grande, no fila por fila)
 """
 from __future__ import annotations
@@ -143,3 +143,29 @@ class SheetsClient:
             self.cfg.sheet_id, self.cfg.pestaña, len(filas),
         )
         return len(filas)
+
+    def leer_todas_las_filas(self) -> list[list[str]]:
+        """Lee todas las filas de la pestaña como lista de listas de strings.
+
+        A diferencia de escribir_replace, NO crea la pestaña si no existe:
+        levanta WorksheetNotFound. Esto es intencional: si el historial no
+        existe, queremos saberlo (no inventarlo silenciosamente).
+
+        Returns:
+            Lista de filas. La primera fila normalmente son los headers.
+            Si la pestaña está completamente vacía, devuelve [].
+
+        Raises:
+            gspread.exceptions.WorksheetNotFound: la pestaña no existe.
+            ErrorSheets: problema de permisos u otra API error.
+        """
+        sheet = self._abrir_sheet()
+        # NO usar _abrir_pestaña porque ese crea la pestaña si falta.
+        # Acá queremos que falle (capturable por el caller).
+        ws = sheet.worksheet(self.cfg.pestaña)
+        filas = ws.get_all_values()
+        log.info(
+            "Sheet '%s' / '%s': %d filas leídas",
+            self.cfg.sheet_id, self.cfg.pestaña, len(filas),
+        )
+        return filas
