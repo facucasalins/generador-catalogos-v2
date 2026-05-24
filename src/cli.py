@@ -3,8 +3,7 @@
 Uso:
     python -m src.cli --cliente=morashop [flags]
 
-Fase E.2: implementa Bloques 1, 2, 4, 5.1 (Storage) y 5.2 (Destino Meta).
-Pendiente: 5.3 (Destino TikTok).
+Fase E.2 refactor + E.3: Meta + TikTok, 1 pestaña por template.
 """
 from __future__ import annotations
 import argparse
@@ -38,6 +37,9 @@ from src.distribucion.storage.base import ErrorStorage
 from src.distribucion.destinos.meta_catalog import (
     ConfigMetaCatalog, MetaCatalogDestino,
 )
+from src.distribucion.destinos.tiktok_catalog import (
+    ConfigTikTokCatalog, TikTokCatalogDestino,
+)
 from src.distribucion.destinos.base import ErrorDestino
 
 
@@ -51,25 +53,11 @@ log = logging.getLogger("cli")
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generador de catálogos v2 (Agency Nusa)")
     parser.add_argument("--cliente", type=str, default=os.environ.get("CLIENTE"))
-    parser.add_argument(
-        "--solo-inventario", action="store_true",
-        help="Corre solo el Bloque 1.",
-    )
-    parser.add_argument(
-        "--solo-seleccion", action="store_true",
-        help="Corre Bloques 1 + 2.",
-    )
-    parser.add_argument(
-        "--sin-storage", action="store_true",
-        help="No sube placas a Cloudinary ni escribe feeds.",
-    )
-    parser.add_argument(
-        "--sin-feeds", action="store_true",
-        help="Sube a Cloudinary pero NO escribe feeds (Meta/TikTok).",
-    )
-    parser.add_argument(
-        "--output-dir", type=str, default=None,
-    )
+    parser.add_argument("--solo-inventario", action="store_true")
+    parser.add_argument("--solo-seleccion", action="store_true")
+    parser.add_argument("--sin-storage", action="store_true")
+    parser.add_argument("--sin-feeds", action="store_true")
+    parser.add_argument("--output-dir", type=str, default=None)
     return parser.parse_args()
 
 
@@ -115,7 +103,7 @@ def construir_storage(cfg_storage: dict):
     api_secret = os.environ.get(inner.get("api_secret_secret", "CLOUDINARY_API_SECRET"))
 
     if not cloud_name or not api_key or not api_secret:
-        log.error("Faltan credenciales de Cloudinary (revisar secrets de GitHub)")
+        log.error("Faltan credenciales de Cloudinary")
         sys.exit(41)
 
     folder = inner.get("folder")
@@ -124,10 +112,8 @@ def construir_storage(cfg_storage: dict):
         sys.exit(42)
 
     return CloudinaryStorage(ConfigCloudinary(
-        cloud_name=str(cloud_name),
-        api_key=str(api_key),
-        api_secret=str(api_secret),
-        folder=folder,
+        cloud_name=str(cloud_name), api_key=str(api_key),
+        api_secret=str(api_secret), folder=folder,
     ))
 
 
@@ -137,10 +123,17 @@ def construir_destino(destino_config: dict):
     inner = destino_config.get("config", {})
 
     if tipo == "meta_catalog":
-        sheet = inner.get("sheet", {})
         return MetaCatalogDestino(ConfigMetaCatalog(
-            sheet_id=sheet.get("id", ""),
-            pestaña=sheet.get("pestaña", "Meta"),
+            sheet_id=inner.get("sheet_id", ""),
+            moneda=inner.get("moneda", "ARS"),
+            calcular_availability_por_stock=inner.get(
+                "calcular_availability_por_stock", True
+            ),
+        ))
+
+    if tipo == "tiktok_catalog":
+        return TikTokCatalogDestino(ConfigTikTokCatalog(
+            sheet_id=inner.get("sheet_id", ""),
             moneda=inner.get("moneda", "ARS"),
             calcular_availability_por_stock=inner.get(
                 "calcular_availability_por_stock", True
@@ -159,9 +152,7 @@ def correr_pipeline(
     sin_feeds: bool = False,
     output_dir: str | None = None,
 ) -> ResultadoRun:
-    """Ejecuta el pipeline para un cliente."""
     resultado = ResultadoRun(cliente=cliente, inicio=datetime.now())
-
     pipeline = cargar_pipeline_yaml(cliente)
     base_repo = Path(__file__).parent.parent
 
@@ -173,7 +164,6 @@ def correr_pipeline(
 
     fuente = construir_fuente_inventario(cfg_inv)
     log.info("[Bloque 1] Fuente: %s", fuente.nombre())
-
     productos = fuente.traer_productos()
     resultado.productos_inventario = len(productos)
     log.info("[Bloque 1] Productos: %d", len(productos))
@@ -185,21 +175,19 @@ def correr_pipeline(
 
     inv_dest = cfg_inv["config"]["sheet_destino"]
     inv_client = SheetsClient(ConfigSheets(
-        sheet_id=inv_dest["id"],
-        pestaña=inv_dest["pestaña"],
+        sheet_id=inv_dest["id"], pestaña=inv_dest["pestaña"],
     ))
     escribir_inventario(inv_client, productos)
     log.info("[Bloque 1] OK")
 
     if solo_inventario:
-        log.info("--solo-inventario: salgo")
         resultado.fin = datetime.now()
         return resultado
 
     # ============ BLOQUE 2: SELECCIÓN ============
     cfg_sel = pipeline.get("seleccion")
     if not cfg_sel:
-        log.info("[Bloque 2] No configurado, salteo")
+        log.info("[Bloque 2] No configurado")
         resultado.fin = datetime.now()
         return resultado
 
@@ -218,8 +206,7 @@ def correr_pipeline(
     ))
     decisiones = fuente_sel.seleccionar(productos)
     resultado.productos_seleccionados = len(decisiones)
-    log.info("[Bloque 2] Decisiones válidas (con stock+published+marcadas): %d",
-             len(decisiones))
+    log.info("[Bloque 2] Decisiones válidas: %d", len(decisiones))
 
     templates_set = set(templates_disponibles)
     decisiones_validas = []
@@ -236,16 +223,14 @@ def correr_pipeline(
         decisiones_validas.append(d)
 
     log.info("[Bloque 2] OK")
-
     if solo_seleccion:
-        log.info("--solo-seleccion: salgo")
         resultado.fin = datetime.now()
         return resultado
 
     # ============ BLOQUE 4: ESTILO ============
     cfg_estilo = pipeline.get("estilo")
     if not cfg_estilo:
-        log.info("[Bloque 4] No configurado, salteo")
+        log.info("[Bloque 4] No configurado")
         resultado.fin = datetime.now()
         return resultado
 
@@ -258,7 +243,6 @@ def correr_pipeline(
     else:
         output_path = Path(tempfile.gettempdir()) / "placas" / cliente
     output_path.mkdir(parents=True, exist_ok=True)
-    log.info("[Bloque 4] Output dir: %s", output_path)
 
     productos_por_sku = {p.sku: p for p in productos}
     decisiones_ordenadas = sorted(decisiones_validas, key=lambda d: d.prioridad)
@@ -273,7 +257,8 @@ def correr_pipeline(
     )
 
     placas_generadas = []
-    productos_renderizados: list = []  # productos que efectivamente tienen placa
+    productos_renderizados = []
+    decisiones_renderizadas = []  # paralelo a productos_renderizados
     with PlaywrightHtmlEstilo(motor_config) as motor:
         for i, decision in enumerate(decisiones_ordenadas, start=1):
             producto = productos_por_sku.get(decision.sku)
@@ -286,6 +271,7 @@ def correr_pipeline(
                 placa = motor.renderizar(producto, decision)
                 placas_generadas.append(placa)
                 productos_renderizados.append(producto)
+                decisiones_renderizadas.append(decision)
                 log.info("[%d/%d] %s → %s",
                          i, len(decisiones_ordenadas),
                          producto.sku, placa.path_local)
@@ -296,18 +282,16 @@ def correr_pipeline(
 
     resultado.placas_generadas = len(placas_generadas)
     log.info("[Bloque 4] %d placas generadas", len(placas_generadas))
-    log.info("[Bloque 4] OK")
 
-    # ============ BLOQUE 5.1: STORAGE (Cloudinary) ============
+    # ============ BLOQUE 5.1: STORAGE ============
     if sin_storage:
-        log.info("--sin-storage: salgo sin subir ni publicar feeds")
         resultado.fin = datetime.now()
         return resultado
 
     cfg_dist = pipeline.get("distribucion", {})
     cfg_storage = cfg_dist.get("storage")
     if not cfg_storage:
-        log.info("[Bloque 5.1] Storage no configurado, salteo")
+        log.info("[Bloque 5.1] Storage no configurado")
         resultado.fin = datetime.now()
         return resultado
 
@@ -326,19 +310,16 @@ def correr_pipeline(
             resultado.errores.append((placa.sku, f"storage: {e}"))
 
     resultado.placas_subidas = len(placas_subidas)
-    log.info("[Bloque 5.1] %d placas subidas a %s",
-             len(placas_subidas), storage.nombre())
-    log.info("[Bloque 5.1] OK")
+    log.info("[Bloque 5.1] %d placas subidas", len(placas_subidas))
 
-    # ============ BLOQUE 5.2: DESTINOS (Meta, TikTok, ...) ============
+    # ============ BLOQUE 5.2: DESTINOS ============
     if sin_feeds:
-        log.info("--sin-feeds: salgo sin publicar feeds")
         resultado.fin = datetime.now()
         return resultado
 
     destinos_cfg = cfg_dist.get("destinos", [])
     if not destinos_cfg:
-        log.info("[Bloque 5.2] No hay destinos configurados, salteo")
+        log.info("[Bloque 5.2] No hay destinos configurados")
         resultado.fin = datetime.now()
         return resultado
 
@@ -347,8 +328,18 @@ def correr_pipeline(
         destino = construir_destino(destino_config)
         log.info("[Bloque 5.2] Destino: %s", destino.nombre())
         try:
-            n = destino.publicar(productos_renderizados, placas_subidas)
-            log.info("[Bloque 5.2] %s: %d filas publicadas", destino.nombre(), n)
+            # Refactor: ahora pasamos decisiones para que el destino agrupe
+            # por template
+            resultados = destino.publicar(
+                productos_renderizados,
+                placas_subidas,
+                decisiones_renderizadas,
+            )
+            total_filas = sum(resultados.values())
+            log.info("[Bloque 5.2] %s: %d pestañas, %d filas totales",
+                     destino.nombre(), len(resultados), total_filas)
+            for pestaña, n in resultados.items():
+                log.info("[Bloque 5.2]   - %s: %d filas", pestaña, n)
             feeds_publicados += 1
         except ErrorDestino as e:
             log.error("Falló destino %s: %s", destino.nombre(), e)
