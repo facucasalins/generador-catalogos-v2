@@ -1,9 +1,10 @@
 name: MoraShop v2 - Pipeline completo
 
 on:
-  workflow_dispatch:
-  # schedule:
-  #   - cron: '0 12 * * *'  # 09:00 ART (UTC-3) — DESCOMENTAR cuando validemos en prod
+  workflow_dispatch:  # botón manual desde GitHub Actions
+  schedule:
+    # 06:00 ART = 09:00 UTC (Argentina está siempre en UTC-3, no usa horario de verano)
+    - cron: '0 9 * * *'
 
 jobs:
   pipeline:
@@ -36,6 +37,8 @@ jobs:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OUTPUT_DIR: ${{ github.workspace }}/placas_output
         run: |
           python -m src.cli --cliente=morashop --output-dir=$OUTPUT_DIR
