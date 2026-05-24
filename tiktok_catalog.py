@@ -1,9 +1,11 @@
-"""Destino: feed Meta Catalog (refactor Opción B).
+"""Destino: feed TikTok Catalog.
 
-Escribe N pestañas en el sheet de Feed-Output, una por template.
-Pestañas: Meta_{template}, ej: Meta_default, Meta_electrohogar.
+Igual que Meta pero con:
+- Header del id: 'sku_id' (TikTok-specific, no 'id')
+- Prefijo de pestaña: 'TikTok_'
 
-Header del id: 'id' (lo que Meta espera).
+Las demás 8 columnas son idénticas a Meta. Si en el futuro TikTok cambia
+algún campo, se ajusta acá sin tocar Meta.
 """
 from __future__ import annotations
 import logging
@@ -20,9 +22,9 @@ from src.distribucion.destinos._common import (
 log = logging.getLogger(__name__)
 
 
-# Headers Meta. Primera columna 'id' (Meta-specific).
-HEADERS_META = [
-    "id",
+# Headers TikTok. La diferencia con Meta: 'sku_id' en vez de 'id'.
+HEADERS_TIKTOK = [
+    "sku_id",
     "title",
     "description",
     "availability",
@@ -33,27 +35,27 @@ HEADERS_META = [
     "brand",
 ]
 
-PREFIJO_PESTAÑA = "Meta"
+PREFIJO_PESTAÑA = "TikTok"
 
 
 @dataclass
-class ConfigMetaCatalog:
-    """Config Meta. Una pestaña por template, prefijo 'Meta_'."""
+class ConfigTikTokCatalog:
+    """Config TikTok. Una pestaña por template, prefijo 'TikTok_'."""
     sheet_id: str
     moneda: str = "ARS"
     calcular_availability_por_stock: bool = True
 
 
-class MetaCatalogDestino(DestinoFeed):
-    """Escribe feeds Meta Catalog, una pestaña por template."""
+class TikTokCatalogDestino(DestinoFeed):
+    """Escribe feeds TikTok Catalog, una pestaña por template."""
 
-    def __init__(self, config: ConfigMetaCatalog):
+    def __init__(self, config: ConfigTikTokCatalog):
         if not config.sheet_id:
-            raise ErrorDestino("ConfigMetaCatalog.sheet_id es obligatorio")
+            raise ErrorDestino("ConfigTikTokCatalog.sheet_id es obligatorio")
         self.cfg = config
 
     def nombre(self) -> str:
-        return "meta_catalog"
+        return "tiktok_catalog"
 
     def publicar(
         self,
@@ -66,7 +68,7 @@ class MetaCatalogDestino(DestinoFeed):
         grupos = agrupar_por_template(productos, decisiones)
 
         if not grupos:
-            log.warning("Meta: no hay productos para publicar")
+            log.warning("TikTok: no hay productos para publicar")
             return {}
 
         resultados: dict[str, int] = {}
@@ -74,13 +76,13 @@ class MetaCatalogDestino(DestinoFeed):
 
         for template, productos_grupo in grupos.items():
             pestaña = f"{PREFIJO_PESTAÑA}_{template}"
-            log.info("Meta: escribiendo pestaña '%s' (%d productos del template '%s')",
+            log.info("TikTok: escribiendo pestaña '%s' (%d productos del template '%s')",
                      pestaña, len(productos_grupo), template)
             try:
                 n = escribir_pestaña_feed(
                     sheet_id=self.cfg.sheet_id,
                     pestaña=pestaña,
-                    headers=HEADERS_META,
+                    headers=HEADERS_TIKTOK,
                     productos_grupo=productos_grupo,
                     placas_por_sku=placas_por_sku,
                     moneda=self.cfg.moneda,
@@ -88,12 +90,10 @@ class MetaCatalogDestino(DestinoFeed):
                 )
                 resultados[pestaña] = n
             except ErrorDestino as e:
-                # No abortamos las otras pestañas
-                log.error("Meta: falló pestaña '%s': %s", pestaña, e)
+                log.error("TikTok: falló pestaña '%s': %s", pestaña, e)
                 errores.append(f"{pestaña}: {e}")
 
         if errores and not resultados:
-            # Si TODAS las pestañas fallaron, sí abortamos
-            raise ErrorDestino(f"Meta: todas las pestañas fallaron: {errores}")
+            raise ErrorDestino(f"TikTok: todas las pestañas fallaron: {errores}")
 
         return resultados
