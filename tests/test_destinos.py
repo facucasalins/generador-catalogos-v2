@@ -24,9 +24,18 @@ def _producto(sku="A", stock=10, marca="MarcaX", promo=800.0):
     )
 
 
-def _placa(sku="A"):
+def _placa(sku="A", aspect_ratio="4:5"):
     return PlacaSubida(
         sku=sku, url_publica=f"https://cdn/{sku}.png", storage_backend="cloudinary",
+        aspect_ratio=aspect_ratio,
+    )
+
+
+def _placa_tiktok(sku="A"):
+    """Helper específico para tests de TikTok (placas 9:16)."""
+    return PlacaSubida(
+        sku=sku, url_publica=f"https://cdn/{sku}_9x16.png", storage_backend="cloudinary",
+        aspect_ratio="9:16",
     )
 
 
@@ -194,7 +203,7 @@ def test_tiktok_publica_con_prefijo_tiktok(mock_sheets_class, tiktok):
     mock_sheets_class.return_value = mock_client
 
     productos = [_producto("A")]
-    placas = [_placa("A")]
+    placas = [_placa_tiktok("A")]  # 9:16 para TikTok
     decisiones = [_decision("A", "electrohogar")]
 
     resultados = tiktok.publicar(productos, placas, decisiones)
@@ -208,7 +217,7 @@ def test_tiktok_fila_usa_sku_id(mock_sheets_class, tiktok):
     mock_sheets_class.return_value = mock_client
 
     tiktok.publicar(
-        [_producto("A")], [_placa("A")], [_decision("A", "default")],
+        [_producto("A")], [_placa_tiktok("A")], [_decision("A", "default")],
     )
 
     call = mock_client.escribir_replace.call_args
@@ -223,7 +232,11 @@ def test_tiktok_fila_usa_sku_id(mock_sheets_class, tiktok):
 
 @patch("src.distribucion.destinos._common.SheetsClient")
 def test_meta_y_tiktok_pueden_compartir_sheet(mock_sheets_class):
-    """Apuntando al mismo sheet, no se pisan: prefijos distintos."""
+    """Apuntando al mismo sheet, no se pisan: prefijos distintos.
+
+    Cada destino filtra por su aspect_ratio: Meta usa 4:5, TikTok usa 9:16.
+    Por eso pasamos placas de ambos aspect_ratios.
+    """
     mock_client = MagicMock()
     mock_sheets_class.return_value = mock_client
 
@@ -232,7 +245,8 @@ def test_meta_y_tiktok_pueden_compartir_sheet(mock_sheets_class):
     tiktok = TikTokCatalogDestino(ConfigTikTokCatalog(sheet_id=sheet_id))
 
     productos = [_producto("A")]
-    placas = [_placa("A")]
+    # Pasamos ambas placas: cada destino filtra la que necesita
+    placas = [_placa("A"), _placa_tiktok("A")]
     decisiones = [_decision("A", "default")]
 
     r_meta = meta.publicar(productos, placas, decisiones)

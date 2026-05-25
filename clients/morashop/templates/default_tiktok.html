@@ -1,0 +1,249 @@
+<!-- DESC: Placa default Mora 9:16 (TikTok) — porteo del 4:5 con más aire vertical -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;700&family=Archivo+Black&display=swap');
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        width: 1080px;
+        height: 1920px;
+        background: #0a1f3d;
+        font-family: 'Archivo', sans-serif;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Decoración X rojas top-left */
+    .deco-x {
+        position: absolute;
+        top: 60px;
+        left: 50px;
+        color: #e63946;
+        font-size: 38px;
+        letter-spacing: 8px;
+        font-weight: bold;
+    }
+
+    /* Decoración círculo punteado top-right */
+    .deco-circle {
+        position: absolute;
+        top: 60px;
+        right: 50px;
+        width: 70px;
+        height: 70px;
+        border: 3px dotted white;
+        border-radius: 50%;
+    }
+
+    /* Zigzag decorativo */
+    .deco-zigzag {
+        position: absolute;
+        top: 280px;
+        right: 60px;
+        color: #e63946;
+        font-size: 28px;
+        letter-spacing: 2px;
+    }
+
+    /* Logo centrado arriba */
+    .logo {
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 180px;
+        height: auto;
+        z-index: 10;
+    }
+
+    /* Zona blanca del producto - más alta en 9:16 */
+    .product-zone {
+        position: absolute;
+        top: 320px;
+        left: 80px;
+        right: 80px;
+        height: 1100px;
+        background: #ffffff;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+    }
+
+    .product-image {
+        max-width: 104%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    /* Banda de precio - misma altura que 4:5 */
+    .price-band {
+        position: absolute;
+        top: 1540px;
+        left: 0;
+        right: 0;
+        height: 280px;
+        background: #e63946;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 60px;
+        color: white;
+    }
+
+    .price-left {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .desde {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 32px;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+    }
+
+    .precio-tachado {
+        font-family: 'Archivo', sans-serif;
+        font-size: 38px;
+        text-decoration: line-through;
+        opacity: 0.85;
+        margin-bottom: 4px;
+        font-weight: 700;
+    }
+
+    .precio-principal {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 130px;
+        line-height: 1;
+        letter-spacing: -2px;
+    }
+
+    .aclaracion {
+        font-family: 'Archivo', sans-serif;
+        font-size: 22px;
+        margin-top: 8px;
+        font-style: italic;
+    }
+
+    .price-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        position: relative;
+    }
+
+    .sin-interes {
+        background: white;
+        color: #1a3a6e;
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 14px;
+        padding: 4px 12px;
+        transform: rotate(6deg);
+        margin-bottom: 8px;
+        letter-spacing: 1px;
+    }
+
+    .cuotas-num {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 56px;
+        line-height: 1;
+    }
+
+    .cuotas-monto {
+        font-family: 'Archivo', sans-serif;
+        font-size: 28px;
+        margin-top: 4px;
+    }
+
+    /* Banner inferior */
+    .bottom-banner {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 100px;
+        background: #1a3a6e;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 60px;
+        color: white;
+    }
+
+    .banner-left {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .banner-legal {
+        font-family: 'Archivo', sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        line-height: 1.2;
+    }
+
+    .banner-legal-small {
+        font-family: 'Archivo', sans-serif;
+        font-size: 14px;
+        font-weight: 400;
+        margin-top: 2px;
+        opacity: 0.9;
+    }
+
+    .banner-morashop {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 36px;
+        letter-spacing: 2px;
+    }
+
+    .banner-morashop .red {
+        color: #e63946;
+    }
+</style>
+</head>
+<body>
+    <div class="deco-x">× × ×<br>× × ×</div>
+    <div class="deco-circle"></div>
+    <div class="deco-zigzag">∿ ∿ ∿</div>
+
+    <img class="logo" src="{logo_b64}" alt="logo">
+
+    <div class="product-zone">
+        <img class="product-image" src="{imagen_b64}" alt="producto">
+    </div>
+
+    <div class="price-band">
+        <div class="price-left">
+            <div class="desde">DESDE</div>
+            <div class="precio-tachado">{precio_original_formateado}</div>
+            <div class="precio-principal">{precio_hotsale_formateado}</div>
+        </div>
+
+        <div class="price-right">
+            <div class="sin-interes">SIN INTERÉS</div>
+            <div class="cuotas-num">{cuotas_num} CUOTAS</div>
+            <div class="cuotas-monto">de {cuota_formateada}</div>
+        </div>
+    </div>
+
+    <div class="bottom-banner">
+        <div class="banner-left">
+            <div class="banner-legal">Precio final abonando en Efectivo.</div>
+            <div class="banner-legal-small">{evento_legal}</div>
+        </div>
+        <div class="banner-morashop"><span class="red">×</span> {brand_name}</div>
+    </div>
+</body>
+</html>

@@ -101,6 +101,8 @@ def formatear_resumen_exito(
     enriq_nuevos: int = 0,
     enriq_reusados: int = 0,
     enriq_fallidos: int = 0,
+    skus_huerfanos_borrados: list[str] | None = None,
+    skus_huerfanos_fallidos: list[str] | None = None,
 ) -> str:
     """Arma el mensaje de éxito para Telegram (formato Markdown).
 
@@ -155,6 +157,23 @@ def formatear_resumen_exito(
                 lineas.append(f"  - `{sku}`")
         if len(skus_regenerados) > max_mostrar:
             lineas.append(f"  _...y {len(skus_regenerados) - max_mostrar} más_")
+
+    # Sección de limpieza de huérfanos (solo si hubo)
+    huerfanos_ok = skus_huerfanos_borrados or []
+    huerfanos_falla = skus_huerfanos_fallidos or []
+    if huerfanos_ok or huerfanos_falla:
+        lineas.append("")
+        lineas.append("🗑️ Limpieza SKUs huérfanos:")
+        if huerfanos_ok:
+            lineas.append(f"  • *{len(huerfanos_ok)}* eliminados de Cloudinary")
+            for sku in huerfanos_ok[:5]:
+                lineas.append(f"    - `{sku}`")
+            if len(huerfanos_ok) > 5:
+                lineas.append(f"    _...y {len(huerfanos_ok) - 5} más_")
+        if huerfanos_falla:
+            lineas.append(f"  • ⚠️ *{len(huerfanos_falla)}* no se pudieron borrar")
+            for sku in huerfanos_falla[:3]:
+                lineas.append(f"    - `{sku}`")
 
     lineas.append("")
     lineas.append(f"⏱️ {duracion}")

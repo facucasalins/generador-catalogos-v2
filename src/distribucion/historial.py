@@ -31,6 +31,7 @@ PESTAÑA_HISTORIAL = "Historial_Placas"
 HEADERS_HISTORIAL = [
     "sku",
     "template",
+    "aspect_ratio",  # NUEVO Fase H: "4:5" Meta, "9:16" TikTok
     "precio_lista",
     "precio_promo",
     "url_cloudinary",
@@ -49,6 +50,7 @@ class EntradaHistorial:
     url_cloudinary: str
     fecha_render: str  # ISO format
     hash_render: str
+    aspect_ratio: str = "4:5"  # default para retrocompat con filas viejas
 
 
 def _leer_template_html(templates_dir: Path, template_name: str) -> str:
@@ -68,16 +70,27 @@ def calcular_hash(
     producto: Producto,
     decision: DecisionSeleccion,
     templates_dir: Path,
+    template_name: str | None = None,
+    aspect_ratio: str = "4:5",
 ) -> str:
     """Calcula hash que cambia si cualquier input visual cambia.
 
     Incluye: precios, nombre, descripción, marca, URL imagen, template
-    asignado, y el CONTENIDO del HTML del template.
+    asignado, el CONTENIDO del HTML del template, y el aspect_ratio.
+
+    Args:
+        template_name: si se pasa, se usa para leer el HTML (para soportar
+            templates _tiktok que difieren del decision.template). Si es None,
+            usa decision.template como antes.
+        aspect_ratio: "4:5" o "9:16". Cambiarlo invalida el hash, así que la
+            placa 4:5 y la 9:16 se trackean por separado.
     """
-    template_html = _leer_template_html(templates_dir, decision.template)
+    nombre_template = template_name or decision.template
+    template_html = _leer_template_html(templates_dir, nombre_template)
     partes = [
         producto.sku,
-        decision.template,
+        nombre_template,
+        aspect_ratio,
         f"{producto.precio_lista:.2f}",
         f"{producto.precio_promocional:.2f}" if producto.precio_promocional else "",
         producto.nombre or "",
@@ -98,8 +111,15 @@ class HistorialPlacas:
             sheet_id=sheet_id, pestaña=PESTAÑA_HISTORIAL,
         ))
 
-    def leer_todo(self) -> dict[str, EntradaHistorial]:
-        """Devuelve {sku: EntradaHistorial}. Si la pestaña no existe, dict vacío."""
+    def leer_todo(self) -> dict[tuple[str, str], EntradaHistorial]:
+        """Devuelve {(sku, aspect_ratio): EntradaHistorial}.
+
+        Clave compuesta porque un SKU puede tener varias placas (4:5 para
+        Meta, 9:16 para TikTok). Si la pestaña no existe, dict vacío.
+
+        Filas viejas sin columna `aspect_ratio` se interpretan como 4:5
+        (retrocompat con historial pre-Fase H).
+        """
         try:
             filas = self.client.leer_todas_las_filas()
         except Exception as e:
@@ -109,11 +129,9 @@ class HistorialPlacas:
         if not filas or len(filas) < 2:
             return {}
 
-        # primera fila = headers
         header = filas[0]
         rows = filas[1:]
 
-        # Mapeo flexible por nombre de columna (resiliente a reordenamientos)
         idx = {col: i for i, col in enumerate(header)}
         requeridos = {"sku", "template", "url_cloudinary", "hash_render"}
         faltantes = requeridos - set(idx.keys())
@@ -121,7 +139,7 @@ class HistorialPlacas:
             log.warning("Historial: faltan columnas %s, se ignora", faltantes)
             return {}
 
-        resultado: dict[str, EntradaHistorial] = {}
+        resultado: dict[tuple[str, str], EntradaHistorial] = {}
         for fila in rows:
             if not fila or len(fila) <= idx["sku"]:
                 continue
@@ -129,7 +147,16 @@ class HistorialPlacas:
             if not sku:
                 continue
             try:
-                resultado[sku] = EntradaHistorial(
+                # aspect_ratio: si la columna no existe (historial viejo)
+                # o está vacía, default a "4:5"
+                aspect_ratio = "4:5"
+                ar_idx = idx.get("aspect_ratio", -1)
+                if 0 <= ar_idx < len(fila):
+                    valor = fila[ar_idx].strip()
+                    if valor:
+                        aspect_ratio = valor
+
+                entrada = EntradaHistorial(
                     sku=sku,
                     template=fila[idx["template"]] if idx["template"] < len(fila) else "",
                     precio_lista=_a_float(fila[idx.get("precio_lista", -1)]) if idx.get("precio_lista", -1) < len(fila) else 0.0,
@@ -137,26 +164,35 @@ class HistorialPlacas:
                     url_cloudinary=fila[idx["url_cloudinary"]] if idx["url_cloudinary"] < len(fila) else "",
                     fecha_render=fila[idx.get("fecha_render", -1)] if idx.get("fecha_render", -1) < len(fila) else "",
                     hash_render=fila[idx["hash_render"]] if idx["hash_render"] < len(fila) else "",
+                    aspect_ratio=aspect_ratio,
                 )
+                resultado[(sku, aspect_ratio)] = entrada
             except (IndexError, ValueError) as e:
                 log.warning("Fila inválida en Historial_Placas para sku=%s: %s", sku, e)
                 continue
 
-        log.info("Historial cargado: %d SKUs", len(resultado))
+        log.info("Historial cargado: %d entradas (SKU × aspect_ratio)", len(resultado))
         return resultado
 
-    def escribir_todo(self, entradas: dict[str, EntradaHistorial]) -> None:
+    def escribir_todo(
+        self, entradas: dict[tuple[str, str], EntradaHistorial],
+    ) -> None:
         """Reemplaza toda la pestaña con las entradas. Crea pestaña si no existe."""
         filas = [
             [
-                e.sku, e.template,
-                f"{e.precio_lista:.2f}", f"{e.precio_promo:.2f}",
-                e.url_cloudinary, e.fecha_render, e.hash_render,
+                e.sku,
+                e.template,
+                e.aspect_ratio,
+                f"{e.precio_lista:.2f}",
+                f"{e.precio_promo:.2f}",
+                e.url_cloudinary,
+                e.fecha_render,
+                e.hash_render,
             ]
             for e in entradas.values()
         ]
         self.client.escribir_replace(HEADERS_HISTORIAL, filas)
-        log.info("Historial guardado: %d SKUs", len(filas))
+        log.info("Historial guardado: %d entradas", len(filas))
 
 
 def _a_float(valor) -> float:

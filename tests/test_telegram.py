@@ -155,3 +155,65 @@ def test_enviar_telegram_reintenta_sin_markdown_si_400(mock_urlopen):
     ok = _enviar_telegram("token", "chat", "msg *malo")
     assert ok is True
     assert mock_urlopen.call_count == 2
+
+
+# ============ Sección huérfanos (Fase H) ============
+
+def test_resumen_exito_sin_huerfanos_no_muestra_seccion():
+    """Si no hay huérfanos, no aparece la sección 🗑️"""
+    msg = formatear_resumen_exito(
+        cliente="m", fecha_iso="x", duracion_segundos=60,
+        inventario=10, seleccionados=10,
+        placas_regeneradas=0, placas_reusadas=10,
+        feeds_resumen={"Meta_default": 10},
+        skus_regenerados=[],
+        skus_huerfanos_borrados=[],
+        skus_huerfanos_fallidos=[],
+    )
+    assert "🗑️" not in msg
+    assert "huérfanos" not in msg
+
+
+def test_resumen_exito_con_huerfanos_muestra_seccion():
+    msg = formatear_resumen_exito(
+        cliente="m", fecha_iso="x", duracion_segundos=60,
+        inventario=10, seleccionados=10,
+        placas_regeneradas=0, placas_reusadas=10,
+        feeds_resumen={},
+        skus_regenerados=[],
+        skus_huerfanos_borrados=["SKU-1", "SKU-2", "SKU-3"],
+        skus_huerfanos_fallidos=[],
+    )
+    assert "🗑️" in msg
+    assert "3" in msg
+    assert "SKU-1" in msg
+
+
+def test_resumen_exito_huerfanos_trunca_lista_larga():
+    """Si hay más de 5 huérfanos OK, los recorta."""
+    skus = [f"X-{i}" for i in range(10)]
+    msg = formatear_resumen_exito(
+        cliente="m", fecha_iso="x", duracion_segundos=60,
+        inventario=10, seleccionados=10,
+        placas_regeneradas=0, placas_reusadas=10,
+        feeds_resumen={},
+        skus_regenerados=[],
+        skus_huerfanos_borrados=skus,
+        skus_huerfanos_fallidos=[],
+    )
+    assert "5 más" in msg
+
+
+def test_resumen_exito_huerfanos_fallidos_warning():
+    """Si algunos huérfanos no se pudieron borrar, lo marca con ⚠️"""
+    msg = formatear_resumen_exito(
+        cliente="m", fecha_iso="x", duracion_segundos=60,
+        inventario=10, seleccionados=10,
+        placas_regeneradas=0, placas_reusadas=10,
+        feeds_resumen={},
+        skus_regenerados=[],
+        skus_huerfanos_borrados=["SKU-OK"],
+        skus_huerfanos_fallidos=["SKU-FALLO"],
+    )
+    assert "⚠️" in msg
+    assert "SKU-FALLO" in msg

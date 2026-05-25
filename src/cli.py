@@ -11,6 +11,7 @@ import logging
 import os
 import sys
 import tempfile
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -192,6 +193,8 @@ def correr_pipeline(
         "enriquecimientos_nuevos": 0,
         "enriquecimientos_reusados": 0,
         "enriquecimientos_fallidos": 0,
+        "skus_huerfanos_borrados": [],   # SKUs que salieron y limpiamos
+        "skus_huerfanos_fallidos": [],   # SKUs que intentamos borrar pero falló
     }
 
     # ============ BLOQUE 1: INVENTARIO ============
@@ -202,7 +205,34 @@ def correr_pipeline(
 
     log.info("[Bloque 1] Inventario")
     fuente = construir_fuente_inventario(cfg_inv)
-    productos = fuente.traer_productos()
+
+    # Reintento: 1 reintento con 30s de espera. TN a veces tira blip de red.
+    # Si falla DOS veces seguidas, Telegram avisa con alerta clara (main()).
+    productos = None
+    ultimo_error = None
+    for intento in range(2):
+        try:
+            productos = fuente.traer_productos()
+            break  # éxito
+        except Exception as e:
+            ultimo_error = e
+            if intento == 0:
+                log.warning(
+                    "[Bloque 1] Falló traer productos (intento 1/2): %s. "
+                    "Esperando 30s antes de reintentar...", e,
+                )
+                time.sleep(30)
+            else:
+                log.error("[Bloque 1] Falló traer productos (intento 2/2): %s", e)
+
+    if productos is None:
+        # Los 2 intentos fallaron. Tiramos excepción para que main() la capture
+        # y mande alerta a Telegram con el formato de falla.
+        raise RuntimeError(
+            f"TN no respondió después de 2 intentos (30s de espera). "
+            f"Último error: {ultimo_error}"
+        )
+
     resultado.productos_inventario = len(productos)
     log.info("[Bloque 1] Productos: %d", len(productos))
 
@@ -365,9 +395,13 @@ def correr_pipeline(
     # ============ HISTORIAL: cargar antes de Bloque 4 ============
     historial = HistorialPlacas(sheet_id=inv_dest["id"])
     historial_actual = historial.leer_todo()
-    log.info("[Historial] %d SKUs en historial", len(historial_actual))
+    skus_unicos_historial = len({sku for (sku, _) in historial_actual.keys()})
+    log.info("[Historial] %d entradas (%d SKUs únicos)",
+             len(historial_actual), skus_unicos_historial)
 
-    # ============ BLOQUE 4: ESTILO (con diff) ============
+    # ============ BLOQUE 4 + 5.1: ESTILO + STORAGE (multi-aspect-ratio) ============
+    # Fase H activada: cada SKU genera N placas según `aspect_ratios` del yaml.
+    # 4:5 → Meta, 9:16 → TikTok. El diff inteligente trackea cada uno por separado.
     cfg_estilo = pipeline.get("estilo")
     if not cfg_estilo:
         log.info("[Bloque 4] No configurado")
@@ -387,158 +421,272 @@ def correr_pipeline(
     productos_por_sku = {p.sku: p for p in productos}
     decisiones_ordenadas = sorted(decisiones_validas, key=lambda d: d.prioridad)
 
-    motor_config = ConfigPlaywrightHtml(
-        templates_dir=templates_dir,
-        output_dir=output_path,
-        placa_width=cfg_estilo_inner.get("placa_width", 1080),
-        placa_height=cfg_estilo_inner.get("placa_height", 1350),
-        variables_globales=cfg_estilo_inner.get("variables_globales", {}),
-        hotsale_discount_factor=cfg_estilo_inner.get("hotsale_discount_factor", 1.0),
-    )
+    # Aspect ratios a procesar. Si el yaml define la sección 'aspect_ratios',
+    # se itera; si no, default a una sola pasada 4:5 (retrocompat).
+    aspect_ratios_cfg = cfg_estilo_inner.get("aspect_ratios") or [{
+        "label": "4:5",
+        "width": cfg_estilo_inner.get("placa_width", 1080),
+        "height": cfg_estilo_inner.get("placa_height", 1350),
+        "template_suffix": "",
+    }]
+    log.info("[Bloque 4] Procesando %d aspect_ratios: %s",
+             len(aspect_ratios_cfg),
+             [ar.get("label", "?") for ar in aspect_ratios_cfg])
 
-    # Vamos a separar los SKUs en dos grupos: regenerar vs reusar
-    a_regenerar: list[tuple[Producto, DecisionSeleccion, str]] = []  # (p, d, hash_nuevo)
-    a_reusar: list[tuple[Producto, DecisionSeleccion, EntradaHistorial]] = []
-
-    for decision in decisiones_ordenadas:
-        producto = productos_por_sku.get(decision.sku)
-        if not producto:
-            log.warning("SKU %s no está en inventario. Salteado.", decision.sku)
-            resultado.errores.append((decision.sku, "no está en inventario"))
-            continue
-
-        hash_nuevo = calcular_hash(producto, decision, templates_dir)
-        entrada_vieja = historial_actual.get(decision.sku)
-
-        if entrada_vieja and entrada_vieja.hash_render == hash_nuevo and entrada_vieja.url_cloudinary:
-            a_reusar.append((producto, decision, entrada_vieja))
-        else:
-            a_regenerar.append((producto, decision, hash_nuevo))
-
-    log.info("[Bloque 4] %d a regenerar, %d a reusar",
-             len(a_regenerar), len(a_reusar))
-
-    # Renderizar solo los que cambiaron
-    placas_generadas: list[Placa] = []
-    productos_renderizados: list[Producto] = []
-    decisiones_renderizadas: list[DecisionSeleccion] = []
-    hashes_nuevos: dict[str, str] = {}  # {sku: hash_nuevo}
-
-    if a_regenerar:
-        with PlaywrightHtmlEstilo(motor_config) as motor:
-            for i, (producto, decision, hash_nuevo) in enumerate(a_regenerar, start=1):
-                try:
-                    placa = motor.renderizar(producto, decision)
-                    placas_generadas.append(placa)
-                    productos_renderizados.append(producto)
-                    decisiones_renderizadas.append(decision)
-                    hashes_nuevos[producto.sku] = hash_nuevo
-
-                    # Guardamos qué cambió para el resumen de Telegram
-                    motivo = _resumir_cambio_precio(
-                        producto, historial_actual.get(producto.sku),
-                    )
-                    metricas["skus_regenerados"].append(producto.sku)
-                    metricas["motivos_regeneracion"][producto.sku] = motivo
-
-                    log.info("[%d/%d] %s → %s (%s)",
-                             i, len(a_regenerar),
-                             producto.sku, placa.path_local, motivo)
-                except ErrorEstilo as e:
-                    log.error("Falló render de %s: %s", producto.sku, e)
-                    resultado.errores.append((producto.sku, str(e)))
-                    raise
-
-    metricas["placas_regeneradas"] = len(placas_generadas)
-    metricas["placas_reusadas"] = len(a_reusar)
-    resultado.placas_generadas = len(placas_generadas)
-    log.info("[Bloque 4] OK: %d nuevas, %d reusadas",
-             len(placas_generadas), len(a_reusar))
-
-    # ============ BLOQUE 5.1: STORAGE ============
-    if sin_storage:
-        resultado.fin = datetime.now()
-        return resultado, metricas
-
+    # Storage: construir una sola vez, lo reusamos en cada pasada
     cfg_dist = pipeline.get("distribucion", {})
     cfg_storage = cfg_dist.get("storage")
-    if not cfg_storage:
-        log.info("[Bloque 5.1] Storage no configurado")
-        resultado.fin = datetime.now()
-        return resultado, metricas
+    storage = None
+    if not sin_storage and cfg_storage:
+        storage = construir_storage(cfg_storage)
+        log.info("[Bloque 5.1] Storage: %s", storage.nombre())
 
-    storage = construir_storage(cfg_storage)
-    log.info("[Bloque 5.1] Storage: %s", storage.nombre())
-
-    # Las placas reusadas YA tienen URL en Cloudinary (la del historial).
-    # Solo subimos las nuevas.
-    placas_subidas_nuevas: list[PlacaSubida] = []
-    for i, placa in enumerate(placas_generadas, start=1):
-        try:
-            subida = storage.subir(placa)
-            placas_subidas_nuevas.append(subida)
-            log.info("[%d/%d] Subido: %s → %s",
-                     i, len(placas_generadas), subida.sku, subida.url_publica)
-        except ErrorStorage as e:
-            log.error("Falló subida de %s: %s", placa.sku, e)
-            resultado.errores.append((placa.sku, f"storage: {e}"))
-
-    # Armamos las "placas subidas" reusadas a partir del historial
-    placas_subidas_reusadas: list[PlacaSubida] = [
-        PlacaSubida(
-            sku=p.sku,
-            url_publica=entrada.url_cloudinary,
-            storage_backend="cloudinary",
-        )
-        for (p, _, entrada) in a_reusar
-    ]
-
-    # Lista final: nuevas + reusadas
-    placas_subidas_total = placas_subidas_nuevas + placas_subidas_reusadas
-    resultado.placas_subidas = len(placas_subidas_total)
-    log.info("[Bloque 5.1] %d placas (subidas: %d nuevas + %d reusadas)",
-             len(placas_subidas_total),
-             len(placas_subidas_nuevas), len(placas_subidas_reusadas))
-
-    # Idem productos y decisiones: necesitamos el set completo para los feeds
-    productos_para_feeds = productos_renderizados + [p for (p, _, _) in a_reusar]
-    decisiones_para_feeds = decisiones_renderizadas + [d for (_, d, _) in a_reusar]
-
-    # ============ ACTUALIZAR HISTORIAL ============
-    # Se hace ANTES de feeds para que aunque feeds falle, la próxima corrida
-    # ya tenga el historial actualizado y no re-renderice todo de nuevo.
-    historial_nuevo: dict[str, EntradaHistorial] = {}
-
-    # Entradas para las regeneradas (con URL nueva y hash nuevo)
-    skus_subidos_ok = {s.sku for s in placas_subidas_nuevas}
+    # Acumuladores GLOBALES a través de todos los aspect_ratios.
+    # Los feeds reciben TODAS las placas subidas y filtran por aspect_ratio.
+    placas_subidas_total: list[PlacaSubida] = []
+    historial_nuevo: dict[tuple[str, str], EntradaHistorial] = {}
+    # Productos/decisiones para los feeds (dedup por SKU, agnóstico de aspect_ratio)
+    productos_renderizados_set: dict[str, Producto] = {}
+    decisiones_renderizadas_set: dict[str, DecisionSeleccion] = {}
+    total_regeneradas = 0
+    total_reusadas = 0
     fecha_render_ahora = ahora_iso()
-    for producto, decision, hash_nuevo in a_regenerar:
-        if producto.sku not in skus_subidos_ok:
-            # Falló la subida: NO actualizamos el historial para este SKU
-            # (queremos reintentar mañana)
-            continue
-        url = next(s.url_publica for s in placas_subidas_nuevas if s.sku == producto.sku)
-        historial_nuevo[producto.sku] = EntradaHistorial(
-            sku=producto.sku,
-            template=decision.template,
-            precio_lista=producto.precio_lista,
-            precio_promo=producto.precio_promocional or 0.0,
-            url_cloudinary=url,
-            fecha_render=fecha_render_ahora,
-            hash_render=hash_nuevo,
+
+    # ----- LOOP sobre aspect_ratios -----
+    for ar_cfg in aspect_ratios_cfg:
+        ar_label = ar_cfg.get("label", "4:5")
+        ar_width = ar_cfg.get("width", 1080)
+        ar_height = ar_cfg.get("height", 1350)
+        # template_suffix: "" para 4:5 (template tal cual), "_tiktok" para 9:16
+        template_suffix = ar_cfg.get("template_suffix", "")
+
+        log.info("[Bloque 4][%s] Procesando aspect_ratio %s (%dx%d, suffix='%s')",
+                 ar_label, ar_label, ar_width, ar_height, template_suffix)
+
+        motor_config = ConfigPlaywrightHtml(
+            templates_dir=templates_dir,
+            output_dir=output_path,
+            placa_width=ar_width,
+            placa_height=ar_height,
+            variables_globales=cfg_estilo_inner.get("variables_globales", {}),
+            hotsale_discount_factor=cfg_estilo_inner.get("hotsale_discount_factor", 1.0),
         )
 
-    # Entradas para las reusadas (sin cambios)
-    for producto, decision, entrada_vieja in a_reusar:
-        historial_nuevo[producto.sku] = entrada_vieja
+        # Para este aspect_ratio: separar regenerar vs reusar
+        a_regenerar: list[tuple[Producto, DecisionSeleccion, str]] = []
+        a_reusar: list[tuple[Producto, DecisionSeleccion, EntradaHistorial]] = []
 
+        for decision in decisiones_ordenadas:
+            producto = productos_por_sku.get(decision.sku)
+            if not producto:
+                if ar_label == aspect_ratios_cfg[0].get("label"):
+                    # Solo log una vez (en la primera pasada) para no duplicar
+                    log.warning("SKU %s no está en inventario. Salteado.", decision.sku)
+                    resultado.errores.append((decision.sku, "no está en inventario"))
+                continue
+
+            # Construir el nombre del template aplicado para este aspect_ratio
+            template_a_usar = decision.template + template_suffix
+            template_path = templates_dir / f"{template_a_usar}.html"
+            if not template_path.exists():
+                log.warning(
+                    "[%s] Template '%s' no existe (esperado en %s). "
+                    "SKU %s salteado en este aspect_ratio.",
+                    ar_label, template_a_usar, template_path, decision.sku,
+                )
+                continue
+
+            # Decision con el template ajustado (para que renderizar() use el correcto
+            # y el hash se calcule con el HTML correcto)
+            decision_ajustada = DecisionSeleccion(
+                sku=decision.sku,
+                generar=decision.generar,
+                template=template_a_usar,
+                prioridad=decision.prioridad,
+                notas=decision.notas,
+            )
+
+            hash_nuevo = calcular_hash(
+                producto, decision_ajustada, templates_dir,
+                template_name=template_a_usar,
+                aspect_ratio=ar_label,
+            )
+            entrada_vieja = historial_actual.get((decision.sku, ar_label))
+
+            if entrada_vieja and entrada_vieja.hash_render == hash_nuevo and entrada_vieja.url_cloudinary:
+                a_reusar.append((producto, decision_ajustada, entrada_vieja))
+            else:
+                a_regenerar.append((producto, decision_ajustada, hash_nuevo))
+
+        log.info("[Bloque 4][%s] %d a regenerar, %d a reusar",
+                 ar_label, len(a_regenerar), len(a_reusar))
+
+        # Render: solo si hay algo que regenerar
+        placas_generadas: list[Placa] = []
+        if a_regenerar:
+            with PlaywrightHtmlEstilo(motor_config) as motor:
+                for i, (producto, decision_ajustada, hash_nuevo) in enumerate(a_regenerar, start=1):
+                    try:
+                        placa = motor.renderizar(producto, decision_ajustada)
+                        placas_generadas.append(placa)
+
+                        # Métricas Telegram: solo el primer aspect_ratio popula
+                        # skus_regenerados (evita duplicados visuales en el mensaje).
+                        # Las 9:16 son visibles en el log pero no en la lista resumen.
+                        if ar_label == aspect_ratios_cfg[0].get("label"):
+                            motivo = _resumir_cambio_precio(
+                                producto, historial_actual.get((producto.sku, ar_label)),
+                            )
+                            if producto.sku not in metricas["skus_regenerados"]:
+                                metricas["skus_regenerados"].append(producto.sku)
+                                metricas["motivos_regeneracion"][producto.sku] = motivo
+
+                        log.info("[%s][%d/%d] %s → %s",
+                                 ar_label, i, len(a_regenerar),
+                                 producto.sku, placa.path_local)
+                    except ErrorEstilo as e:
+                        log.error("Falló render de %s [%s]: %s", producto.sku, ar_label, e)
+                        resultado.errores.append((producto.sku, f"{ar_label}: {e}"))
+                        raise
+
+        total_regeneradas += len(placas_generadas)
+        total_reusadas += len(a_reusar)
+
+        # Subida a storage de las nuevas (en este aspect_ratio)
+        placas_subidas_nuevas: list[PlacaSubida] = []
+        if storage and placas_generadas:
+            for i, placa in enumerate(placas_generadas, start=1):
+                try:
+                    subida = storage.subir(placa)
+                    placas_subidas_nuevas.append(subida)
+                    log.info("[%s][%d/%d] Subido: %s → %s",
+                             ar_label, i, len(placas_generadas),
+                             subida.sku, subida.url_publica)
+                except ErrorStorage as e:
+                    log.error("Falló subida de %s [%s]: %s", placa.sku, ar_label, e)
+                    resultado.errores.append((placa.sku, f"storage {ar_label}: {e}"))
+
+        # Reusadas: armar PlacaSubida virtual con la URL del historial
+        placas_subidas_reusadas: list[PlacaSubida] = [
+            PlacaSubida(
+                sku=p.sku,
+                url_publica=entrada.url_cloudinary,
+                storage_backend="cloudinary",
+                aspect_ratio=ar_label,
+            )
+            for (p, _, entrada) in a_reusar
+        ]
+
+        # Acumular para los feeds (todas las pasadas juntas)
+        placas_subidas_total.extend(placas_subidas_nuevas)
+        placas_subidas_total.extend(placas_subidas_reusadas)
+
+        # Productos/decisiones (dedup por SKU; usamos la decision original sin sufijo
+        # para que el feed agrupe por template lógico, no por template_tiktok)
+        def _quitar_suffix(template_name: str, suffix: str) -> str:
+            """Quita el sufijo SOLO si está al final del nombre."""
+            if suffix and template_name.endswith(suffix):
+                return template_name[:-len(suffix)]
+            return template_name
+
+        for p, d, _ in a_reusar:
+            productos_renderizados_set[p.sku] = p
+            decision_para_feed = DecisionSeleccion(
+                sku=d.sku,
+                generar=d.generar,
+                template=_quitar_suffix(d.template, template_suffix),
+                prioridad=d.prioridad,
+                notas=d.notas,
+            )
+            decisiones_renderizadas_set[p.sku] = decision_para_feed
+        for p, d, _ in a_regenerar:
+            productos_renderizados_set[p.sku] = p
+            decision_para_feed = DecisionSeleccion(
+                sku=d.sku,
+                generar=d.generar,
+                template=_quitar_suffix(d.template, template_suffix),
+                prioridad=d.prioridad,
+                notas=d.notas,
+            )
+            decisiones_renderizadas_set[p.sku] = decision_para_feed
+
+        # Actualizar historial para este aspect_ratio
+        skus_subidos_ok = {s.sku for s in placas_subidas_nuevas}
+        for producto, decision_ajustada, hash_nuevo in a_regenerar:
+            if producto.sku not in skus_subidos_ok:
+                # Falló la subida: NO actualizamos el historial para este SKU/ar
+                # (queremos reintentar mañana solo este aspect_ratio)
+                continue
+            url = next(s.url_publica for s in placas_subidas_nuevas if s.sku == producto.sku)
+            historial_nuevo[(producto.sku, ar_label)] = EntradaHistorial(
+                sku=producto.sku,
+                template=decision_ajustada.template,  # template REAL usado (con sufijo)
+                precio_lista=producto.precio_lista,
+                precio_promo=producto.precio_promocional or 0.0,
+                url_cloudinary=url,
+                fecha_render=fecha_render_ahora,
+                hash_render=hash_nuevo,
+                aspect_ratio=ar_label,
+            )
+        for producto, decision_ajustada, entrada_vieja in a_reusar:
+            historial_nuevo[(producto.sku, ar_label)] = entrada_vieja
+
+    # ----- Fin del loop aspect_ratios -----
+
+    # Métricas globales (suma de todos los aspect_ratios)
+    metricas["placas_regeneradas"] = total_regeneradas
+    metricas["placas_reusadas"] = total_reusadas
+    resultado.placas_generadas = total_regeneradas
+    resultado.placas_subidas = len(placas_subidas_total)
+    log.info("[Bloque 4+5.1] OK: %d regen, %d reus, %d en storage final",
+             total_regeneradas, total_reusadas, len(placas_subidas_total))
+
+    # Listas para feeds
+    productos_para_feeds = list(productos_renderizados_set.values())
+    decisiones_para_feeds = list(decisiones_renderizadas_set.values())
+
+    # ============ LIMPIEZA DE SKUs HUÉRFANOS ============
+    # Un SKU es huérfano si NINGUNA entrada (en ningún aspect_ratio) está en
+    # historial_nuevo. Si el 4:5 está OK pero el 9:16 falló, NO es huérfano.
+    skus_activos = {sku for (sku, _) in historial_nuevo.keys()}
+    skus_historial_anterior = {sku for (sku, _) in historial_actual.keys()}
+    skus_huerfanos = skus_historial_anterior - skus_activos
+    if skus_huerfanos and storage:
+        log.info("[Limpieza] %d SKUs huérfanos detectados", len(skus_huerfanos))
+        borrados_ok = []
+        borrados_falla = []
+        for sku in skus_huerfanos:
+            if storage.borrar(sku):
+                borrados_ok.append(sku)
+                log.info("[Limpieza] Borrado de Cloudinary: %s", sku)
+            else:
+                borrados_falla.append(sku)
+                log.warning("[Limpieza] No pude borrar de Cloudinary: %s", sku)
+        metricas["skus_huerfanos_borrados"] = borrados_ok
+        metricas["skus_huerfanos_fallidos"] = borrados_falla
+        log.info("[Limpieza] OK: %d borrados, %d fallidos",
+                 len(borrados_ok), len(borrados_falla))
+    else:
+        metricas["skus_huerfanos_borrados"] = []
+        metricas["skus_huerfanos_fallidos"] = []
+
+    # Guardar historial completo (todos los aspect_ratios juntos)
     try:
         historial.escribir_todo(historial_nuevo)
         log.info("[Historial] Actualizado: %d entradas", len(historial_nuevo))
     except Exception as e:
-        # No abortamos por esto; lo logueamos
         log.error("[Historial] Falló actualizar: %s", e)
         resultado.errores.append(("historial", str(e)))
+
+    # Si no hay storage, salimos antes de los feeds
+    if sin_storage:
+        resultado.fin = datetime.now()
+        return resultado, metricas
+
+    if not cfg_storage:
+        log.info("[Bloque 5.1] Storage no configurado")
+        resultado.fin = datetime.now()
+        return resultado, metricas
 
     # ============ BLOQUE 5.2: DESTINOS ============
     if sin_feeds:
@@ -610,11 +758,24 @@ def main() -> None:
         tb = traceback.format_exc()
         log.error("Pipeline falló: %s\n%s", e, tb)
         if not args.sin_telegram:
+            # Intentar deducir el bloque que rompió a partir del mensaje
+            error_str = str(e)
+            if "TN no respondió" in error_str:
+                bloque = "Bloque 1 (Inventario - TN no responde)"
+            elif "Cloudinary" in error_str:
+                bloque = "Bloque 5.1 (Storage Cloudinary)"
+            elif "Gemini" in error_str:
+                bloque = "Bloque 3 (Enriquecimiento Gemini)"
+            elif "sheet" in error_str.lower() or "Sheets" in error_str:
+                bloque = "Sheets API"
+            else:
+                bloque = "ver logs"
+
             msg = telegram_notifier.formatear_resumen_falla(
                 cliente=args.cliente,
                 fecha_iso=datetime.now().strftime("%Y-%m-%d %H:%M ART"),
                 error_msg=str(e),
-                bloque="ver logs",
+                bloque=bloque,
                 url_run=url_run,
             )
             telegram_notifier.notificar(msg)
@@ -653,6 +814,8 @@ def main() -> None:
             enriq_nuevos=metricas["enriquecimientos_nuevos"],
             enriq_reusados=metricas["enriquecimientos_reusados"],
             enriq_fallidos=metricas["enriquecimientos_fallidos"],
+            skus_huerfanos_borrados=metricas.get("skus_huerfanos_borrados", []),
+            skus_huerfanos_fallidos=metricas.get("skus_huerfanos_fallidos", []),
         )
         telegram_notifier.notificar(msg)
 

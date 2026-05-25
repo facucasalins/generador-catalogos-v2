@@ -116,6 +116,9 @@ class Placa:
     path_local: str  # archivo PNG en disco
     width: int = 1080
     height: int = 1350
+    # "4:5" (1080x1350, Meta) o "9:16" (1080x1920, TikTok)
+    # Por default "4:5" para retrocompatibilidad con código existente.
+    aspect_ratio: str = "4:5"
 
 
 # ============================================================
@@ -128,6 +131,7 @@ class PlacaSubida:
     sku: str
     url_publica: str
     storage_backend: str  # "cloudinary", "s3", etc.
+    aspect_ratio: str = "4:5"  # "4:5" Meta, "9:16" TikTok
 
 
 @dataclass

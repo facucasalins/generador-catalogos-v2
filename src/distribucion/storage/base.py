@@ -31,3 +31,17 @@ class StorageBackend(ABC):
     def nombre(self) -> str:
         """Identificador: 'cloudinary', 's3', 'google_drive', etc."""
         ...
+
+    def borrar(self, sku: str) -> bool:
+        """Borra la imagen de un SKU del storage. Opcional para subclases.
+
+        Default: no-op que devuelve False (no soporta borrado).
+        Las subclases que implementan borrado real lo overridean.
+
+        Es best-effort: no debe raisear, solo devolver bool.
+
+        Returns:
+            True si se borró exitosamente (o si ya no existía).
+            False si el storage no soporta borrado o el borrado falló.
+        """
+        return False

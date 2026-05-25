@@ -2,14 +2,14 @@
 # Pipeline de MoraShop V2
 # ====================================================================
 # Estado: Fases B, C, D, E.1, E.2 (refactor), E.3 (TikTok), F (diff +
-# Telegram), G (enriquecimiento Gemini).
+# Telegram), G (enriquecimiento Gemini), H (limpieza huérfanos +
+# reintento TN + placas 9:16 activadas).
 # ====================================================================
 
 cliente:
   nombre: morashop
   brand_name: MORASHOP
   zona_horaria: America/Argentina/Buenos_Aires
-
 
 # ============ BLOQUE 1: INVENTARIO ============
 inventario:
@@ -21,7 +21,6 @@ inventario:
       id: "1902u_7ofkHjRTAa5uClX0Nof5d2JaauJLxNcCPkMagU"
       pestaña: Inventario
 
-
 # ============ BLOQUE 2: SELECCIÓN ============
 seleccion:
   fuente: sheet_manual
@@ -30,7 +29,6 @@ seleccion:
       id: "1NOG91buD9co2Er4G0lobFGySyFql1i23vEZSjzqcWCI"
       pestaña: Seleccion
     template_default: default
-
 
 # ============ BLOQUE 3: ENRIQUECIMIENTO (Fase G) ============
 # Llama a Gemini para generar titulo_corto + descripcion_corta + tips.
@@ -47,19 +45,38 @@ enriquecimiento:
     max_chars_tip: 40
     tono: "Argentino. Usa voseo cuando corresponda (ej: 'llevátelo', 'es para vos'). Lenguaje natural, sin extranjerismos innecesarios."
 
-
 # ============ BLOQUE 4: ESTILO ============
+# Fase H activada: dos aspect_ratios por SKU.
+#  - 4:5 (1080x1350) → Meta, usa template tal como está en la selección.
+#  - 9:16 (1080x1920) → TikTok, usa template + sufijo "_tiktok".
+# Cada aspect_ratio se trackea por separado en el historial (clave compuesta).
+# Para que 9:16 funcione, en clients/morashop/templates/ deben existir los HTML
+# con sufijo _tiktok (ej: default_tiktok.html, electrohogar_tiktok.html).
 estilo:
   motor: playwright_html
   config:
+    # Defaults legados (usados si NO se define aspect_ratios). Se mantienen
+    # por retrocompat; el loop de aspect_ratios los ignora porque define los
+    # suyos. No los borres todavía: otros tests/clientes pueden depender.
     placa_width: 1080
     placa_height: 1350
     hotsale_discount_factor: 1.0
+
+    # Loop multi-aspect-ratio (Fase H activación)
+    aspect_ratios:
+      - label: "4:5"
+        width: 1080
+        height: 1350
+        template_suffix: ""        # template tal cual (default, electro, ...)
+      - label: "9:16"
+        width: 1080
+        height: 1920
+        template_suffix: "_tiktok" # default → default_tiktok, electro → electro_tiktok
+
     variables_globales:
       brand_name: MORASHOP
       logo_url: "https://acdn-us.mitiendanube.com/stores/002/268/228/themes/toluca/img-479084497-1715570316-13b884ee9ca022bcfa337bfec6db35451715570316.png?3248503917"
       evento_legal: "Válido durante Mora Hot."
-
 
 # ============ BLOQUE 5: DISTRIBUCIÓN ============
 distribucion:
@@ -72,12 +89,14 @@ distribucion:
       folder: morashop-v2
 
   destinos:
+    # Meta filtra automáticamente las placas 4:5
     - tipo: meta_catalog
       config:
         sheet_id: "1oDOXmgeVgSAuC3J20NaQ5t5J8FSuCaH0Gv2lecluqlw"
         moneda: ARS
         calcular_availability_por_stock: true
 
+    # TikTok filtra automáticamente las placas 9:16
     - tipo: tiktok_catalog
       config:
         sheet_id: "1oDOXmgeVgSAuC3J20NaQ5t5J8FSuCaH0Gv2lecluqlw"

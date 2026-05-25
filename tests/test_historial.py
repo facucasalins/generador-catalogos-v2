@@ -140,23 +140,64 @@ def test_leer_todo_solo_headers(mock_client_class):
 
 @patch("src.distribucion.historial.SheetsClient")
 def test_leer_todo_devuelve_entradas(mock_client_class):
+    """Headers actuales incluyen aspect_ratio. Filas con esa columna se leen OK."""
     mock_client = MagicMock()
     mock_client.leer_todas_las_filas.return_value = [
-        HEADERS_HISTORIAL,
-        ["SKU-1", "default", "1000.00", "800.00", "https://cdn/1.png",
-         "2026-05-24 06:00:00", "abc123"],
-        ["SKU-2", "electrohogar", "2000.00", "1500.00", "https://cdn/2.png",
-         "2026-05-24 06:00:00", "def456"],
+        HEADERS_HISTORIAL,  # ["sku", "template", "aspect_ratio", ...]
+        ["SKU-1", "default", "4:5", "1000.00", "800.00",
+         "https://cdn/1.png", "2026-05-24 06:00:00", "abc123"],
+        ["SKU-2", "electrohogar", "4:5", "2000.00", "1500.00",
+         "https://cdn/2.png", "2026-05-24 06:00:00", "def456"],
     ]
     mock_client_class.return_value = mock_client
 
     h = HistorialPlacas("sheet-123")
     entradas = h.leer_todo()
 
+    # Clave es (sku, aspect_ratio)
     assert len(entradas) == 2
-    assert entradas["SKU-1"].hash_render == "abc123"
-    assert entradas["SKU-1"].precio_lista == 1000.0
-    assert entradas["SKU-2"].template == "electrohogar"
+    assert entradas[("SKU-1", "4:5")].hash_render == "abc123"
+    assert entradas[("SKU-1", "4:5")].precio_lista == 1000.0
+    assert entradas[("SKU-2", "4:5")].template == "electrohogar"
+
+
+@patch("src.distribucion.historial.SheetsClient")
+def test_leer_todo_mismo_sku_dos_aspect_ratios(mock_client_class):
+    """Un SKU con 4:5 y 9:16 genera 2 entradas distintas."""
+    mock_client = MagicMock()
+    mock_client.leer_todas_las_filas.return_value = [
+        HEADERS_HISTORIAL,
+        ["SKU-X", "default", "4:5", "1000", "800",
+         "https://cdn/x.png", "2026", "hash4x5"],
+        ["SKU-X", "default_tiktok", "9:16", "1000", "800",
+         "https://cdn/x_9x16.png", "2026", "hash9x16"],
+    ]
+    mock_client_class.return_value = mock_client
+
+    h = HistorialPlacas("sheet-123")
+    entradas = h.leer_todo()
+    assert ("SKU-X", "4:5") in entradas
+    assert ("SKU-X", "9:16") in entradas
+    assert entradas[("SKU-X", "4:5")].hash_render == "hash4x5"
+    assert entradas[("SKU-X", "9:16")].hash_render == "hash9x16"
+
+
+@patch("src.distribucion.historial.SheetsClient")
+def test_leer_todo_filas_sin_aspect_ratio_default_a_4_5(mock_client_class):
+    """Retrocompat: filas viejas sin columna aspect_ratio se interpretan como 4:5."""
+    headers_viejos = ["sku", "template", "precio_lista", "precio_promo",
+                      "url_cloudinary", "fecha_render", "hash_render"]
+    mock_client = MagicMock()
+    mock_client.leer_todas_las_filas.return_value = [
+        headers_viejos,
+        ["SKU-OLD", "default", "1000", "800", "https://x", "2026", "abc"],
+    ]
+    mock_client_class.return_value = mock_client
+
+    h = HistorialPlacas("sheet-123")
+    entradas = h.leer_todo()
+    # Default a 4:5 si la columna no existe
+    assert ("SKU-OLD", "4:5") in entradas
 
 
 @patch("src.distribucion.historial.SheetsClient")
@@ -165,19 +206,19 @@ def test_leer_todo_tolera_filas_corruptas(mock_client_class):
     mock_client = MagicMock()
     mock_client.leer_todas_las_filas.return_value = [
         HEADERS_HISTORIAL,
-        ["SKU-1", "default", "1000", "800", "https://x", "2026", "abc"],
+        ["SKU-1", "default", "4:5", "1000", "800", "https://x", "2026", "abc"],
         ["SKU-INCOMPLETO"],  # corrupta
         [],  # vacía
-        ["SKU-2", "default", "1000", "800", "https://x", "2026", "xyz"],
+        ["SKU-2", "default", "4:5", "1000", "800", "https://x", "2026", "xyz"],
     ]
     mock_client_class.return_value = mock_client
 
     h = HistorialPlacas("sheet-123")
     entradas = h.leer_todo()
 
-    # Las 2 válidas se devuelven; las otras se ignoran sin error
-    assert "SKU-1" in entradas
-    assert "SKU-2" in entradas
+    # Las 2 válidas se devuelven con clave compuesta; las otras se ignoran
+    assert ("SKU-1", "4:5") in entradas
+    assert ("SKU-2", "4:5") in entradas
 
 
 # ============ HistorialPlacas: escribir ============
@@ -189,12 +230,13 @@ def test_escribir_todo_replace_completo(mock_client_class):
 
     h = HistorialPlacas("sheet-123")
     entradas = {
-        "SKU-1": EntradaHistorial(
+        ("SKU-1", "4:5"): EntradaHistorial(
             sku="SKU-1", template="default",
             precio_lista=1000.0, precio_promo=800.0,
             url_cloudinary="https://cdn/1.png",
             fecha_render="2026-05-24 06:00:00",
             hash_render="abc",
+            aspect_ratio="4:5",
         ),
     }
     h.escribir_todo(entradas)
@@ -206,5 +248,9 @@ def test_escribir_todo_replace_completo(mock_client_class):
 
     assert headers == HEADERS_HISTORIAL
     assert len(filas) == 1
+    # Orden de columnas según HEADERS_HISTORIAL:
+    # ["sku", "template", "aspect_ratio", "precio_lista", ...]
     assert filas[0][0] == "SKU-1"
-    assert filas[0][2] == "1000.00"  # precio formateado
+    assert filas[0][1] == "default"
+    assert filas[0][2] == "4:5"
+    assert filas[0][3] == "1000.00"
