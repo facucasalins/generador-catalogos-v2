@@ -58,6 +58,35 @@ def test_recortar_corta_duro_si_no_hay_espacio_cercano():
     assert len(r) == 10
 
 
+def test_recortar_prefiere_fin_de_oracion_sobre_espacio():
+    """v3: si hay un punto antes del límite en zona razonable, corta ahí."""
+    # 'Pesa 300g.' termina en el char 60. Límite 80. Después sigue cortando palabra.
+    texto = "Sacaleche de silicona libre de BPA. Pesa 300g. Es compacto y fácil de usar."
+    r = _recortar(texto, 50)
+    # Debería cortar después de "BPA." (carácter 35), no a la mitad de la siguiente
+    assert r.endswith(".")
+    assert "Sacaleche de silicona libre de BPA." in r
+
+
+def test_recortar_oracion_completa_no_se_recorta():
+    """Si la primera oración entera entra y la segunda no, deja la primera."""
+    texto = "Primera oración corta. Segunda oración que es mucho más larga y no entra."
+    r = _recortar(texto, 30)
+    assert r == "Primera oración corta."
+
+
+def test_recortar_cae_a_espacio_si_no_hay_punto_cercano():
+    """Sin punto razonable, sigue funcionando como antes: corta en espacio."""
+    texto = "esta es una frase muy larga sin puntos que necesita ser recortada"
+    r = _recortar(texto, 25)
+    assert len(r) <= 25
+    assert not r.endswith(" ")
+    # No debe terminar a la mitad de una palabra
+    palabras_originales = texto.split()
+    for palabra in r.split():
+        assert palabra in palabras_originales
+
+
 # ============ _validar_y_recortar ============
 
 def _cfg(max_titulo=60, max_desc=200, n_tips=3, max_tip=40):
