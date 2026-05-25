@@ -325,8 +325,16 @@ class PlaywrightHtmlEstilo(MotorEstilo):
     def renderizar(
         self, producto: Producto, decision: DecisionSeleccion
     ) -> Placa:
-        """Renderiza la placa de UN producto."""
-        log.info("Renderizando %s (template=%s)", producto.sku, decision.template)
+        """Renderiza la placa de UN producto.
+
+        Las dimensiones vienen del config del motor (placa_width/height),
+        así que para generar 4:5 y 9:16 hay que instanciar 2 motores con
+        configs distintas. El aspect_ratio del config se propaga a la placa
+        resultante, y se incluye en el nombre del archivo para no pisar.
+        """
+        log.info("Renderizando %s (template=%s, %dx%d)",
+                 producto.sku, decision.template,
+                 self.cfg.placa_width, self.cfg.placa_height)
 
         # 1. Cargar template
         html_template = self._cargar_template(decision.template)
@@ -337,11 +345,17 @@ class PlaywrightHtmlEstilo(MotorEstilo):
         # 3. Reemplazar placeholders en el HTML
         html_final = self._reemplazar_variables(html_template, variables)
 
-        # 4. Renderizar a PNG
-        # El nombre del archivo es el SKU saneado (quitamos espacios y caracteres
-        # raros que pueden romper paths en GitHub Actions / Cloudinary)
+        # 4. Renderizar a PNG. El nombre del archivo incluye el aspect_ratio
+        # para no pisar la placa 4:5 con la 9:16 cuando se renderizan ambas.
         sku_sanitizado = _sanitizar_sku(producto.sku)
-        path_png = self.cfg.output_dir / f"{sku_sanitizado}.png"
+        aspect = _aspect_ratio_label(self.cfg)
+        if aspect == "4:5":
+            # retrocompat: no agregamos sufijo a la 4:5 (mantiene URLs viejas)
+            sufijo = ""
+        else:
+            # "9:16" → "_9x16" (los : no son válidos en URLs / filenames)
+            sufijo = "_" + aspect.replace(":", "x")
+        path_png = self.cfg.output_dir / f"{sku_sanitizado}{sufijo}.png"
 
         self._renderizar_html_a_png(html_final, path_png)
 
@@ -351,7 +365,26 @@ class PlaywrightHtmlEstilo(MotorEstilo):
             path_local=str(path_png),
             width=self.cfg.placa_width,
             height=self.cfg.placa_height,
+            aspect_ratio=aspect,
         )
+
+
+def _aspect_ratio_label(cfg: "ConfigPlaywrightHtml") -> str:
+    """Calcula el label de aspect ratio desde las dimensiones del config.
+
+    1080x1350 → "4:5"
+    1080x1920 → "9:16"
+    Si no coincide con ninguno conocido, usa la fracción literal.
+    """
+    w, h = cfg.placa_width, cfg.placa_height
+    if (w, h) == (1080, 1350):
+        return "4:5"
+    if (w, h) == (1080, 1920):
+        return "9:16"
+    # Fallback: simplificar fracción (no crítico, solo etiqueta)
+    from math import gcd
+    g = gcd(w, h) or 1
+    return f"{w // g}:{h // g}"
 
 
 def _sanitizar_sku(sku: str) -> str:
