@@ -11,6 +11,7 @@ import logging
 import os
 import sys
 import tempfile
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -192,6 +193,8 @@ def correr_pipeline(
         "enriquecimientos_nuevos": 0,
         "enriquecimientos_reusados": 0,
         "enriquecimientos_fallidos": 0,
+        "skus_huerfanos_borrados": [],   # SKUs que salieron y limpiamos
+        "skus_huerfanos_fallidos": [],   # SKUs que intentamos borrar pero falló
     }
 
     # ============ BLOQUE 1: INVENTARIO ============
@@ -202,7 +205,34 @@ def correr_pipeline(
 
     log.info("[Bloque 1] Inventario")
     fuente = construir_fuente_inventario(cfg_inv)
-    productos = fuente.traer_productos()
+
+    # Reintento: 1 reintento con 30s de espera. TN a veces tira blip de red.
+    # Si falla DOS veces seguidas, Telegram avisa con alerta clara (main()).
+    productos = None
+    ultimo_error = None
+    for intento in range(2):
+        try:
+            productos = fuente.traer_productos()
+            break  # éxito
+        except Exception as e:
+            ultimo_error = e
+            if intento == 0:
+                log.warning(
+                    "[Bloque 1] Falló traer productos (intento 1/2): %s. "
+                    "Esperando 30s antes de reintentar...", e,
+                )
+                time.sleep(30)
+            else:
+                log.error("[Bloque 1] Falló traer productos (intento 2/2): %s", e)
+
+    if productos is None:
+        # Los 2 intentos fallaron. Tiramos excepción para que main() la capture
+        # y mande alerta a Telegram con el formato de falla.
+        raise RuntimeError(
+            f"TN no respondió después de 2 intentos (30s de espera). "
+            f"Último error: {ultimo_error}"
+        )
+
     resultado.productos_inventario = len(productos)
     log.info("[Bloque 1] Productos: %d", len(productos))
 
@@ -365,7 +395,9 @@ def correr_pipeline(
     # ============ HISTORIAL: cargar antes de Bloque 4 ============
     historial = HistorialPlacas(sheet_id=inv_dest["id"])
     historial_actual = historial.leer_todo()
-    log.info("[Historial] %d SKUs en historial", len(historial_actual))
+    skus_unicos_historial = len({sku for (sku, _) in historial_actual.keys()})
+    log.info("[Historial] %d entradas (%d SKUs únicos)",
+             len(historial_actual), skus_unicos_historial)
 
     # ============ BLOQUE 4: ESTILO (con diff) ============
     cfg_estilo = pipeline.get("estilo")
@@ -407,8 +439,8 @@ def correr_pipeline(
             resultado.errores.append((decision.sku, "no está en inventario"))
             continue
 
-        hash_nuevo = calcular_hash(producto, decision, templates_dir)
-        entrada_vieja = historial_actual.get(decision.sku)
+        hash_nuevo = calcular_hash(producto, decision, templates_dir, aspect_ratio="4:5")
+        entrada_vieja = historial_actual.get((decision.sku, "4:5"))
 
         if entrada_vieja and entrada_vieja.hash_render == hash_nuevo and entrada_vieja.url_cloudinary:
             a_reusar.append((producto, decision, entrada_vieja))
@@ -436,7 +468,7 @@ def correr_pipeline(
 
                     # Guardamos qué cambió para el resumen de Telegram
                     motivo = _resumir_cambio_precio(
-                        producto, historial_actual.get(producto.sku),
+                        producto, historial_actual.get((producto.sku, "4:5")),
                     )
                     metricas["skus_regenerados"].append(producto.sku)
                     metricas["motivos_regeneracion"][producto.sku] = motivo
@@ -507,7 +539,8 @@ def correr_pipeline(
     # ============ ACTUALIZAR HISTORIAL ============
     # Se hace ANTES de feeds para que aunque feeds falle, la próxima corrida
     # ya tenga el historial actualizado y no re-renderice todo de nuevo.
-    historial_nuevo: dict[str, EntradaHistorial] = {}
+    # Clave compuesta: (sku, aspect_ratio). Por ahora todo es 4:5.
+    historial_nuevo: dict[tuple[str, str], EntradaHistorial] = {}
 
     # Entradas para las regeneradas (con URL nueva y hash nuevo)
     skus_subidos_ok = {s.sku for s in placas_subidas_nuevas}
@@ -518,7 +551,7 @@ def correr_pipeline(
             # (queremos reintentar mañana)
             continue
         url = next(s.url_publica for s in placas_subidas_nuevas if s.sku == producto.sku)
-        historial_nuevo[producto.sku] = EntradaHistorial(
+        historial_nuevo[(producto.sku, "4:5")] = EntradaHistorial(
             sku=producto.sku,
             template=decision.template,
             precio_lista=producto.precio_lista,
@@ -526,11 +559,37 @@ def correr_pipeline(
             url_cloudinary=url,
             fecha_render=fecha_render_ahora,
             hash_render=hash_nuevo,
+            aspect_ratio="4:5",
         )
 
     # Entradas para las reusadas (sin cambios)
     for producto, decision, entrada_vieja in a_reusar:
-        historial_nuevo[producto.sku] = entrada_vieja
+        historial_nuevo[(producto.sku, "4:5")] = entrada_vieja
+
+    # ============ LIMPIEZA DE SKUs HUÉRFANOS ============
+    # Un SKU es huérfano si NINGUNA de sus entradas (ningún aspect_ratio) está
+    # en historial_nuevo. Lo identificamos por el primer elemento de la tupla.
+    skus_activos = {sku for (sku, _) in historial_nuevo.keys()}
+    skus_historial_anterior = {sku for (sku, _) in historial_actual.keys()}
+    skus_huerfanos = skus_historial_anterior - skus_activos
+    if skus_huerfanos:
+        log.info("[Limpieza] %d SKUs huérfanos detectados", len(skus_huerfanos))
+        borrados_ok = []
+        borrados_falla = []
+        for sku in skus_huerfanos:
+            if storage.borrar(sku):
+                borrados_ok.append(sku)
+                log.info("[Limpieza] Borrado de Cloudinary: %s", sku)
+            else:
+                borrados_falla.append(sku)
+                log.warning("[Limpieza] No pude borrar de Cloudinary: %s", sku)
+        metricas["skus_huerfanos_borrados"] = borrados_ok
+        metricas["skus_huerfanos_fallidos"] = borrados_falla
+        log.info("[Limpieza] OK: %d borrados, %d fallidos",
+                 len(borrados_ok), len(borrados_falla))
+    else:
+        metricas["skus_huerfanos_borrados"] = []
+        metricas["skus_huerfanos_fallidos"] = []
 
     try:
         historial.escribir_todo(historial_nuevo)
@@ -610,11 +669,24 @@ def main() -> None:
         tb = traceback.format_exc()
         log.error("Pipeline falló: %s\n%s", e, tb)
         if not args.sin_telegram:
+            # Intentar deducir el bloque que rompió a partir del mensaje
+            error_str = str(e)
+            if "TN no respondió" in error_str:
+                bloque = "Bloque 1 (Inventario - TN no responde)"
+            elif "Cloudinary" in error_str:
+                bloque = "Bloque 5.1 (Storage Cloudinary)"
+            elif "Gemini" in error_str:
+                bloque = "Bloque 3 (Enriquecimiento Gemini)"
+            elif "sheet" in error_str.lower() or "Sheets" in error_str:
+                bloque = "Sheets API"
+            else:
+                bloque = "ver logs"
+
             msg = telegram_notifier.formatear_resumen_falla(
                 cliente=args.cliente,
                 fecha_iso=datetime.now().strftime("%Y-%m-%d %H:%M ART"),
                 error_msg=str(e),
-                bloque="ver logs",
+                bloque=bloque,
                 url_run=url_run,
             )
             telegram_notifier.notificar(msg)
@@ -653,6 +725,8 @@ def main() -> None:
             enriq_nuevos=metricas["enriquecimientos_nuevos"],
             enriq_reusados=metricas["enriquecimientos_reusados"],
             enriq_fallidos=metricas["enriquecimientos_fallidos"],
+            skus_huerfanos_borrados=metricas.get("skus_huerfanos_borrados", []),
+            skus_huerfanos_fallidos=metricas.get("skus_huerfanos_fallidos", []),
         )
         telegram_notifier.notificar(msg)
 
