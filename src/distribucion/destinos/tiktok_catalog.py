@@ -63,8 +63,12 @@ class TikTokCatalogDestino(DestinoFeed):
         placas_subidas: list[PlacaSubida],
         decisiones: list[DecisionSeleccion],
     ) -> dict[str, int]:
-        """Agrupa por template, escribe 1 pestaña por grupo."""
-        placas_por_sku = {ps.sku: ps for ps in placas_subidas}
+        """Agrupa por template, escribe 1 pestaña por grupo.
+
+        TikTok usa las placas 9:16 (Fase H: filtra del set total de placas).
+        Si todavía no hay placas 9:16 para los SKUs, la pestaña queda vacía
+        con warning.
+        """
         grupos = agrupar_por_template(productos, decisiones)
 
         if not grupos:
@@ -84,9 +88,10 @@ class TikTokCatalogDestino(DestinoFeed):
                     pestaña=pestaña,
                     headers=HEADERS_TIKTOK,
                     productos_grupo=productos_grupo,
-                    placas_por_sku=placas_por_sku,
+                    placas_subidas=placas_subidas,
                     moneda=self.cfg.moneda,
                     calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
+                    aspect_ratio_filtrar="9:16",
                 )
                 resultados[pestaña] = n
             except ErrorDestino as e:

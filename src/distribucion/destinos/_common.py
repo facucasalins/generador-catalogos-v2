@@ -109,18 +109,30 @@ def escribir_pestaña_feed(
     pestaña: str,
     headers: list[str],
     productos_grupo: list[Producto],
-    placas_por_sku: dict[str, PlacaSubida],
+    placas_subidas: list[PlacaSubida],
     moneda: str,
     calcular_availability_por_stock: bool,
+    aspect_ratio_filtrar: str = "4:5",
 ) -> int:
     """Escribe UNA pestaña del feed (modo replace).
 
     Si la pestaña no existe, se crea (lo hace SheetsClient automáticamente).
     Si productos_grupo está vacío, escribe solo los headers (limpia data vieja).
 
+    Args:
+        placas_subidas: lista de TODAS las placas subidas (4:5 + 9:16).
+            Adentro filtramos por aspect_ratio_filtrar.
+        aspect_ratio_filtrar: solo se incluyen placas con este aspect ratio.
+            "4:5" para feed Meta, "9:16" para feed TikTok.
+
     Returns:
         Cantidad de filas de datos escritas (sin contar header).
     """
+    # Filtrar por aspect ratio e indexar por SKU
+    placas_por_sku: dict[str, PlacaSubida] = {
+        p.sku: p for p in placas_subidas if p.aspect_ratio == aspect_ratio_filtrar
+    }
+
     filas = []
     sin_placa = 0
     for p in productos_grupo:
@@ -134,8 +146,8 @@ def escribir_pestaña_feed(
 
     if sin_placa:
         log.warning(
-            "Pestaña '%s': %d productos excluidos por falta de placa subida",
-            pestaña, sin_placa,
+            "Pestaña '%s' (%s): %d productos excluidos por falta de placa subida",
+            pestaña, aspect_ratio_filtrar, sin_placa,
         )
 
     client = SheetsClient(ConfigSheets(sheet_id=sheet_id, pestaña=pestaña))
@@ -144,5 +156,6 @@ def escribir_pestaña_feed(
     except Exception as e:
         raise ErrorDestino(f"Falló escritura pestaña '{pestaña}': {e}") from e
 
-    log.info("Pestaña '%s': %d filas escritas", pestaña, len(filas))
+    log.info("Pestaña '%s': %d filas escritas (aspect_ratio=%s)",
+             pestaña, len(filas), aspect_ratio_filtrar)
     return len(filas)

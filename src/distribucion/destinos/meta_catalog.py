@@ -61,8 +61,10 @@ class MetaCatalogDestino(DestinoFeed):
         placas_subidas: list[PlacaSubida],
         decisiones: list[DecisionSeleccion],
     ) -> dict[str, int]:
-        """Agrupa por template, escribe 1 pestaña por grupo."""
-        placas_por_sku = {ps.sku: ps for ps in placas_subidas}
+        """Agrupa por template, escribe 1 pestaña por grupo.
+
+        Meta usa las placas 4:5 (Fase H: filtra del set total de placas).
+        """
         grupos = agrupar_por_template(productos, decisiones)
 
         if not grupos:
@@ -82,18 +84,17 @@ class MetaCatalogDestino(DestinoFeed):
                     pestaña=pestaña,
                     headers=HEADERS_META,
                     productos_grupo=productos_grupo,
-                    placas_por_sku=placas_por_sku,
+                    placas_subidas=placas_subidas,
                     moneda=self.cfg.moneda,
                     calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
+                    aspect_ratio_filtrar="4:5",
                 )
                 resultados[pestaña] = n
             except ErrorDestino as e:
-                # No abortamos las otras pestañas
                 log.error("Meta: falló pestaña '%s': %s", pestaña, e)
                 errores.append(f"{pestaña}: {e}")
 
         if errores and not resultados:
-            # Si TODAS las pestañas fallaron, sí abortamos
             raise ErrorDestino(f"Meta: todas las pestañas fallaron: {errores}")
 
         return resultados
