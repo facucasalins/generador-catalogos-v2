@@ -10,7 +10,6 @@ jobs:
   pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,8 +25,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # Cache de Playwright. Ahorra ~45s/run en cache-hit.
+      # Se invalida si cambia requirements.txt (asume nueva versión de playwright).
+      - name: Cache de browsers Playwright
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+
       - name: Instalar Chromium para Playwright
-        run: playwright install --with-deps chromium
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            # Binario en cache: solo instalamos deps del sistema (apt-get libs).
+            # Estas no se cachean entre runs.
+            playwright install-deps chromium
+          else
+            # Cache miss (primera vez o requirements cambió):
+            # descarga binario + instala deps del sistema.
+            playwright install --with-deps chromium
+          fi
 
       - name: Correr pipeline (Inventario + Selección + Enriquecimiento + Estilo + Storage + Feeds)
         env:
