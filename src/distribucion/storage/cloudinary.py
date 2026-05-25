@@ -68,16 +68,22 @@ class CloudinaryStorage(StorageBackend):
     def nombre(self) -> str:
         return "cloudinary"
 
-    def _public_id(self, sku: str) -> str:
-        """Convierte SKU a public_id (sin extensión, con folder).
+    def _public_id(self, sku: str, aspect_ratio: str = "4:5") -> str:
+        """Convierte SKU + aspect_ratio a public_id (sin extensión, con folder).
 
-        'GOLDNU0 CREA 300G' → 'morashop-v2/GOLDNU0_CREA_300G'
+        '4:5':  'GOLDNU0 CREA 300G' → 'morashop-v2/GOLDNU0_CREA_300G'
+        '9:16': 'GOLDNU0 CREA 300G' → 'morashop-v2/GOLDNU0_CREA_300G_9x16'
 
         Importante: el sanitizado debe ser el MISMO que usa playwright_html
         (para que el nombre del PNG en disco coincida con el public_id).
+        4:5 sin sufijo mantiene retrocompat con URLs viejas pre-Fase H.
         """
         sku_sanitizado = _sanitizar_sku(sku)
-        return f"{self.cfg.folder}/{sku_sanitizado}"
+        if aspect_ratio == "4:5":
+            sufijo = ""
+        else:
+            sufijo = "_" + aspect_ratio.replace(":", "x")
+        return f"{self.cfg.folder}/{sku_sanitizado}{sufijo}"
 
     def subir(self, placa: Placa) -> PlacaSubida:
         """Sube una placa a Cloudinary y devuelve la URL pública."""
@@ -85,8 +91,9 @@ class CloudinaryStorage(StorageBackend):
         if not path.exists():
             raise ErrorStorage(f"No existe el PNG local: {path}")
 
-        public_id = self._public_id(placa.sku)
-        log.info("Subiendo a Cloudinary: %s → %s", placa.sku, public_id)
+        public_id = self._public_id(placa.sku, placa.aspect_ratio)
+        log.info("Subiendo a Cloudinary: %s [%s] → %s",
+                 placa.sku, placa.aspect_ratio, public_id)
 
         try:
             response = cloudinary.uploader.upload(
@@ -119,7 +126,43 @@ class CloudinaryStorage(StorageBackend):
             sku=placa.sku,
             url_publica=url_publica,
             storage_backend="cloudinary",
+            aspect_ratio=placa.aspect_ratio,
         )
+
+    def borrar(self, sku: str) -> bool:
+        """Borra TODAS las imágenes de un SKU en Cloudinary (4:5 y 9:16).
+
+        Usado por la limpieza de SKUs huérfanos al final del pipeline.
+
+        Args:
+            sku: SKU del producto. Borra el public_id base + cualquier variante
+                con sufijo de aspect_ratio (_9x16).
+
+        Returns:
+            True si TODOS los aspect_ratios se borraron (o no existían).
+            False si alguno falló.
+            Nunca raisea: el borrado es best-effort.
+        """
+        # Intentamos borrar las dos variantes. Si Mora todavía no tiene 9:16,
+        # el 'not found' es válido y cuenta como éxito.
+        aspect_ratios_a_borrar = ["4:5", "9:16"]
+        todo_ok = True
+        for ar in aspect_ratios_a_borrar:
+            public_id = self._public_id(sku, ar)
+            log.info("Cloudinary: borrando %s [%s] (public_id=%s)", sku, ar, public_id)
+            try:
+                result = cloudinary.uploader.destroy(
+                    public_id, resource_type="image", invalidate=True,
+                )
+                res = result.get("result", "")
+                if res not in ("ok", "not found"):
+                    log.warning("Cloudinary: borrado de %s [%s] devolvió result=%s",
+                                sku, ar, res)
+                    todo_ok = False
+            except Exception as e:
+                log.warning("Cloudinary: falló borrado de %s [%s]: %s", sku, ar, e)
+                todo_ok = False
+        return todo_ok
 
 
 def _sanitizar_sku(sku: str) -> str:
