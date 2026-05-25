@@ -148,10 +148,22 @@ def test_prompt_incluye_tono():
 def test_prompt_incluye_limites():
     cfg = _cfg(max_titulo=60, max_desc=200, n_tips=3, max_tip=40)
     prompt = _construir_prompt(_producto(), cfg)
+    # v2 prompt usa los números directamente
     assert "60 caracteres" in prompt
     assert "200 caracteres" in prompt
-    assert "40 caracteres" in prompt
+    assert "40 chars" in prompt  # cambió formato
     assert "3 tips" in prompt
+
+
+def test_prompt_v2_tiene_reglas_anti_cliches():
+    """El prompt v2 debe prohibir exclamaciones y clichés explícitamente."""
+    prompt = _construir_prompt(_producto(), _cfg())
+    # Anti exclamaciones
+    assert "CERO signos de exclamación" in prompt or "0 signos" in prompt or "sin exclamación" in prompt.lower()
+    # Anti clichés
+    assert "ideal para vos" in prompt.lower() or "es para vos" in prompt.lower()
+    # Few-shot examples
+    assert "Ejemplo" in prompt or "ejemplo" in prompt
 
 
 # ============ _extraer_json_de_respuesta ============
