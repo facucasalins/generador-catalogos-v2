@@ -48,16 +48,48 @@ class ConfigGemini:
 
 
 def _construir_prompt(producto: Producto, cfg: ConfigGemini) -> str:
-    """Prompt que le pedimos a Gemini.
+    """Prompt v2 (más estricto, sin exclamaciones, sin clichés).
 
-    Le damos contexto del producto y le pedimos JSON con campos fijos.
-    Importante: usamos respuesta forzada JSON (response_mime_type) además
-    del prompt, así que aunque divague va a devolver JSON parseable.
+    Reglas duras para evitar los patrones malos detectados en v1:
+    - 0 signos de exclamación
+    - Sin clichés publicitarios genéricos
+    - Priorizar hechos (litros, watts, materiales) sobre adjetivos
+    - Tips distintos del título y descripción
+    - Sin info comercial (cuotas, envío, descuentos)
+    - Few-shot examples (bueno + malo) para anclar el estilo
     """
-    return f"""Sos un experto en marketing digital y copy para e-commerce.
-Generá metadata optimizada para Meta Ads y TikTok Ads para este producto.
+    return f"""Sos copywriter senior especializado en e-commerce argentino. Generás metadata
+optimizada para Meta Ads y TikTok Ads.
 
 Tono: {cfg.tono}
+
+REGLAS DURAS (no negociables):
+
+1. CERO signos de exclamación (¡ o !). Lenguaje sobrio, profesional.
+
+2. CERO clichés publicitarios. Frases prohibidas (no usar nunca):
+   - "ideal para vos" / "es para vos" / "pensado para vos"
+   - "al siguiente nivel" / "máxima calidad" / "calidad superior"
+   - "tu mejor aliado" / "el mejor del mercado"
+   - "no te lo pierdas" / "aprovechalo"
+   - "diseñado para vos" / "hecho para vos"
+   - Adjetivos vagos solos: "increíble", "fantástico", "espectacular"
+
+3. PRIORIZAR HECHOS sobre adjetivos. Si el producto tiene:
+   - capacidad (litros, kg, ml), potencia (W), medidas → INCLUILA
+   - materiales (acero, silicona, plástico) → INCLUILOS si son relevantes
+   - cantidad de partes/accesorios incluidos → MENCIONALA
+   - certificaciones (sin BPA, libre de gluten) → DESTACALA
+   Preferí "Horno 45L con convección" sobre "Horno potente y versátil".
+
+4. NO incluyas info comercial: envío, cuotas, descuentos, transferencia,
+   precios, marca. Eso lo agrega Meta automáticamente del feed.
+
+5. LOS TIPS NO REPITEN el título ni la descripción. Cada tip debe agregar
+   info que NO está en los otros dos campos.
+
+6. Cada tip resalta UN beneficio CONCRETO y DISTINTO. Nada de "más fuerza
+   y resistencia" (vago). Sí "Recuperación en 24hs" (concreto).
 
 Producto:
 - Nombre: {producto.nombre}
@@ -65,25 +97,45 @@ Producto:
 - Marca: {producto.marca or "(sin marca)"}
 - Categoría: {producto.categoria or "(sin categoría)"}
 
-Devolvé un JSON con esta estructura exacta:
+EJEMPLOS DE BUEN OUTPUT:
+
+Ejemplo 1 (parlante bluetooth portátil):
 {{
-  "titulo_corto": "string máximo {cfg.max_chars_titulo} caracteres, claro y conciso, destacar lo principal",
-  "descripcion_corta": "string máximo {cfg.max_chars_descripcion} caracteres, descriptiva y persuasiva",
-  "tips": ["tip 1", "tip 2", "tip 3"]
+  "titulo_corto": "Parlante bluetooth 20W con 12hs de batería",
+  "descripcion_corta": "Sonido envolvente con 20W de potencia y resistencia al agua IPX7. Conexión bluetooth 5.0 estable hasta 10 metros. Batería de 4000 mAh para 12 horas continuas.",
+  "tips": ["Resistente al agua IPX7", "12 horas de batería", "Conecta dos parlantes"]
 }}
 
-Reglas para los tips:
-- Exactamente {cfg.cantidad_tips} tips
-- Cada tip máximo {cfg.max_chars_tip} caracteres
-- Cortos, punchy, destacan un beneficio concreto
-- Ejemplos de buen tip: "Bajo consumo", "Ideal para casa", "Llevátelo a todos lados"
-- NO uses jerga publicitaria genérica ("la mejor calidad", "increíble")
-- Cada tip debe resaltar UN beneficio específico distinto del producto
+Ejemplo 2 (zapatillas running):
+{{
+  "titulo_corto": "Zapatillas running con amortiguación EVA",
+  "descripcion_corta": "Suela de EVA inyectada para reducir el impacto en cada pisada. Upper de mesh transpirable y refuerzo lateral. Drop de 8mm pensado para correr 5K a 21K.",
+  "tips": ["Drop 8mm para correr largo", "Mesh que ventila el pie", "Suela antideslizante"]
+}}
 
-Reglas generales:
-- Respondé SOLO el JSON, sin texto adicional, sin markdown, sin ```
-- Respetá ESTRICTAMENTE los límites de caracteres
-- Si el producto tiene poca info, usá lo que tengas con criterio"""
+EJEMPLOS DE MAL OUTPUT (NUNCA hagas esto):
+
+Mal 1: "¡Las mejores zapatillas para vos! ¡Calidad premium al siguiente nivel!"
+  → Demasiadas exclamaciones, clichés, sin info concreta.
+
+Mal 2: tips=["Excelente calidad", "Lo vas a amar", "Aprovechá la oferta"]
+  → Vacíos, genéricos, mencionan oferta (info comercial).
+
+FORMATO DE RESPUESTA:
+
+Devolvé SOLO un JSON con esta estructura. Sin markdown, sin ``` , sin texto extra:
+{{
+  "titulo_corto": "máximo {cfg.max_chars_titulo} caracteres",
+  "descripcion_corta": "máximo {cfg.max_chars_descripcion} caracteres",
+  "tips": [
+    "tip 1 (máx {cfg.max_chars_tip} chars)",
+    "tip 2 (máx {cfg.max_chars_tip} chars)",
+    "tip 3 (máx {cfg.max_chars_tip} chars)"
+  ]
+}}
+
+Exactamente {cfg.cantidad_tips} tips. Si el producto tiene poca info, hacé
+lo mejor posible con lo que tengas — pero respetá todas las reglas."""
 
 
 def _llamar_gemini(cfg: ConfigGemini, prompt: str) -> dict:
