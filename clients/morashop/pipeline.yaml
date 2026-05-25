@@ -51,7 +51,7 @@ enriquecimiento:
 #  - 9:16 (1080x1920) → TikTok, usa template + sufijo "_tiktok".
 # Cada aspect_ratio se trackea por separado en el historial (clave compuesta).
 # Para que 9:16 funcione, en clients/morashop/templates/ deben existir los HTML
-# con sufijo _tiktok (ej: default_tiktok.html, electrohogar_tiktok.html).
+# con sufijo _tiktok (ej: default_tiktok.html, electro_tiktok.html).
 estilo:
   motor: playwright_html
   config:
