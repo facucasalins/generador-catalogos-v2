@@ -92,7 +92,7 @@ def calcular_hash_input(producto: Producto, proveedor: str) -> str:
         producto.marca or "",
         producto.categoria or "",
         proveedor,
-        "v2",  # versión del prompt; bumpealo manualmente si cambias prompt
+        "v3",  # versión del prompt; bumpealo manualmente si cambias prompt
     ]
     blob = "||".join(partes).encode("utf-8")
     return hashlib.sha256(blob).hexdigest()[:16]

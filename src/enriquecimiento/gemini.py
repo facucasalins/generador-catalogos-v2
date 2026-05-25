@@ -91,6 +91,16 @@ REGLAS DURAS (no negociables):
 6. Cada tip resalta UN beneficio CONCRETO y DISTINTO. Nada de "más fuerza
    y resistencia" (vago). Sí "Recuperación en 24hs" (concreto).
 
+7. BENEFICIOS sobre MECANISMOS. Hablale al consumidor final, no al fabricante.
+   Mal (mecanismo): "Zinc contribuye a síntesis de proteínas"
+   Bien (beneficio): "Ayuda a recuperarte más rápido"
+   Mal (mecanismo): "Magnesio apoya equilibrio electrolítico"
+   Bien (beneficio): "Reduce los calambres después de entrenar"
+   Mal (jerga): "Bio-disponible para el cuerpo"
+   Bien (claro): "Tu cuerpo lo absorbe rápido"
+   Si el producto tiene compuestos técnicos, explicá QUÉ HACEN POR EL USUARIO,
+   no qué son.
+
 Producto:
 - Nombre: {producto.nombre}
 - Descripción: {producto.descripcion or "(sin descripción)"}
@@ -258,14 +268,36 @@ def _validar_y_recortar(
 
 
 def _recortar(texto: str, max_chars: int) -> str:
-    """Recorta texto al último espacio antes del límite. Si no hay, corta duro."""
+    """Recorta texto preservando oraciones completas cuando es posible.
+
+    Estrategia:
+    1. Si el texto ya entra → no recorta.
+    2. Buscar el último fin de oración (.!?) en zona razonable (>=60% del límite).
+       Si lo encuentra → cortar ahí (incluye el signo).
+    3. Fallback: buscar último espacio (no cortar palabra a la mitad).
+    4. Último recurso: corte duro al límite.
+    """
     if len(texto) <= max_chars:
         return texto
-    # Buscar el último espacio para no cortar palabras
+
     recortado = texto[:max_chars]
+    umbral = int(max_chars * 0.6)
+
+    # 1. Buscar último fin de oración en zona razonable
+    mejor_fin_oracion = max(
+        recortado.rfind("."),
+        recortado.rfind("!"),
+        recortado.rfind("?"),
+    )
+    if mejor_fin_oracion >= umbral:
+        return recortado[:mejor_fin_oracion + 1].rstrip()
+
+    # 2. Fallback: último espacio
     ultimo_espacio = recortado.rfind(" ")
-    if ultimo_espacio > max_chars * 0.7:  # si el espacio está en un lugar razonable
+    if ultimo_espacio > max_chars * 0.7:
         return recortado[:ultimo_espacio].rstrip()
+
+    # 3. Corte duro
     return recortado.rstrip()
 
 
