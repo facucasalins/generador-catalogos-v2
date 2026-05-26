@@ -470,6 +470,8 @@ def correr_pipeline(
             placa_height=ar_height,
             variables_globales=cfg_estilo_inner.get("variables_globales", {}),
             hotsale_discount_factor=cfg_estilo_inner.get("hotsale_discount_factor", 1.0),
+            descuento_efectivo_factor=cfg_estilo_inner.get("descuento_efectivo_factor"),
+            cuotas_sobre_promocional=cfg_estilo_inner.get("cuotas_sobre_promocional", False),
         )
 
         # Para este aspect_ratio: separar regenerar vs reusar
