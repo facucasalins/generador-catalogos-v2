@@ -103,18 +103,18 @@ def construir_fuente_inventario(cfg_inv: dict):
         if not token:
             log.error("Falta env var %s", token_secret)
             sys.exit(11)
-        # Flags opt-in: si no están en el yaml, se usan los defaults
-        # del dataclass ConfigTiendanube (retrocompat con clientes existentes).
-        sku_fallback = inner.get("sku_fallback_handle_variant", False)
-        if sku_fallback:
+        # Flag opt-in agrupar_por_producto: si no está en el yaml usa el
+        # default del dataclass (False = retrocompat con Mora).
+        agrupar = inner.get("agrupar_por_producto", False)
+        if agrupar:
             log.info(
-                "[TN] sku_fallback_handle_variant=True: variantes sin SKU "
-                "se autogenerarán como '{handle}-{variant_id}'."
+                "[TN] agrupar_por_producto=True: 1 fila por producto TN "
+                "(SKU = handle, agrupa variantes de talle/color)."
             )
         return TiendanubeInventario(ConfigTiendanube(
             store_id=str(store_id),
             access_token=str(token),
-            sku_fallback_handle_variant=bool(sku_fallback),
+            agrupar_por_producto=bool(agrupar),
         ))
     log.error("Fuente de inventario no soportada: %s", fuente_tipo)
     sys.exit(20)
