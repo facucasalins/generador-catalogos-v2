@@ -3,17 +3,23 @@
 Documentación: https://tiendanube.github.io/api-documentation/resources/product
 
 Conceptos clave:
-- Un producto en TN tiene N variantes. Cada variante tiene su propio SKU.
-- En nuestro modelo, cada variante = un `Producto` separado (1 fila por SKU).
+- Un producto en TN tiene N variantes (talles/colores). Cada variante PUEDE
+  tener su propio SKU.
+- Hay 2 modos de mapeo a `Producto`, elegibles vía `agrupar_por_producto`:
+
+  MODO 1 (default, False): "1 fila por variante con SKU".
+      Cada variante con SKU explícito genera un Producto independiente.
+      Variantes sin SKU se descartan con warning.
+      Usado por Mora (suplementos): cada SKU = ítem distinto en feed.
+
+  MODO 2 (True): "1 fila por producto del catálogo".
+      Cada producto TN genera UN solo Producto, agrupando sus variantes.
+      SKU = handle (identificador de URL). Precio = primera variante.
+      Stock = suma de todas las variantes (disponible si alguna tiene).
+      Usado por Shark (ropa): el link manda a la página del producto donde
+      el comprador elige talle/color. Evita duplicados en feed.
 - Campos multi-idioma vienen como {"es": "valor"}. Asumimos siempre "es".
 - Paginación: ?page=N, hasta `per_page=200` por request.
-
-Fallback de SKU (opt-in):
-- Tiendas que NO cargan SKU explícito en variantes (típico en ropa) pueden
-  activar `sku_fallback_handle_variant=True` en la config. Si una variante
-  no tiene SKU, se genera automáticamente como "{handle}-{variant_id}".
-- Por defecto está apagado: variantes sin SKU se ignoran (comportamiento
-  histórico, retrocompat con Mora y otras tiendas que sí cargan SKU).
 """
 from __future__ import annotations
 import logging
@@ -43,10 +49,12 @@ class ConfigTiendanube:
     max_paginas: int = 100       # safeguard contra loops
     timeout_segundos: int = 30
     retraso_entre_paginas: float = 0.3  # ser amable con el rate limit
-    # Fallback opt-in: si la variante no tiene SKU, generar "{handle}-{variant_id}".
-    # Útil para tiendas (típicamente ropa) que no cargan SKU explícito en TN.
-    # Default False = comportamiento histórico (ignorar variantes sin SKU).
-    sku_fallback_handle_variant: bool = False
+    # Modo de agrupación opt-in:
+    # - False (default): 1 Producto por variante con SKU (Mora). Retrocompat.
+    # - True: 1 Producto por producto TN, agrupando variantes. SKU = handle.
+    #   Útil para ropa/calzado donde las variantes son talles/colores y el
+    #   link manda a la página del producto.
+    agrupar_por_producto: bool = False
 
 
 # ============ Helpers de parseo ============
@@ -100,21 +108,19 @@ def _a_int(valor) -> Optional[int]:
         return None
 
 
-def _construir_sku_fallback(handle: str, variant_id) -> Optional[str]:
-    """Genera SKU como "{handle}-{variant_id}" para variantes sin SKU explícito.
+def _sku_desde_handle(handle: str, product_id) -> Optional[str]:
+    """Genera SKU a partir del handle (Identificador de URL en TN).
 
-    - El handle es el 'Identificador de URL' de TN (slug del producto).
-    - Incluir variant_id garantiza unicidad cuando un producto tiene varias
-      variantes (talles/colores) sin SKU propio.
-    - Devuelve None si falta cualquiera de los dos (no podemos generar).
+    Caso normal: handle válido → usar tal cual ('remera-oversize-negra').
+    Fallback defensivo: si TN no devuelve handle (raro), usar 'tn-{product_id}'.
+    Devuelve None si tampoco hay product_id (no podemos generar nada único).
     """
-    if not variant_id:
-        return None
     handle_limpio = (handle or "").strip()
-    if not handle_limpio:
-        # Sin handle no podemos generar SKU legible; usar solo variant_id.
-        return f"tn-{variant_id}"
-    return f"{handle_limpio}-{variant_id}"
+    if handle_limpio:
+        return handle_limpio
+    if product_id:
+        return f"tn-{product_id}"
+    return None
 
 
 # ============ Implementación ============
@@ -185,15 +191,12 @@ class TiendanubeInventario(FuenteInventario):
         log.info("TN: %d productos (con variantes) traídos en total", len(productos_tn))
         return productos_tn
 
-    def _producto_tn_a_modelo(self, producto_tn: dict) -> list[Producto]:
-        """Convierte 1 producto TN en N Productos (uno por variante)."""
-        productos: list[Producto] = []
-
+    def _extraer_comunes(self, producto_tn: dict) -> dict:
+        """Extrae los campos compartidos entre ambos modos (nombre, marca, etc)."""
         nombre = _campo_es(producto_tn.get("name"))
         descripcion = limpiar_html(_campo_es(producto_tn.get("description")))
         marca = (producto_tn.get("brand") or "").strip()
         url_producto = producto_tn.get("canonical_url") or ""
-        # El handle (Identificador de URL en TN) lo usamos como fallback de SKU.
         handle = _campo_es(producto_tn.get("handle"))
 
         # Categoría: tomamos la primera (TN permite N pero el caso típico es 1)
@@ -204,14 +207,30 @@ class TiendanubeInventario(FuenteInventario):
         imagenes = producto_tn.get("images") or []
         imagen_url = imagenes[0].get("src", "") if imagenes else ""
 
-        # Metadata extra a guardar en `enriquecimiento` para no perderla
-        # (lo usamos como "campo libre" del modelo).
-        meta = {
+        return {
+            "nombre": nombre,
+            "descripcion": descripcion,
+            "marca": marca,
+            "url_producto": url_producto,
+            "handle": handle,
+            "categoria": categoria,
+            "imagen_url": imagen_url,
+        }
+
+    def _meta_base(self, producto_tn: dict) -> dict:
+        """Metadata base del producto TN, sin info de variante."""
+        return {
             "tn_product_id": producto_tn.get("id"),
             "tn_published": producto_tn.get("published", False),
             "tn_has_stock": producto_tn.get("has_stock", False),
             "tn_is_kit": producto_tn.get("is_kit", False),
         }
+
+    def _mapear_por_variante(self, producto_tn: dict) -> list[Producto]:
+        """MODO 1 (Mora): cada variante con SKU → un Producto separado."""
+        productos: list[Producto] = []
+        comunes = self._extraer_comunes(producto_tn)
+        meta = self._meta_base(producto_tn)
 
         variantes = producto_tn.get("variants") or []
         if not variantes:
@@ -220,96 +239,162 @@ class TiendanubeInventario(FuenteInventario):
 
         for variante in variantes:
             sku = (variante.get("sku") or "").strip()
-            sku_es_fallback = False
             if not sku:
-                # Sin SKU explícito: intentar fallback si está habilitado.
-                if self.cfg.sku_fallback_handle_variant:
-                    sku = _construir_sku_fallback(handle, variante.get("id")) or ""
-                    sku_es_fallback = bool(sku)
-                    if sku:
-                        log.debug(
-                            "SKU fallback generado para producto_id=%s variant_id=%s: %s",
-                            producto_tn.get("id"), variante.get("id"), sku,
-                        )
-                if not sku:
-                    # Ni SKU explícito ni fallback disponible: ignorar.
-                    log.warning(
-                        "Variante sin SKU ignorada: producto_id=%s variant_id=%s",
-                        producto_tn.get("id"), variante.get("id"),
-                    )
-                    continue
+                # Sin SKU no podemos trackearlo. Ignoramos.
+                log.warning(
+                    "Variante sin SKU ignorada: producto_id=%s variant_id=%s",
+                    producto_tn.get("id"), variante.get("id"),
+                )
+                continue
 
             precio_lista = _a_float(variante.get("price"))
             if precio_lista is None:
                 log.warning("SKU %s sin precio_lista, ignorado", sku)
                 continue
 
-            # En TN: `promotional_price` < `price` = está en promo.
-            # `compare_at_price` es el precio tachado (>price) para mostrar ahorro.
-            # Nuestro modelo es más simple: precio_lista + opcional precio_promocional.
             precio_promo = _a_float(variante.get("promotional_price"))
 
             meta_variante = {
                 **meta,
                 "tn_variant_id": variante.get("id"),
                 "tn_compare_at_price": variante.get("compare_at_price"),
-                "tn_sku_es_fallback": sku_es_fallback,
             }
 
             productos.append(Producto(
                 sku=sku,
-                nombre=nombre or sku,
-                descripcion=descripcion,
+                nombre=comunes["nombre"] or sku,
+                descripcion=comunes["descripcion"],
                 precio_lista=precio_lista,
                 precio_promocional=precio_promo,
                 cuotas_num=3,  # default acordado (TN no devuelve cuotas)
                 stock=_a_int(variante.get("stock")),
-                categoria=categoria,
-                marca=marca,
-                imagen_url=imagen_url,
-                url_producto=url_producto,
+                categoria=comunes["categoria"],
+                marca=comunes["marca"],
+                imagen_url=comunes["imagen_url"],
+                url_producto=comunes["url_producto"],
                 fuente="tiendanube",
                 enriquecimiento=meta_variante,
             ))
 
         return productos
 
+    def _mapear_agrupado(self, producto_tn: dict) -> list[Producto]:
+        """MODO 2 (Shark): 1 Producto por producto TN, agrupando variantes.
+
+        - SKU = handle (identificador de URL TN), o "tn-{product_id}" si no hay
+        - Precio = primera variante (asumimos que todas las variantes valen igual)
+        - Stock = suma de variantes (disponible si alguna tiene stock)
+        - Imagen, nombre, etc. = del producto padre
+        """
+        comunes = self._extraer_comunes(producto_tn)
+        meta = self._meta_base(producto_tn)
+
+        variantes = producto_tn.get("variants") or []
+        if not variantes:
+            log.warning(
+                "Producto TN %s sin variantes, ignorado",
+                producto_tn.get("id"),
+            )
+            return []
+
+        sku = _sku_desde_handle(comunes["handle"], producto_tn.get("id"))
+        if not sku:
+            log.warning(
+                "Producto TN %s sin handle ni id, ignorado",
+                producto_tn.get("id"),
+            )
+            return []
+
+        # Tomamos la primera variante como referencia de precio.
+        # El usuario confirmó que en Shark todas las variantes valen igual;
+        # si alguna vez aparece un caso con precios distintos, lo veremos
+        # en los logs (precio_min vs precio_max).
+        primera = variantes[0]
+        precio_lista = _a_float(primera.get("price"))
+        if precio_lista is None:
+            log.warning("Producto %s sin precio en primera variante, ignorado", sku)
+            return []
+        precio_promo = _a_float(primera.get("promotional_price"))
+
+        # Stock agregado: suma de variantes con stock numérico.
+        # Si todas tienen stock=None, dejamos None (no asumimos nada).
+        stocks = [_a_int(v.get("stock")) for v in variantes]
+        stocks_validos = [s for s in stocks if s is not None]
+        stock_total = sum(stocks_validos) if stocks_validos else None
+
+        # Sanity check: si las variantes tienen precios distintos, lo logueamos
+        # como warning para que el usuario lo vea (no abortamos).
+        precios_variantes = {_a_float(v.get("price")) for v in variantes}
+        precios_variantes.discard(None)
+        if len(precios_variantes) > 1:
+            log.warning(
+                "Producto %s tiene variantes con precios distintos (%s). "
+                "Usando el de la primera variante: $%.2f",
+                sku, sorted(precios_variantes), precio_lista,
+            )
+
+        meta_agrupada = {
+            **meta,
+            "tn_handle": comunes["handle"],
+            "tn_variantes_total": len(variantes),
+            "tn_variantes_con_stock": sum(
+                1 for s in stocks_validos if s > 0
+            ),
+            "tn_sku_es_handle": True,  # marca: este SKU es autogenerado del handle
+        }
+
+        return [Producto(
+            sku=sku,
+            nombre=comunes["nombre"] or sku,
+            descripcion=comunes["descripcion"],
+            precio_lista=precio_lista,
+            precio_promocional=precio_promo,
+            cuotas_num=3,
+            stock=stock_total,
+            categoria=comunes["categoria"],
+            marca=comunes["marca"],
+            imagen_url=comunes["imagen_url"],
+            url_producto=comunes["url_producto"],
+            fuente="tiendanube",
+            enriquecimiento=meta_agrupada,
+        )]
+
+    def _producto_tn_a_modelo(self, producto_tn: dict) -> list[Producto]:
+        """Convierte 1 producto TN en N Productos según el modo configurado."""
+        if self.cfg.agrupar_por_producto:
+            return self._mapear_agrupado(producto_tn)
+        return self._mapear_por_variante(producto_tn)
+
     def traer_productos(self) -> list[Producto]:
         """Trae todo el catálogo y lo normaliza a lista de Producto.
 
         Estrategia:
         - Pagina hasta agotar el catálogo
-        - Cada producto TN puede generar N Productos (1 por variante con SKU)
-        - Productos/variantes sin SKU o sin precio se ignoran con warning
-          (a menos que sku_fallback_handle_variant esté activo)
+        - El mapeo a Producto depende del modo (ver `agrupar_por_producto`)
         - Errores HTTP se propagan (no es seguro continuar si falla la API)
         """
         productos_tn = self._traer_todos_los_productos_tn()
 
         productos: list[Producto] = []
-        ignorados_sin_variantes = 0
+        ignorados = 0
 
         for p_tn in productos_tn:
-            variantes_modelo = self._producto_tn_a_modelo(p_tn)
-            if not variantes_modelo:
-                ignorados_sin_variantes += 1
+            mapeados = self._producto_tn_a_modelo(p_tn)
+            if not mapeados:
+                ignorados += 1
                 continue
-            productos.extend(variantes_modelo)
+            productos.extend(mapeados)
 
-        # Contar cuántos usaron fallback (útil para diagnóstico).
-        con_fallback = sum(
-            1 for p in productos
-            if p.enriquecimiento and p.enriquecimiento.get("tn_sku_es_fallback")
-        )
-        if con_fallback:
+        if self.cfg.agrupar_por_producto:
             log.info(
-                "TN: %d Producto generados (de %d productos TN). "
-                "%d productos sin variantes válidas. %d con SKU fallback (handle-variant_id).",
-                len(productos), len(productos_tn), ignorados_sin_variantes, con_fallback,
+                "TN: %d Producto generados (modo agrupado, 1 por producto TN). "
+                "%d productos TN ignorados (sin variantes válidas).",
+                len(productos), ignorados,
             )
         else:
             log.info(
-                "TN: %d Producto generados (de %d productos TN). %d productos sin variantes válidas.",
-                len(productos), len(productos_tn), ignorados_sin_variantes,
+                "TN: %d Producto generados (modo por variante). "
+                "%d productos TN sin variantes válidas.",
+                len(productos), ignorados,
             )
         return productos
