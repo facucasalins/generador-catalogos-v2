@@ -1,0 +1,100 @@
+# ====================================================================
+# Pipeline de Shark V1
+# ====================================================================
+# Onboarding: 2026-05-26
+# Tienda: Tiendanube (vía app "Agency Nusa Analytics", App ID 28059)
+# ====================================================================
+
+cliente:
+  nombre: shark
+  brand_name: SHARK
+  zona_horaria: America/Argentina/Buenos_Aires
+
+# ============ BLOQUE 1: INVENTARIO ============
+inventario:
+  fuente: tiendanube
+  config:
+    store_id_secret: SHARK_TIENDANUBE_STORE_ID
+    access_token_secret: SHARK_TIENDANUBE_TOKEN
+    sheet_destino:
+      id: "1nRY50vdK-76X_7Jv_I2IZITy_kui_HvqPNHXjdkcct0"
+      pestaña: Inventario
+
+# ============ BLOQUE 2: SELECCIÓN ============
+seleccion:
+  fuente: sheet_manual
+  config:
+    sheet:
+      id: "1hly2JItsBrzbFudkez4Ieu_64HBvkriRxOvcMP6_bb8"
+      pestaña: Seleccion
+    template_default: default
+
+# ============ BLOQUE 3: ENRIQUECIMIENTO ============
+# Llama a Gemini para generar titulo_corto + descripcion_corta + tips.
+# Cache en pestaña 'Enriquecimiento' del sheet de Inventario.
+# Si Gemini falla en un SKU → ese SKU NO entra al feed.
+enriquecimiento:
+  proveedor: gemini
+  config:
+    api_key_secret: GEMINI_API_KEY
+    modelo: gemini-2.5-flash
+    max_chars_titulo: 60
+    max_chars_descripcion: 200
+    cantidad_tips: 3
+    max_chars_tip: 40
+    tono: "Argentino, jovial, dirigido a personas que les gusta la moda. Usa voseo cuando corresponda (ej: 'llevátelo', 'es para vos'). Lenguaje natural."
+
+# ============ BLOQUE 4: ESTILO ============
+# Por ahora Shark NO usa descuento efectivo (a diferencia de Mora).
+# Si en algún momento Shark suma promo de "X% off en efectivo", se activa
+# descomentando las 2 líneas marcadas y los templates pasan a usar
+# precio_efectivo_formateado.
+estilo:
+  motor: playwright_html
+  config:
+    placa_width: 1080
+    placa_height: 1350
+    hotsale_discount_factor: 1.0
+
+    # descuento_efectivo_factor: 0.85    # ← descomentar si Shark suma promo
+    # cuotas_sobre_promocional: true     # ← descomentar si Shark suma promo
+
+    aspect_ratios:
+      - label: "4:5"
+        width: 1080
+        height: 1350
+        template_suffix: ""
+      - label: "9:16"
+        width: 1080
+        height: 1920
+        template_suffix: "_tiktok"
+
+    variables_globales:
+      brand_name: SHARK
+      logo_url: "https://acdn-us.mitiendanube.com/stores/001/511/342/themes/common/logo-1618213504-1767785834-13687a37491cf881c2b0d601e1cddd761767785834.png?0"
+      evento_legal: ""
+
+# ============ BLOQUE 5: DISTRIBUCIÓN ============
+# Reusa la cuenta de Cloudinary de Mora pero en folder distinto.
+# Los secrets CLOUDINARY_* ya están en GitHub (no hay que crear).
+distribucion:
+  storage:
+    backend: cloudinary
+    config:
+      cloud_name_secret: CLOUDINARY_CLOUD_NAME
+      api_key_secret: CLOUDINARY_API_KEY
+      api_secret_secret: CLOUDINARY_API_SECRET
+      folder: shark
+
+  destinos:
+    - tipo: meta_catalog
+      config:
+        sheet_id: "1r1UPXaSgKj142P0dtbztr7ZUNNJV-vOCDAfBnUoWDkE"
+        moneda: ARS
+        calcular_availability_por_stock: true
+
+    - tipo: tiktok_catalog
+      config:
+        sheet_id: "1r1UPXaSgKj142P0dtbztr7ZUNNJV-vOCDAfBnUoWDkE"
+        moneda: ARS
+        calcular_availability_por_stock: true
