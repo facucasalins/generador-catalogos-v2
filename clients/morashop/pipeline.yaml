@@ -62,6 +62,14 @@ estilo:
     placa_height: 1350
     hotsale_discount_factor: 1.0
 
+    # 15% off sobre el precio web (precio_promocional de TN).
+    # Genera la variable {precio_efectivo_formateado} que va GRANDE en placa.
+    descuento_efectivo_factor: 0.85
+
+    # Cuotas se calculan sobre precio_promocional (precio web) en vez de
+    # precio_lista. Refleja que las cuotas sin interés aplican al precio web.
+    cuotas_sobre_promocional: true
+
     # Loop multi-aspect-ratio (Fase H activación)
     aspect_ratios:
       - label: "4:5"
