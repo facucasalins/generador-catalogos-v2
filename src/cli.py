@@ -92,8 +92,9 @@ def cargar_pipeline_yaml(cliente: str) -> dict:
 def construir_fuente_inventario(cfg_inv: dict):
     fuente_tipo = cfg_inv.get("fuente")
     if fuente_tipo == "tiendanube":
-        store_id_secret = cfg_inv["config"]["store_id_secret"]
-        token_secret = cfg_inv["config"]["access_token_secret"]
+        inner = cfg_inv.get("config", {})
+        store_id_secret = inner["store_id_secret"]
+        token_secret = inner["access_token_secret"]
         store_id = os.environ.get(store_id_secret)
         token = os.environ.get(token_secret)
         if not store_id:
@@ -102,8 +103,18 @@ def construir_fuente_inventario(cfg_inv: dict):
         if not token:
             log.error("Falta env var %s", token_secret)
             sys.exit(11)
+        # Flags opt-in: si no están en el yaml, se usan los defaults
+        # del dataclass ConfigTiendanube (retrocompat con clientes existentes).
+        sku_fallback = inner.get("sku_fallback_handle_variant", False)
+        if sku_fallback:
+            log.info(
+                "[TN] sku_fallback_handle_variant=True: variantes sin SKU "
+                "se autogenerarán como '{handle}-{variant_id}'."
+            )
         return TiendanubeInventario(ConfigTiendanube(
-            store_id=str(store_id), access_token=str(token),
+            store_id=str(store_id),
+            access_token=str(token),
+            sku_fallback_handle_variant=bool(sku_fallback),
         ))
     log.error("Fuente de inventario no soportada: %s", fuente_tipo)
     sys.exit(20)
