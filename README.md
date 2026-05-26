@@ -1,55 +1,109 @@
-# generador-catalogos-v2
+# Generador de Catálogos v2
 
-> 🚧 **Sistema en construcción** — Este es un repositorio nuevo. v1 (`generador-catalogos`) sigue corriendo en producción.
+Sistema multi-cliente para generar **placas de producto automáticamente** y publicarlas como catálogos de Meta y TikTok.
 
-Pipeline modular para generar placas publicitarias y feeds de catálogo para Meta Ads, TikTok Ads y otros destinos. Diseñado para escalar a múltiples clientes de Agency Nusa.
+Cada día, para cada cliente, el pipeline:
+1. Lee inventario desde Tiendanube
+2. Selecciona los SKUs marcados por el cliente
+3. Enriquece textos con IA (Gemini)
+4. Renderiza placas con HTML+Playwright (4:5 para Meta, 9:16 para TikTok)
+5. Sube las imágenes a Cloudinary
+6. Escribe los feeds a Google Sheets listos para Meta/TikTok Catalog Manager
 
-## Estado actual
+Notifica el resultado por Telegram. Funciona en GitHub Actions.
 
-**Fase A — Setup de infraestructura** (en curso).
+---
 
-Ver [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) para el diseño completo.
+## 🚀 Quickstart
 
-## ¿Por qué v2?
+**¿Querés agregar un cliente nuevo?**
+→ Leé **[`docs/01-quickstart-nuevo-cliente.md`](docs/01-quickstart-nuevo-cliente.md)**.
 
-v1 funciona pero está acoplado al caso de MoraShop, con varios pasos manuales no documentados y un Apps Script roto. v2 implementa la arquitectura de 5 bloques modulares descrita en `ARCHITECTURE.md`:
+**¿Querés diseñar templates para un cliente?**
+→ Leé **[`docs/02-diseno-templates.md`](docs/02-diseno-templates.md)**.
+
+**¿Querés entender cómo funciona el sistema por dentro?**
+→ Leé **[`docs/03-arquitectura.md`](docs/03-arquitectura.md)**.
+
+**¿Algo no anda?**
+→ Leé **[`docs/04-troubleshooting.md`](docs/04-troubleshooting.md)**.
+
+---
+
+## Clientes activos
+
+| Cliente | Estado | Industria | Cron |
+|---|---|---|---|
+| MoraShop | ✅ Activo | Suplementos + electrohogar | 06:00 ART diario |
+| Shark | 🟡 Pendiente | Ropa deportiva | - |
+| Juanita Shoes | 🟡 Pendiente | Calzado femenino | - |
+| Antonia | 🟡 Pendiente | Calzado femenino | - |
+
+---
+
+## Stack técnico
+
+- **Lenguaje**: Python 3.11
+- **Orquestación**: GitHub Actions (1 workflow por cliente)
+- **Inventario**: Tiendanube API
+- **IA**: Google Gemini 2.5 Flash
+- **Renderizado**: Playwright + HTML/CSS
+- **Storage**: Cloudinary (folder por cliente)
+- **Destinos**: Google Sheets (publica feed CSV)
+- **Notificaciones**: Telegram Bot
+- **Tests**: pytest (147 tests, corren en CI)
+
+---
+
+## Estructura del repo
 
 ```
-Inventario → Selección → Enriquecimiento → Estilo → Distribución
+generador-catalogos-v2/
+├── .github/workflows/        ← 1 workflow YAML por cliente
+├── clients/                  ← CONFIGURACIÓN por cliente (pipeline.yaml + templates)
+│   ├── morashop/
+│   ├── shark/
+│   └── ...
+├── src/                      ← CÓDIGO compartido entre clientes
+├── tests/                    ← 147 tests automatizados
+├── scripts/
+│   └── preview_template.py   ← preview local de templates (sin correr el pipeline)
+├── docs/                     ← esta documentación
+└── requirements.txt
 ```
 
-Sumar un cliente nuevo en v2 debe tomar ≤30 minutos sin escribir código.
+**Principio fundamental**: agregar un cliente nuevo NO requiere tocar `src/`. Solo agregás una carpeta en `clients/` y un workflow YAML en `.github/workflows/`.
 
-## Reglas críticas durante el desarrollo
+---
 
-1. **NO TOCAR v1.** Mora v1 sigue corriendo en `generador-catalogos`. Cualquier cambio acá NO debe afectar producción.
-2. **Migración con red de seguridad.** Mora v2 corre en paralelo a v1 durante mínimo 7 días antes de cualquier switch.
-3. **Cloudinary, catálogos y sheets son SEPARADOS de v1**:
-   - Cloudinary folder: `morashop-v2/` (NO `morashop/`)
-   - Catálogos Meta/TikTok: `MoraShop V2 - *` (catálogos nuevos)
-   - Sheets: carpeta nueva en Drive de Agency Nusa
-4. **Cero modificación de campañas activas** durante la migración.
+## Workflows en cada uno
 
-## Roadmap
+| Workflow | Qué hace | Cuándo corre |
+|---|---|---|
+| `morashop-v2.yml` | Pipeline completo de Mora | Cron diario 06:00 ART + manual |
+| `shark.yml` | Pipeline completo de Shark | - |
+| `ci.yml` | Corre `pytest tests/` | En cada push |
 
-Ver `docs/ARCHITECTURE.md` sección 11. Resumen:
+---
 
-| Mes | Hito |
-|---|---|
-| 1 | Mora-v2 corriendo en paralelo a v1 |
-| 1 | Switch productivo: Mora 100% v2 |
-| 2 | Onboarding de 1 cliente nuevo |
-| 2 | Bloque Enriquecimiento con Gemini |
-| 3 | Soporte Shopify |
+## Desarrollo local
 
-## Estructura
+```bash
+# Setup
+pip install -r requirements.txt
+playwright install chromium
 
-Ver `docs/ARCHITECTURE.md` sección 5.
+# Correr tests
+pytest tests/ -v
 
-## Para empezar a contribuir
+# Previsualizar un template
+python scripts/preview_template.py --cliente=morashop --template=default
+```
 
-Antes de tocar cualquier código, leer en orden:
+---
 
-1. `docs/ARCHITECTURE.md` (entero)
-2. `docs/DECISIONES.md` (decisiones tomadas y por qué)
-3. `docs/ONBOARDING.md` (cuando lleguemos a sumar clientes)
+## Contacto
+
+- Mantenedor: Facu (Agency Nusa)
+- Decisiones de diseño: ver `docs/03-arquitectura.md`
+- Algo no anda: `docs/04-troubleshooting.md` o mandame log del run
