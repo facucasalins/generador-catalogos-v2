@@ -14,12 +14,13 @@ inventario:
   config:
     store_id_secret: SHARK_TIENDANUBE_STORE_ID
     access_token_secret: SHARK_TIENDANUBE_TOKEN
-    # Shark vende ropa y no carga SKU en las variantes (talles/colores).
-    # Con este flag, las variantes sin SKU se autogeneran como
-    # "{handle}-{variant_id}", ej: "remera-oversize-negra-1167599522".
-    # Es único por variante y legible. Mora no usa este flag (tiene SKU
-    # explícito), así que sigue funcionando idéntico.
-    sku_fallback_handle_variant: true
+    # Shark vende ropa: cada producto TN tiene variantes de talle/color,
+    # todas valen lo mismo y el link manda a la página del producto donde
+    # el comprador elige. Con este flag generamos 1 fila por producto TN
+    # (no por variante), evitando duplicados en el feed.
+    # SKU = handle (Identificador de URL TN), ej: "remera-oversize-negra".
+    # Mora no usa este flag (default False = comportamiento histórico).
+    agrupar_por_producto: true
     sheet_destino:
       id: "1nRY50vdK-76X_7Jv_I2IZITy_kui_HvqPNHXjdkcct0"
       pestaña: Inventario
