@@ -7,6 +7,13 @@ Conceptos clave:
 - En nuestro modelo, cada variante = un `Producto` separado (1 fila por SKU).
 - Campos multi-idioma vienen como {"es": "valor"}. Asumimos siempre "es".
 - Paginación: ?page=N, hasta `per_page=200` por request.
+
+Fallback de SKU (opt-in):
+- Tiendas que NO cargan SKU explícito en variantes (típico en ropa) pueden
+  activar `sku_fallback_handle_variant=True` en la config. Si una variante
+  no tiene SKU, se genera automáticamente como "{handle}-{variant_id}".
+- Por defecto está apagado: variantes sin SKU se ignoran (comportamiento
+  histórico, retrocompat con Mora y otras tiendas que sí cargan SKU).
 """
 from __future__ import annotations
 import logging
@@ -36,6 +43,10 @@ class ConfigTiendanube:
     max_paginas: int = 100       # safeguard contra loops
     timeout_segundos: int = 30
     retraso_entre_paginas: float = 0.3  # ser amable con el rate limit
+    # Fallback opt-in: si la variante no tiene SKU, generar "{handle}-{variant_id}".
+    # Útil para tiendas (típicamente ropa) que no cargan SKU explícito en TN.
+    # Default False = comportamiento histórico (ignorar variantes sin SKU).
+    sku_fallback_handle_variant: bool = False
 
 
 # ============ Helpers de parseo ============
@@ -87,6 +98,23 @@ def _a_int(valor) -> Optional[int]:
         return int(valor)
     except (TypeError, ValueError):
         return None
+
+
+def _construir_sku_fallback(handle: str, variant_id) -> Optional[str]:
+    """Genera SKU como "{handle}-{variant_id}" para variantes sin SKU explícito.
+
+    - El handle es el 'Identificador de URL' de TN (slug del producto).
+    - Incluir variant_id garantiza unicidad cuando un producto tiene varias
+      variantes (talles/colores) sin SKU propio.
+    - Devuelve None si falta cualquiera de los dos (no podemos generar).
+    """
+    if not variant_id:
+        return None
+    handle_limpio = (handle or "").strip()
+    if not handle_limpio:
+        # Sin handle no podemos generar SKU legible; usar solo variant_id.
+        return f"tn-{variant_id}"
+    return f"{handle_limpio}-{variant_id}"
 
 
 # ============ Implementación ============
@@ -165,6 +193,8 @@ class TiendanubeInventario(FuenteInventario):
         descripcion = limpiar_html(_campo_es(producto_tn.get("description")))
         marca = (producto_tn.get("brand") or "").strip()
         url_producto = producto_tn.get("canonical_url") or ""
+        # El handle (Identificador de URL en TN) lo usamos como fallback de SKU.
+        handle = _campo_es(producto_tn.get("handle"))
 
         # Categoría: tomamos la primera (TN permite N pero el caso típico es 1)
         categorias = producto_tn.get("categories") or []
@@ -190,13 +220,24 @@ class TiendanubeInventario(FuenteInventario):
 
         for variante in variantes:
             sku = (variante.get("sku") or "").strip()
+            sku_es_fallback = False
             if not sku:
-                # Sin SKU no podemos trackearlo en el pipeline. Lo ignoramos.
-                log.warning(
-                    "Variante sin SKU ignorada: producto_id=%s variant_id=%s",
-                    producto_tn.get("id"), variante.get("id"),
-                )
-                continue
+                # Sin SKU explícito: intentar fallback si está habilitado.
+                if self.cfg.sku_fallback_handle_variant:
+                    sku = _construir_sku_fallback(handle, variante.get("id")) or ""
+                    sku_es_fallback = bool(sku)
+                    if sku:
+                        log.debug(
+                            "SKU fallback generado para producto_id=%s variant_id=%s: %s",
+                            producto_tn.get("id"), variante.get("id"), sku,
+                        )
+                if not sku:
+                    # Ni SKU explícito ni fallback disponible: ignorar.
+                    log.warning(
+                        "Variante sin SKU ignorada: producto_id=%s variant_id=%s",
+                        producto_tn.get("id"), variante.get("id"),
+                    )
+                    continue
 
             precio_lista = _a_float(variante.get("price"))
             if precio_lista is None:
@@ -212,6 +253,7 @@ class TiendanubeInventario(FuenteInventario):
                 **meta,
                 "tn_variant_id": variante.get("id"),
                 "tn_compare_at_price": variante.get("compare_at_price"),
+                "tn_sku_es_fallback": sku_es_fallback,
             }
 
             productos.append(Producto(
@@ -239,13 +281,13 @@ class TiendanubeInventario(FuenteInventario):
         - Pagina hasta agotar el catálogo
         - Cada producto TN puede generar N Productos (1 por variante con SKU)
         - Productos/variantes sin SKU o sin precio se ignoran con warning
+          (a menos que sku_fallback_handle_variant esté activo)
         - Errores HTTP se propagan (no es seguro continuar si falla la API)
         """
         productos_tn = self._traer_todos_los_productos_tn()
 
         productos: list[Producto] = []
         ignorados_sin_variantes = 0
-        ignorados_sin_sku = 0
 
         for p_tn in productos_tn:
             variantes_modelo = self._producto_tn_a_modelo(p_tn)
@@ -254,8 +296,20 @@ class TiendanubeInventario(FuenteInventario):
                 continue
             productos.extend(variantes_modelo)
 
-        log.info(
-            "TN: %d Producto generados (de %d productos TN). %d productos sin variantes válidas.",
-            len(productos), len(productos_tn), ignorados_sin_variantes,
+        # Contar cuántos usaron fallback (útil para diagnóstico).
+        con_fallback = sum(
+            1 for p in productos
+            if p.enriquecimiento and p.enriquecimiento.get("tn_sku_es_fallback")
         )
+        if con_fallback:
+            log.info(
+                "TN: %d Producto generados (de %d productos TN). "
+                "%d productos sin variantes válidas. %d con SKU fallback (handle-variant_id).",
+                len(productos), len(productos_tn), ignorados_sin_variantes, con_fallback,
+            )
+        else:
+            log.info(
+                "TN: %d Producto generados (de %d productos TN). %d productos sin variantes válidas.",
+                len(productos), len(productos_tn), ignorados_sin_variantes,
+            )
         return productos
