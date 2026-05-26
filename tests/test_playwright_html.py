@@ -339,3 +339,113 @@ def test_cargar_template_cachea(motor, templates_dir):
 
 def test_nombre_motor(motor):
     assert motor.nombre() == "playwright_html"
+
+
+# ============ Tests nuevos: precio_efectivo + cuotas_sobre_promocional ============
+
+@patch("src.estilo.playwright_html.requests.get")
+def test_precio_efectivo_no_se_expone_si_factor_es_none(
+    mock_get, motor, producto_basico, decision_basica
+):
+    """Sin descuento_efectivo_factor, la variable no existe (retrocompat)."""
+    mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
+    mock_resp.raise_for_status = MagicMock()
+    mock_get.return_value = mock_resp
+    vars_ = motor._construir_variables(producto_basico, decision_basica)
+    assert "precio_efectivo_formateado" not in vars_
+
+
+@patch("src.estilo.playwright_html.requests.get")
+def test_precio_efectivo_caso_mora(
+    mock_get, templates_dir, tmp_path, decision_basica
+):
+    """Caso Mora real: promo=$82.294 × 0.85 = $69.950."""
+    mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
+    mock_resp.raise_for_status = MagicMock()
+    mock_get.return_value = mock_resp
+
+    cfg = ConfigPlaywrightHtml(
+        templates_dir=templates_dir,
+        output_dir=tmp_path / "out",
+        variables_globales={"logo_url": "https://example.com/l.png"},
+        descuento_efectivo_factor=0.85,
+    )
+    motor = PlaywrightHtmlEstilo(cfg)
+
+    p = Producto(
+        sku="OMEGA-001", nombre="Omega 3 Max",
+        precio_lista=86626.0, precio_promocional=82294.0,
+        imagen_url="https://example.com/x.jpg",
+    )
+    vars_ = motor._construir_variables(p, decision_basica)
+    assert vars_["precio_hotsale_formateado"] == "$82.294"
+    assert vars_["precio_efectivo_formateado"] == "$69.950"
+
+
+@patch("src.estilo.playwright_html.requests.get")
+def test_cuotas_default_sobre_precio_lista(
+    mock_get, motor, producto_basico, decision_basica
+):
+    """Default (sin flag): cuotas sobre precio_lista. Retrocompat."""
+    mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
+    mock_resp.raise_for_status = MagicMock()
+    mock_get.return_value = mock_resp
+    vars_ = motor._construir_variables(producto_basico, decision_basica)
+    assert vars_["cuota_formateada"] == "$3.333"  # 10000/3
+
+
+@patch("src.estilo.playwright_html.requests.get")
+def test_cuotas_sobre_promocional_caso_mora(
+    mock_get, templates_dir, tmp_path, decision_basica
+):
+    """Con flag activo: cuotas sobre precio_promocional. Caso Mora."""
+    mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
+    mock_resp.raise_for_status = MagicMock()
+    mock_get.return_value = mock_resp
+
+    cfg = ConfigPlaywrightHtml(
+        templates_dir=templates_dir,
+        output_dir=tmp_path / "out",
+        variables_globales={"logo_url": "https://example.com/l.png"},
+        cuotas_sobre_promocional=True,
+    )
+    motor = PlaywrightHtmlEstilo(cfg)
+
+    p = Producto(
+        sku="OMEGA-001", nombre="Omega 3 Max",
+        precio_lista=86626.0, precio_promocional=82294.0,
+        cuotas_num=3,
+        imagen_url="https://example.com/x.jpg",
+    )
+    vars_ = motor._construir_variables(p, decision_basica)
+    assert vars_["cuota_formateada"] == "$27.431"  # 82294/3
+
+
+@patch("src.estilo.playwright_html.requests.get")
+def test_combo_efectivo_y_cuotas_caso_mora_completo(
+    mock_get, templates_dir, tmp_path, decision_basica
+):
+    """Caso Mora completo: ambos flags activos."""
+    mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
+    mock_resp.raise_for_status = MagicMock()
+    mock_get.return_value = mock_resp
+
+    cfg = ConfigPlaywrightHtml(
+        templates_dir=templates_dir,
+        output_dir=tmp_path / "out",
+        variables_globales={"logo_url": "https://example.com/l.png"},
+        descuento_efectivo_factor=0.85,
+        cuotas_sobre_promocional=True,
+    )
+    motor = PlaywrightHtmlEstilo(cfg)
+
+    p = Producto(
+        sku="OMEGA-001", nombre="Omega 3 Max",
+        precio_lista=86626.0, precio_promocional=82294.0,
+        cuotas_num=3,
+        imagen_url="https://example.com/x.jpg",
+    )
+    vars_ = motor._construir_variables(p, decision_basica)
+    assert vars_["precio_hotsale_formateado"] == "$82.294"
+    assert vars_["precio_efectivo_formateado"] == "$69.950"
+    assert vars_["cuota_formateada"] == "$27.431"
