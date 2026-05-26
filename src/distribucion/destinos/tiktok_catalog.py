@@ -6,6 +6,8 @@ Igual que Meta pero con:
 
 Las demás 8 columnas son idénticas a Meta. Si en el futuro TikTok cambia
 algún campo, se ajusta acá sin tocar Meta.
+
+Limpieza de huérfanas (Fase I): igual que en Meta. Ver meta_catalog.py.
 """
 from __future__ import annotations
 import logging
@@ -16,6 +18,7 @@ from src.distribucion.destinos.base import DestinoFeed, ErrorDestino
 from src.distribucion.destinos._common import (
     agrupar_por_template,
     escribir_pestaña_feed,
+    limpiar_pestañas_huerfanas,
 )
 
 
@@ -63,7 +66,7 @@ class TikTokCatalogDestino(DestinoFeed):
         placas_subidas: list[PlacaSubida],
         decisiones: list[DecisionSeleccion],
     ) -> dict[str, int]:
-        """Agrupa por template, escribe 1 pestaña por grupo.
+        """Agrupa por template, escribe 1 pestaña por grupo, limpia huérfanas.
 
         TikTok usa las placas 9:16 (Fase H: filtra del set total de placas).
         Si todavía no hay placas 9:16 para los SKUs, la pestaña queda vacía
@@ -71,34 +74,43 @@ class TikTokCatalogDestino(DestinoFeed):
         """
         grupos = agrupar_por_template(productos, decisiones)
 
-        if not grupos:
-            log.warning("TikTok: no hay productos para publicar")
-            return {}
-
         resultados: dict[str, int] = {}
         errores: list[str] = []
 
-        for template, productos_grupo in grupos.items():
-            pestaña = f"{PREFIJO_PESTAÑA}_{template}"
-            log.info("TikTok: escribiendo pestaña '%s' (%d productos del template '%s')",
-                     pestaña, len(productos_grupo), template)
-            try:
-                n = escribir_pestaña_feed(
-                    sheet_id=self.cfg.sheet_id,
-                    pestaña=pestaña,
-                    headers=HEADERS_TIKTOK,
-                    productos_grupo=productos_grupo,
-                    placas_subidas=placas_subidas,
-                    moneda=self.cfg.moneda,
-                    calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
-                    aspect_ratio_filtrar="9:16",
-                )
-                resultados[pestaña] = n
-            except ErrorDestino as e:
-                log.error("TikTok: falló pestaña '%s': %s", pestaña, e)
-                errores.append(f"{pestaña}: {e}")
+        if not grupos:
+            log.warning("TikTok: no hay productos para publicar")
+        else:
+            for template, productos_grupo in grupos.items():
+                pestaña = f"{PREFIJO_PESTAÑA}_{template}"
+                log.info("TikTok: escribiendo pestaña '%s' (%d productos del template '%s')",
+                         pestaña, len(productos_grupo), template)
+                try:
+                    n = escribir_pestaña_feed(
+                        sheet_id=self.cfg.sheet_id,
+                        pestaña=pestaña,
+                        headers=HEADERS_TIKTOK,
+                        productos_grupo=productos_grupo,
+                        placas_subidas=placas_subidas,
+                        moneda=self.cfg.moneda,
+                        calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
+                        aspect_ratio_filtrar="9:16",
+                    )
+                    resultados[pestaña] = n
+                except ErrorDestino as e:
+                    log.error("TikTok: falló pestaña '%s': %s", pestaña, e)
+                    errores.append(f"{pestaña}: {e}")
 
-        if errores and not resultados:
-            raise ErrorDestino(f"TikTok: todas las pestañas fallaron: {errores}")
+            if errores and not resultados:
+                raise ErrorDestino(f"TikTok: todas las pestañas fallaron: {errores}")
+
+        # Limpieza de huérfanas (ver doc en meta_catalog.py)
+        vaciadas = limpiar_pestañas_huerfanas(
+            sheet_id=self.cfg.sheet_id,
+            prefijo=PREFIJO_PESTAÑA,
+            headers=HEADERS_TIKTOK,
+            pestañas_activas=set(resultados.keys()),
+        )
+        for nombre in vaciadas:
+            resultados[nombre] = 0
 
         return resultados

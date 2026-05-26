@@ -159,3 +159,72 @@ def escribir_pestaña_feed(
     log.info("Pestaña '%s': %d filas escritas (aspect_ratio=%s)",
              pestaña, len(filas), aspect_ratio_filtrar)
     return len(filas)
+
+
+def limpiar_pestañas_huerfanas(
+    sheet_id: str,
+    prefijo: str,
+    headers: list[str],
+    pestañas_activas: set[str],
+) -> list[str]:
+    """Vacía las pestañas con prefijo que NO están en pestañas_activas.
+
+    Caso típico: el usuario sacó todos los SKUs del template 'electro' de la
+    selección. Antes, 'Meta_electro' seguía con los datos viejos para siempre.
+    Ahora detectamos eso y la vaciamos (deja solo headers).
+
+    Filosofía: NO borramos la pestaña del sheet (mantiene URLs/integraciones
+    estables), solo limpiamos su contenido.
+
+    Args:
+        sheet_id: ID del sheet de Feed-Output.
+        prefijo: prefijo de pestaña ('Meta' o 'TikTok'). NO incluir el '_'.
+        headers: headers del feed (para que la pestaña vaciada los conserve).
+        pestañas_activas: pestañas que SÍ se escribieron en este run.
+            Las de prefijo que NO estén acá se consideran huérfanas.
+
+    Returns:
+        Lista de nombres de pestañas que fueron vaciadas. Vacía si no había.
+    """
+    prefijo_completo = f"{prefijo}_"
+
+    # Listar pestañas reales del sheet
+    try:
+        # Usamos cualquier pestaña como pivot para conectarnos (el SheetsClient
+        # necesita una en su config, pero listar_pestañas opera a nivel sheet).
+        # Pasamos una pestaña dummy: si no existe NO se crea acá (solo se
+        # crearía al llamar a _abrir_pestaña, cosa que listar_pestañas evita).
+        pivot = SheetsClient(ConfigSheets(sheet_id=sheet_id, pestaña="_pivot"))
+        todas_las_pestañas = pivot.listar_pestañas()
+    except Exception as e:
+        # Si no podemos listar pestañas, no aborta el feed (solo log).
+        log.warning(
+            "No pude listar pestañas del sheet %s para limpieza de huérfanas: %s",
+            sheet_id, e,
+        )
+        return []
+
+    huerfanas = [
+        nombre for nombre in todas_las_pestañas
+        if nombre.startswith(prefijo_completo) and nombre not in pestañas_activas
+    ]
+
+    if not huerfanas:
+        log.info("Sin pestañas huérfanas con prefijo '%s'", prefijo_completo)
+        return []
+
+    vaciadas: list[str] = []
+    for nombre in huerfanas:
+        try:
+            client = SheetsClient(ConfigSheets(sheet_id=sheet_id, pestaña=nombre))
+            client.escribir_replace(headers, [])  # solo headers, 0 filas
+            vaciadas.append(nombre)
+            log.info(
+                "Pestaña huérfana '%s' vaciada (template ya no está en selección)",
+                nombre,
+            )
+        except Exception as e:
+            log.error("Falló vaciar pestaña huérfana '%s': %s", nombre, e)
+            # No re-raise: si una pestaña falla, sigamos con las otras.
+
+    return vaciadas
