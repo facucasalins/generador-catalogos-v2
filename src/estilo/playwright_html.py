@@ -55,6 +55,18 @@ class ConfigPlaywrightHtml:
     # la fuente no lo provee (legado de Mora v1). 1.0 = sin descuento adicional.
     hotsale_discount_factor: float = 1.0
 
+    # Factor de descuento adicional para "precio efectivo" (ej. pago en
+    # efectivo / transferencia). Opt-in por cliente: si es None, no se
+    # calcula la variable y los templates siguen igual.
+    # MoraShop usa 0.85 (15% off sobre el precio promocional).
+    descuento_efectivo_factor: Optional[float] = None
+
+    # Si True, calcula cuotas sobre precio_hotsale (promocional) en vez de
+    # precio_lista. Refleja que las cuotas sin interés se aplican sobre el
+    # precio web actual, no sobre el tachado.
+    # Default False = comportamiento legado (cuotas sobre precio_lista).
+    cuotas_sobre_promocional: bool = False
+
     # Timeout en ms para descargar imágenes
     download_timeout_seg: int = 15
 
@@ -75,15 +87,16 @@ def formatear_precio_ars(valor: float) -> str:
     return f"${formateado}"
 
 
-def calcular_cuota(precio_lista: float, cuotas_num: int = 3) -> float:
+def calcular_cuota(precio_base: float, cuotas_num: int = 3) -> float:
     """Calcula el monto de cada cuota.
 
-    OJO: las cuotas se calculan SOBRE precio_lista (no sobre precio promocional).
-    Esto es así porque la promo es solo en efectivo. Replica v1.
+    El precio base sobre el que se calcula viene del caller. Históricamente
+    era precio_lista; con el flag `cuotas_sobre_promocional` ahora puede ser
+    precio_hotsale.
     """
     if cuotas_num <= 0:
-        return precio_lista
-    return precio_lista / cuotas_num
+        return precio_base
+    return precio_base / cuotas_num
 
 
 # ============ Motor ============
@@ -214,8 +227,16 @@ class PlaywrightHtmlEstilo(MotorEstilo):
 
         Las variables son las que usa v1, para que el porteo del template
         sea sin tocar nada.
+
+        Variables de precio expuestas:
+          - precio_original_formateado: precio_lista tachado (web compare_at)
+          - precio_hotsale_formateado:  precio_promocional o lista*factor
+          - precio_efectivo_formateado: precio_hotsale * descuento_efectivo_factor
+                                        (solo si el cliente lo configuró)
+          - cuota_formateada:           cuota sobre lista o sobre hotsale,
+                                        según cuotas_sobre_promocional
         """
-        # Precio original = precio_lista (lo tachado)
+        # Precio original = precio_lista (lo tachado en placas estándar)
         precio_original = producto.precio_lista
 
         # Precio "hotsale" = el promocional si existe, sino el lista * factor
@@ -228,8 +249,22 @@ class PlaywrightHtmlEstilo(MotorEstilo):
             # a ver "rara" pero no rompemos el run, decisión de Faco)
             precio_hotsale = precio_original * self.cfg.hotsale_discount_factor
 
-        # Cuota = precio_lista / cuotas_num (NO sobre el promocional)
-        cuota = calcular_cuota(precio_original, producto.cuotas_num)
+        # Precio "efectivo" (opt-in por cliente vía descuento_efectivo_factor).
+        # Aplica un factor adicional SOBRE precio_hotsale.
+        # Caso MoraShop: precio_hotsale es el precio web (TN ya tiene 5% off),
+        # y descuento_efectivo_factor=0.85 lo lleva al precio final en efectivo.
+        # Si el factor no está seteado, la variable no se expone.
+        precio_efectivo: Optional[float] = None
+        if self.cfg.descuento_efectivo_factor is not None:
+            precio_efectivo = precio_hotsale * self.cfg.descuento_efectivo_factor
+
+        # Cuota: base depende del cliente.
+        # - cuotas_sobre_promocional=False (default legado): sobre precio_lista
+        # - cuotas_sobre_promocional=True (caso Mora): sobre precio_hotsale
+        # En ambos casos las cuotas se calculan sobre el precio que se paga
+        # cuando NO es efectivo (las cuotas no son en efectivo).
+        base_cuota = precio_hotsale if self.cfg.cuotas_sobre_promocional else precio_original
+        cuota = calcular_cuota(base_cuota, producto.cuotas_num)
 
         # Descargar imágenes a base64
         imagen_b64 = self._descargar_imagen_a_base64(producto.imagen_url)
@@ -263,6 +298,12 @@ class PlaywrightHtmlEstilo(MotorEstilo):
 
             # Metadata
             "cuotas_num": str(producto.cuotas_num),
+
+            # Precio efectivo (solo si el cliente lo configuró)
+            **({
+                "precio_efectivo": str(precio_efectivo),
+                "precio_efectivo_formateado": formatear_precio_ars(precio_efectivo),
+            } if precio_efectivo is not None else {}),
         }
 
         # Mergear variables globales del pipeline.yaml
