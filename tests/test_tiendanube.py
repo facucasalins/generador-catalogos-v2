@@ -14,6 +14,7 @@ from src.inventario.tiendanube import (
     _campo_es,
     _a_float,
     _a_int,
+    _construir_sku_fallback,
 )
 
 
@@ -79,6 +80,12 @@ def test_config_requiere_store_id():
 def test_config_requiere_token():
     with pytest.raises(ValueError, match="access_token"):
         TiendanubeInventario(ConfigTiendanube(store_id="123", access_token=""))
+
+
+def test_config_sku_fallback_default_false():
+    """Retrocompat: el default es False (comportamiento histórico)."""
+    cfg = ConfigTiendanube(store_id="123", access_token="abc")
+    assert cfg.sku_fallback_handle_variant is False
 
 
 # ============ Sample data (estructura real de TN) ============
@@ -147,12 +154,44 @@ PRODUCTO_TN_SIN_PUBLICAR = {
 }
 
 
+# Sample típico de tienda de ropa Tiendanube: NINGUNA variante carga SKU.
+# Talles distintos, mismo handle, variant_id único.
+PRODUCTO_TN_ROPA_SIN_SKU = {
+    "id": 999001,
+    "name": {"es": "Remera Oversize Negra"},
+    "description": {"es": "Algodón premium"},
+    "handle": {"es": "remera-oversize-negra"},
+    "published": True,
+    "has_stock": True,
+    "is_kit": False,
+    "brand": "SHARK",
+    "canonical_url": "https://shark.com.ar/productos/remera-oversize-negra/",
+    "variants": [
+        {"id": 555001, "sku": "", "price": "15000.00", "stock": 10},  # Talle S
+        {"id": 555002, "sku": "", "price": "15000.00", "stock": 5},   # Talle M
+        {"id": 555003, "sku": "", "price": "15000.00", "stock": 0},   # Talle L (sin stock)
+    ],
+    "images": [{"src": "https://example.com/remera.jpg", "position": 1}],
+    "categories": [{"id": 10, "name": {"es": "Remeras"}}],
+}
+
+
 # ============ Tests de _producto_tn_a_modelo ============
 
 @pytest.fixture
 def fuente():
     return TiendanubeInventario(ConfigTiendanube(
         store_id="2268228", access_token="fake_token"
+    ))
+
+
+@pytest.fixture
+def fuente_con_fallback():
+    """Fixture específica para tests del fallback (Shark)."""
+    return TiendanubeInventario(ConfigTiendanube(
+        store_id="2268228",
+        access_token="fake_token",
+        sku_fallback_handle_variant=True,
     ))
 
 
@@ -183,6 +222,8 @@ def test_metadata_tn_preservada_en_enriquecimiento(fuente):
     assert p.enriquecimiento["tn_published"] is True
     assert p.enriquecimiento["tn_has_stock"] is True
     assert p.enriquecimiento["tn_compare_at_price"] == "24324.00"
+    # Cuando hay SKU explícito, NO se marca como fallback.
+    assert p.enriquecimiento["tn_sku_es_fallback"] is False
 
 
 def test_multiples_variantes_un_producto_por_variante_con_sku(fuente):
@@ -285,3 +326,74 @@ def test_headers_son_los_correctos(mock_get, fuente):
 
 def test_nombre_modulo(fuente):
     assert fuente.nombre() == "tiendanube"
+
+
+# ============ Tests del SKU fallback (opt-in para tiendas de ropa) ============
+
+def test_helper_construir_sku_fallback_normal():
+    """Caso normal: handle + variant_id → '{handle}-{variant_id}'"""
+    sku = _construir_sku_fallback("remera-negra", 555001)
+    assert sku == "remera-negra-555001"
+
+
+def test_helper_construir_sku_fallback_sin_handle():
+    """Sin handle válido: fallback a 'tn-{variant_id}' (último recurso)."""
+    assert _construir_sku_fallback("", 555001) == "tn-555001"
+    assert _construir_sku_fallback(None, 555001) == "tn-555001"
+    assert _construir_sku_fallback("   ", 555001) == "tn-555001"
+
+
+def test_helper_construir_sku_fallback_sin_variant_id():
+    """Sin variant_id no podemos generar nada único."""
+    assert _construir_sku_fallback("remera-negra", None) is None
+    assert _construir_sku_fallback("remera-negra", 0) is None
+
+
+def test_fallback_apagado_descarta_variantes_sin_sku(fuente):
+    """Comportamiento histórico (Mora): variante sin SKU → ignorada.
+
+    Este test PROTEGE a Mora de cambios accidentales. Si alguien cambia
+    el default a True, este test falla y avisa antes del deploy.
+    """
+    productos = fuente._producto_tn_a_modelo(PRODUCTO_TN_ROPA_SIN_SKU)
+    assert productos == []  # las 3 variantes sin SKU se descartan
+
+
+def test_fallback_encendido_genera_sku_por_variante(fuente_con_fallback):
+    """Shark: con el flag activo, cada variante sin SKU obtiene uno autogenerado."""
+    productos = fuente_con_fallback._producto_tn_a_modelo(PRODUCTO_TN_ROPA_SIN_SKU)
+    assert len(productos) == 3  # 3 variantes, 3 productos generados
+    skus = sorted(p.sku for p in productos)
+    assert skus == [
+        "remera-oversize-negra-555001",
+        "remera-oversize-negra-555002",
+        "remera-oversize-negra-555003",
+    ]
+    # Todos los SKUs son únicos (talles distintos no colisionan).
+    assert len(set(skus)) == 3
+    # Y todos quedan marcados como fallback en metadata (para diagnóstico).
+    assert all(p.enriquecimiento["tn_sku_es_fallback"] is True for p in productos)
+
+
+def test_fallback_encendido_respeta_sku_explicito_si_existe(fuente_con_fallback):
+    """Caso mixto: si una variante TIENE sku, se usa ese. Si no, fallback.
+
+    Importante: incluso con el flag activo, NO sobrescribimos SKUs reales.
+    """
+    productos = fuente_con_fallback._producto_tn_a_modelo(
+        PRODUCTO_TN_MULTIPLES_VARIANTES
+    )
+    # 2 variantes con SKU explícito + 1 sin SKU = 3 productos ahora (no 2)
+    assert len(productos) == 3
+    skus = sorted(p.sku for p in productos)
+    # Las 2 con SKU explícito mantienen su valor original
+    assert "ENA-WHEY-CHOC" in skus
+    assert "ENA-WHEY-VAIN" in skus
+    # La 3ra (sin SKU) usa el fallback. PRODUCTO_TN_MULTIPLES_VARIANTES no
+    # tiene 'handle', así que cae al "tn-{variant_id}" como último recurso.
+    assert "tn-3" in skus
+    # Solo la fallback queda marcada como tal
+    por_sku = {p.sku: p for p in productos}
+    assert por_sku["ENA-WHEY-CHOC"].enriquecimiento["tn_sku_es_fallback"] is False
+    assert por_sku["ENA-WHEY-VAIN"].enriquecimiento["tn_sku_es_fallback"] is False
+    assert por_sku["tn-3"].enriquecimiento["tn_sku_es_fallback"] is True
