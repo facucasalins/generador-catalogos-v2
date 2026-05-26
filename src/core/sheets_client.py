@@ -169,3 +169,21 @@ class SheetsClient:
             self.cfg.sheet_id, self.cfg.pestaña, len(filas),
         )
         return filas
+
+    def listar_pestañas(self) -> list[str]:
+        """Devuelve los nombres de todas las pestañas del sheet.
+
+        NO usa self.cfg.pestaña (es una operación a nivel sheet, no pestaña).
+        NO crea ninguna pestaña.
+
+        Returns:
+            Lista de nombres en el orden que aparecen en el sheet.
+
+        Raises:
+            ErrorSheets: problema de permisos u otra API error.
+        """
+        sheet = self._abrir_sheet()
+        nombres = [ws.title for ws in sheet.worksheets()]
+        log.debug("Sheet '%s': %d pestañas (%s)",
+                  self.cfg.sheet_id, len(nombres), nombres)
+        return nombres
