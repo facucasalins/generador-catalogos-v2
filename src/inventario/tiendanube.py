@@ -270,7 +270,7 @@ class TiendanubeInventario(FuenteInventario):
                 descripcion=comunes["descripcion"],
                 precio_lista=precio_lista,
                 precio_promocional=precio_promo,
-                cuotas_num=3,  # default acordado (TN no devuelve cuotas)
+                cuotas_num=self.cfg.cuotas_num,
                 stock=_a_int(variante.get("stock")),
                 categoria=comunes["categoria"],
                 marca=comunes["marca"],
@@ -353,7 +353,7 @@ class TiendanubeInventario(FuenteInventario):
             descripcion=comunes["descripcion"],
             precio_lista=precio_lista,
             precio_promocional=precio_promo,
-            cuotas_num=3,
+            cuotas_num=self.cfg.cuotas_num,
             stock=stock_total,
             categoria=comunes["categoria"],
             marca=comunes["marca"],
