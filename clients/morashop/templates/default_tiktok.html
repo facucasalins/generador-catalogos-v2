@@ -1,4 +1,4 @@
-<!-- DESC: Placa default Mora 9:16 (TikTok) — porteo del 4:5 con más aire vertical -->
+<!-- DESC: Placa default Mora 9:16 (TikTok) — precio reposicionado para no quedar tapado por la UI de TikTok -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -64,13 +64,13 @@
         z-index: 10;
     }
 
-    /* Zona blanca del producto - más alta en 9:16 */
+    /* Zona blanca del producto - achicada para dejar lugar al precio en zona segura TikTok */
     .product-zone {
         position: absolute;
         top: 320px;
         left: 80px;
         right: 80px;
-        height: 1100px;
+        height: 620px;
         background: #ffffff;
         border-radius: 8px;
         display: flex;
@@ -85,10 +85,10 @@
         object-fit: contain;
     }
 
-    /* Banda de precio - misma altura que 4:5 */
+    /* Banda de precio - subida a zona segura (no la tapa el bloque "Sponsored/Buy it" de TikTok) */
     .price-band {
         position: absolute;
-        top: 1540px;
+        top: 960px;
         left: 0;
         right: 0;
         height: 280px;
@@ -166,10 +166,10 @@
         margin-top: 4px;
     }
 
-    /* Banner inferior */
+    /* Banner inferior - apoyado contra la banda de precio (queda en zona segura, no en el fondo) */
     .bottom-banner {
         position: absolute;
-        bottom: 0;
+        bottom: 800px;
         left: 0;
         right: 0;
         height: 100px;
@@ -227,8 +227,8 @@
     <div class="price-band">
         <div class="price-left">
             <div class="desde">DESDE</div>
-            <div class="precio-tachado">{precio_hotsale_formateado}</div>
-            <div class="precio-principal">{precio_efectivo_formateado}</div>
+            <div class="precio-tachado">{precio_original_formateado}</div>
+            <div class="precio-principal">{precio_hotsale_formateado}</div>
         </div>
 
         <div class="price-right">
