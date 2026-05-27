@@ -1,4 +1,4 @@
-<!-- DESC: Placa MoraShop electrohogar 9:16 (TikTok) — precio reposicionado para no quedar tapado por la UI de TikTok -->
+<!-- DESC: Placa MoraShop electrohogar 9:16 (TikTok) — precio reposicionado para zona segura TikTok, banner al fondo (formato original) -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -60,13 +60,13 @@
         z-index: 10;
     }
 
-    /* Zona producto: achicada para que precio + product-name entren en zona segura */
+    /* Zona producto: achicada para que product-name + price-band entren en zona segura */
     .product-zone {
         position: absolute;
         top: 320px;
         left: 80px;
         right: 80px;
-        height: 460px;
+        height: 600px;
         background: #ffffff;
         border-radius: 8px;
         display: flex;
@@ -85,10 +85,10 @@
     /* Product name - entre la zona del producto y la banda de precio */
     .product-name {
         position: absolute;
-        top: 800px;
+        top: 940px;
         left: 80px;
         right: 80px;
-        height: 130px;
+        height: 140px;
         color: #0a2042;
         font-family: 'Archivo Black', sans-serif;
         font-size: 44px;
@@ -106,10 +106,10 @@
         justify-content: center;
     }
 
-    /* Banda de precio - subida a zona segura */
+    /* Banda de precio - subida de 1540 a 1100 para que no la tape la UI de TikTok */
     .price-band {
         position: absolute;
-        top: 960px;
+        top: 1100px;
         left: 0;
         right: 0;
         height: 280px;
@@ -180,10 +180,10 @@
         margin-top: 4px;
     }
 
-    /* Banner inferior - apoyado contra la banda de precio, dentro de zona segura */
+    /* Banner inferior - formato original, pegado al fondo (se tapa con la UI de TikTok, es solo branding) */
     .bottom-banner {
         position: absolute;
-        bottom: 800px;
+        bottom: 0;
         left: 0;
         right: 0;
         height: 100px;

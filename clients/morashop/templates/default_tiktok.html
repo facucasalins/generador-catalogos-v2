@@ -1,4 +1,4 @@
-<!-- DESC: Placa default Mora 9:16 (TikTok) — precio reposicionado para no quedar tapado por la UI de TikTok -->
+<!-- DESC: Placa default Mora 9:16 (TikTok) — precio reposicionado para zona segura TikTok, banner al fondo (formato original) -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -64,13 +64,13 @@
         z-index: 10;
     }
 
-    /* Zona blanca del producto - achicada para dejar lugar al precio en zona segura TikTok */
+    /* Zona blanca del producto - achicada para que el precio entre en zona segura TikTok */
     .product-zone {
         position: absolute;
         top: 320px;
         left: 80px;
         right: 80px;
-        height: 620px;
+        height: 760px;
         background: #ffffff;
         border-radius: 8px;
         display: flex;
@@ -85,10 +85,10 @@
         object-fit: contain;
     }
 
-    /* Banda de precio - subida a zona segura (no la tapa el bloque "Sponsored/Buy it" de TikTok) */
+    /* Banda de precio - subida de 1540 a 1100 para que no la tape la UI de TikTok */
     .price-band {
         position: absolute;
-        top: 960px;
+        top: 1100px;
         left: 0;
         right: 0;
         height: 280px;
@@ -166,10 +166,10 @@
         margin-top: 4px;
     }
 
-    /* Banner inferior - apoyado contra la banda de precio (queda en zona segura, no en el fondo) */
+    /* Banner inferior - formato original, pegado al fondo (se tapa con la UI de TikTok, es solo branding) */
     .bottom-banner {
         position: absolute;
-        bottom: 800px;
+        bottom: 0;
         left: 0;
         right: 0;
         height: 100px;
