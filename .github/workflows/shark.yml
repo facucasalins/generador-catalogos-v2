@@ -5,7 +5,7 @@ on:
   schedule:
     # 07:00 ART = 10:00 UTC. (Mora corre a 06:00 ART; los corremos
     # separados con 1 hora de gap para no pisar cuotas de APIs.)
-    - cron: '0 10 * * *'
+    - cron: '30 9 * * *'
 
 jobs:
   pipeline:
