@@ -47,18 +47,19 @@ enriquecimiento:
     max_chars_tip: 40
     tono: "Argentino, jovial, dirigido a personas que les gusta la moda. Usa voseo cuando corresponda (ej: 'llevátelo', 'es para vos'). Lenguaje natural."
 # ============ BLOQUE 4: ESTILO ============
-# Por ahora Shark NO usa descuento efectivo (a diferencia de Mora).
-# Si en algún momento Shark suma promo de "X% off en efectivo", se activa
-# descomentando las 2 líneas marcadas y los templates pasan a usar
-# precio_efectivo_formateado.
+# Shark aplica:
+# - 20% off sobre precio promocional para pago en efectivo/transferencia
+#   → variable {precio_efectivo_formateado} = precio_promocional * 0.80
+# - 3 cuotas sin interés sobre precio promocional (SIN aplicar el 20%)
+#   → variable {cuota_formateada} = precio_promocional / 3
 estilo:
   motor: playwright_html
   config:
     placa_width: 1080
     placa_height: 1350
     hotsale_discount_factor: 1.0
-    # descuento_efectivo_factor: 0.85    # ← descomentar si Shark suma promo
-    # cuotas_sobre_promocional: true     # ← descomentar si Shark suma promo
+    descuento_efectivo_factor: 0.80   # 20% off para transferencia/efectivo
+    cuotas_sobre_promocional: true    # cuotas sobre el precio_promocional
     aspect_ratios:
       - label: "4:5"
         width: 1080
