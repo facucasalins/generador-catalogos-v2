@@ -20,6 +20,8 @@ inventario:
     # el comprador elige. Misma lógica que Shark: 1 fila por producto TN.
     # SKU = handle (Identificador de URL TN), ej: "stiletto-negro-clasico".
     agrupar_por_producto: true
+    # Antonia ofrece hasta 6 cuotas sin interés (TN no devuelve cuotas, se setea acá).
+    cuotas_num: 6
     sheet_destino:
       id: "1iRy8tQHPB_qDD-Hd3NjnAKWmGa3dARnFQn0sA_ycGX0"
       pestaña: Inventario
@@ -59,7 +61,6 @@ estilo:
     hotsale_discount_factor: 1.0
     descuento_efectivo_factor: 0.80   # 20% off para transferencia/efectivo
     cuotas_sobre_promocional: true    # cuotas sobre el precio_promocional
-    cuotas_num: 6                     # 6 cuotas sin interés
     aspect_ratios:
       - label: "4:5"
         width: 1080
