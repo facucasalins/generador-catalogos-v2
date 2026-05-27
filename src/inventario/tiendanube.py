@@ -55,6 +55,10 @@ class ConfigTiendanube:
     #   Útil para ropa/calzado donde las variantes son talles/colores y el
     #   link manda a la página del producto.
     agrupar_por_producto: bool = False
+    # Cantidad de cuotas sin interés que muestra la placa.
+    # TN no devuelve cuotas, así que se setea por cliente en el pipeline.yaml.
+    # Default 3 = retrocompat con Mora/Shark.
+    cuotas_num: int = 3
 
 
 # ============ Helpers de parseo ============
