@@ -1,4 +1,4 @@
-<!-- DESC: Placa default Shark (9:16 TikTok) — foto full-bleed, precio efectivo, cuotas sobre promo -->
+<!-- DESC: Placa default Shark (9:16 TikTok) — info arriba para no ser tapada por CTA -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -32,16 +32,17 @@
         z-index: 1;
     }
 
+    /* Gradient ARRIBA para el formato vertical */
     .overlay-base {
         position: absolute;
         inset: 0;
         background: linear-gradient(
             180deg,
-            rgba(0, 0, 0, 0.45) 0%,
-            rgba(0, 0, 0, 0.18) 18%,
-            rgba(0, 0, 0, 0.12) 45%,
-            rgba(0, 0, 0, 0.62) 70%,
-            rgba(0, 0, 0, 0.95) 100%
+            rgba(0, 0, 0, 0.95) 0%,
+            rgba(0, 0, 0, 0.80) 22%,
+            rgba(0, 0, 0, 0.50) 42%,
+            rgba(0, 0, 0, 0.18) 60%,
+            rgba(0, 0, 0, 0.12) 100%
         );
         z-index: 2;
     }
@@ -50,7 +51,7 @@
         position: absolute;
         inset: 0;
         background:
-            radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0) 30%, rgba(15, 12, 0, 0.40) 100%),
+            radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0) 30%, rgba(15, 12, 0, 0.35) 100%),
             linear-gradient(135deg, rgba(212, 160, 23, 0.06) 0%, rgba(0, 0, 0, 0) 50%, rgba(212, 160, 23, 0.06) 100%);
         z-index: 3;
         pointer-events: none;
@@ -59,23 +60,23 @@
     .accent-line {
         position: absolute;
         left: 70px;
-        top: 70px;
+        top: 60px;
         width: 2px;
-        height: 100px;
+        height: 80px;
         background: linear-gradient(180deg, #d4a017 0%, transparent 100%);
         z-index: 5;
     }
 
-    /* Logo grande sin fondo */
+    /* Logo arriba a la derecha, grande sin fondo */
     .header {
         position: absolute;
-        top: 60px;
-        right: 60px;
+        top: 50px;
+        right: 70px;
         z-index: 10;
     }
 
     .logo {
-        height: 115px;
+        height: 100px;
         width: auto;
         filter: brightness(0) invert(1)
                 drop-shadow(0 2px 14px rgba(0, 0, 0, 0.85))
@@ -83,12 +84,13 @@
         display: block;
     }
 
+    /* Info-zone ARRIBA */
     .info-zone {
         position: absolute;
-        bottom: 0;
+        top: 200px;
         left: 0;
         right: 0;
-        padding: 0 80px 140px 80px;
+        padding: 0 80px;
         z-index: 10;
         text-align: center;
         text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9);
@@ -146,7 +148,7 @@
         color: #ffffff;
         letter-spacing: 0.3px;
         line-height: 1.2;
-        margin-bottom: 48px;
+        margin-bottom: 44px;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -157,7 +159,7 @@
     .pills {
         display: flex;
         justify-content: center;
-        gap: 24px;
+        gap: 22px;
         flex-wrap: wrap;
     }
 
@@ -179,15 +181,16 @@
     }
 
     .pill-cuotas {
-        background: rgba(212, 160, 23, 0.95);
+        background: rgba(212, 160, 23, 0.97);
         color: #0a0a0a;
         border-color: #d4a017;
     }
 
     .pill-cuotas .cuotas-mini {
-        font-weight: 500;
+        font-weight: 600;
         margin-left: 12px;
-        opacity: 0.80;
+        color: #0a0a0a;          /* NEGRO sólido */
+        opacity: 0.85;
         font-size: 20px;
         letter-spacing: 0.5px;
         text-transform: none;
