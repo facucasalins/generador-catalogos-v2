@@ -1,10 +1,10 @@
-<!-- DESC: Placa default Shark 4:5 — punto de partida basado en Mora (sin descuento efectivo) -->
+<!-- DESC: Placa default Shark (4:5 Meta) — imagen del producto full-bleed estilo Gymshark editorial -->
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;700&family=Archivo+Black&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
     * {
         margin: 0;
@@ -15,216 +15,212 @@
     body {
         width: 1080px;
         height: 1350px;
-        background: #1a1a1a;
-        font-family: 'Archivo', sans-serif;
+        font-family: 'Inter', sans-serif;
         position: relative;
         overflow: hidden;
-    }
-
-    /* Decoración top-left */
-    .deco-x {
-        position: absolute;
-        top: 30px;
-        left: 30px;
+        background: #0a0a0a;
         color: #ffffff;
-        font-size: 32px;
-        letter-spacing: 8px;
-        font-weight: bold;
-        opacity: 0.6;
+        -webkit-font-smoothing: antialiased;
     }
 
-    /* Decoración círculo punteado top-right */
-    .deco-circle {
-        position: absolute;
-        top: 30px;
-        right: 30px;
-        width: 60px;
-        height: 60px;
-        border: 3px dotted #ffffff;
-        border-radius: 50%;
-        opacity: 0.6;
-    }
-
-    /* Logo centrado arriba */
-    .logo {
-        position: absolute;
-        top: 40px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 150px;
-        height: auto;
-        z-index: 10;
-    }
-
-    /* Zona blanca del producto */
-    .product-zone {
-        position: absolute;
-        top: 230px;
-        left: 80px;
-        right: 80px;
-        height: 700px;
-        background: #ffffff;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 30px;
-    }
-
+    /* IMAGEN DEL PRODUCTO: cubre toda la placa (fondo) */
     .product-image {
-        max-width: 104%;
-        max-height: 100%;
-        object-fit: contain;
-    }
-
-    /* Banda de precio */
-    .price-band {
         position: absolute;
-        top: 970px;
-        left: 0;
-        right: 0;
-        height: 280px;
-        background: #ffffff;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 60px;
-        color: #1a1a1a;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 1;
     }
 
-    .price-left {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
+    /* OVERLAY OSCURO BASE: oscurece globalmente para legibilidad y consistencia.
+       Asegura que aun fotos muy claras o con fondo blanco queden "premium". */
+    .overlay-base {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            180deg,
+            rgba(0, 0, 0, 0.55) 0%,
+            rgba(0, 0, 0, 0.25) 25%,
+            rgba(0, 0, 0, 0.15) 45%,
+            rgba(0, 0, 0, 0.70) 72%,
+            rgba(0, 0, 0, 0.95) 100%
+        );
+        z-index: 2;
     }
 
-    .desde {
-        font-family: 'Archivo Black', sans-serif;
-        font-size: 32px;
-        letter-spacing: 2px;
-        margin-bottom: 4px;
+    /* OVERLAY DE COLOR: tint dorado/oscuro inspirado en la captura 2 (Shark real).
+       Sutil, sólo aporta cohesión cromática y disimula fondos blancos. */
+    .overlay-tint {
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0) 30%, rgba(15, 12, 0, 0.45) 100%),
+            linear-gradient(135deg, rgba(212, 160, 23, 0.06) 0%, rgba(0, 0, 0, 0) 50%, rgba(212, 160, 23, 0.06) 100%);
+        z-index: 3;
+        pointer-events: none;
     }
 
-    .precio-tachado {
-        font-family: 'Archivo', sans-serif;
-        font-size: 38px;
-        text-decoration: line-through;
-        opacity: 0.6;
-        margin-bottom: 4px;
-        font-weight: 700;
+    /* Línea fina amarilla decorativa, esquina superior izquierda */
+    .accent-line {
+        position: absolute;
+        left: 60px;
+        top: 60px;
+        width: 2px;
+        height: 80px;
+        background: linear-gradient(180deg, #d4a017 0%, transparent 100%);
+        z-index: 5;
     }
 
-    .precio-principal {
-        font-family: 'Archivo Black', sans-serif;
-        font-size: 130px;
-        line-height: 1;
-        letter-spacing: -2px;
+    /* HEADER: logo arriba a la derecha, con badge sutil para legibilidad */
+    .header {
+        position: absolute;
+        top: 50px;
+        right: 50px;
+        z-index: 10;
+        padding: 12px 18px;
+        background: rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(8px);
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
-    .price-right {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        position: relative;
+    .logo {
+        height: 44px;
+        width: auto;
+        filter: brightness(0) invert(1)
+                drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+        opacity: 1;
+        display: block;
     }
 
-    .sin-interes {
-        background: #1a1a1a;
-        color: #ffffff;
-        font-family: 'Archivo Black', sans-serif;
-        font-size: 14px;
-        padding: 4px 12px;
-        transform: rotate(6deg);
-        margin-bottom: 8px;
-        letter-spacing: 1px;
-    }
-
-    .cuotas-num {
-        font-family: 'Archivo Black', sans-serif;
-        font-size: 56px;
-        line-height: 1;
-    }
-
-    .cuotas-monto {
-        font-family: 'Archivo', sans-serif;
-        font-size: 28px;
-        margin-top: 4px;
-    }
-
-    /* Banner inferior */
-    .bottom-banner {
+    /* INFO ZONE: precio + nombre + envío, abajo */
+    .info-zone {
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
-        height: 100px;
-        background: #1a1a1a;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 60px;
-        color: white;
-        border-top: 3px solid #ffffff;
+        padding: 0 80px 100px 80px;
+        z-index: 10;
+        text-align: center;
+        text-shadow: 0 2px 16px rgba(0, 0, 0, 0.9);
     }
 
-    .banner-left {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .banner-legal {
-        font-family: 'Archivo', sans-serif;
-        font-size: 18px;
-        font-weight: 700;
+    /* Precio tachado chico */
+    .precio-tachado {
+        font-family: 'Inter', sans-serif;
+        font-size: 32px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: line-through;
+        text-decoration-color: #d4a017;
+        text-decoration-thickness: 2px;
         letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    /* Precio principal GIGANTE */
+    .precio-principal {
+        font-family: 'Inter', sans-serif;
+        font-size: 168px;
+        font-weight: 900;
+        line-height: 0.95;
+        letter-spacing: -5px;
+        color: #ffffff;
+        margin-bottom: 24px;
+        text-shadow:
+            0 4px 24px rgba(0, 0, 0, 0.95),
+            0 0 60px rgba(0, 0, 0, 0.7),
+            0 0 100px rgba(212, 160, 23, 0.18);
+    }
+
+    /* Línea separadora amarilla */
+    .divider {
+        width: 60px;
+        height: 3px;
+        background: #d4a017;
+        margin: 0 auto 22px auto;
+        box-shadow: 0 0 12px rgba(212, 160, 23, 0.6);
+    }
+
+    /* Nombre del producto */
+    .nombre {
+        font-family: 'Inter', sans-serif;
+        font-size: 32px;
+        font-weight: 600;
+        color: #ffffff;
+        letter-spacing: 0.3px;
         line-height: 1.2;
+        margin-bottom: 28px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-shadow: 0 2px 16px rgba(0, 0, 0, 0.95);
     }
 
-    .banner-legal-small {
-        font-family: 'Archivo', sans-serif;
-        font-size: 14px;
-        font-weight: 400;
-        margin-top: 2px;
-        opacity: 0.9;
+    /* Pills inferiores: envío + cuotas, side by side */
+    .pills {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
     }
 
-    .banner-brand {
-        font-family: 'Archivo Black', sans-serif;
-        font-size: 36px;
-        letter-spacing: 2px;
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        font-family: 'Inter', sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 1.8px;
+        padding: 11px 22px;
+        border: 1.5px solid #d4a017;
+        color: #d4a017;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(6px);
+        border-radius: 2px;
+        text-transform: uppercase;
+        text-shadow: none;
+    }
+
+    .pill-cuotas {
+        background: rgba(212, 160, 23, 0.92);
+        color: #0a0a0a;
+        border-color: #d4a017;
+    }
+
+    .pill-cuotas .cuotas-mini {
+        font-weight: 500;
+        margin-left: 8px;
+        opacity: 0.75;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        text-transform: none;
     }
 </style>
 </head>
 <body>
-    <div class="deco-x">× × ×<br>× × ×</div>
-    <div class="deco-circle"></div>
 
-    <img class="logo" src="{logo_b64}" alt="logo">
+    <img class="product-image" src="{imagen_b64}" alt="producto">
+    <div class="overlay-base"></div>
+    <div class="overlay-tint"></div>
+    <div class="accent-line"></div>
 
-    <div class="product-zone">
-        <img class="product-image" src="{imagen_b64}" alt="producto">
+    <div class="header">
+        <img class="logo" src="{logo_b64}" alt="logo">
     </div>
 
-    <div class="price-band">
-        <div class="price-left">
-            <div class="desde">DESDE</div>
-            <div class="precio-tachado">{precio_original_formateado}</div>
-            <div class="precio-principal">{precio_hotsale_formateado}</div>
-        </div>
-
-        <div class="price-right">
-            <div class="sin-interes">SIN INTERÉS</div>
-            <div class="cuotas-num">{cuotas_num} CUOTAS</div>
-            <div class="cuotas-monto">de {cuota_formateada}</div>
+    <div class="info-zone">
+        <div class="precio-tachado">{precio_original_formateado}</div>
+        <div class="precio-principal">{precio_hotsale_formateado}</div>
+        <div class="divider"></div>
+        <div class="nombre">{nombre}</div>
+        <div class="pills">
+            <div class="pill">Envío gratis</div>
+            <div class="pill pill-cuotas">{cuotas_num} cuotas <span class="cuotas-mini">de {cuota_formateada}</span></div>
         </div>
     </div>
 
-    <div class="bottom-banner">
-        <div class="banner-left">
-            <div class="banner-legal">Envíos a todo el país.</div>
-            <div class="banner-legal-small">{evento_legal}</div>
-        </div>
-        <div class="banner-brand">{brand_name}</div>
-    </div>
 </body>
 </html>
