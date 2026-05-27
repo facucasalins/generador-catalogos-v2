@@ -21,14 +21,14 @@ inventario:
     # SKU = handle (Identificador de URL TN), ej: "stiletto-negro-clasico".
     agrupar_por_producto: true
     sheet_destino:
-      id: "REEMPLAZAR_SHEET_ID_INVENTARIO_ANTONIA"
+      id: "1iRy8tQHPB_qDD-Hd3NjnAKWmGa3dARnFQn0sA_ycGX0"
       pestaña: Inventario
 # ============ BLOQUE 2: SELECCIÓN ============
 seleccion:
   fuente: sheet_manual
   config:
     sheet:
-      id: "REEMPLAZAR_SHEET_ID_SELECCION_ANTONIA"
+      id: "1B6xSOMG2VfR67FzsDfHJPW4aEmK1xdkUFqCmZlWhQUk"
       pestaña: Seleccion
     template_default: default
 # ============ BLOQUE 3: ENRIQUECIMIENTO ============
@@ -71,7 +71,7 @@ estilo:
         template_suffix: "_tiktok"
     variables_globales:
       brand_name: ANTONIA
-      logo_url: "REEMPLAZAR_URL_LOGO_ANTONIA"
+      logo_url: "https://acdn-us.mitiendanube.com/stores/005/181/517/themes/common/logo-94768175-1726830880-650fcd77bfd42f301d06dab1a092e1431726830880.png?0"
       evento_legal: ""
       envio_gratis_desde: "$150.000"
 # ============ BLOQUE 5: DISTRIBUCIÓN ============
@@ -87,11 +87,11 @@ distribucion:
   destinos:
     - tipo: meta_catalog
       config:
-        sheet_id: "REEMPLAZAR_SHEET_ID_SELECCION_ANTONIA"
+        sheet_id: "1B6xSOMG2VfR67FzsDfHJPW4aEmK1xdkUFqCmZlWhQUk"
         moneda: ARS
         calcular_availability_por_stock: true
     - tipo: tiktok_catalog
       config:
-        sheet_id: "REEMPLAZAR_SHEET_ID_SELECCION_ANTONIA"
+        sheet_id: "1B6xSOMG2VfR67FzsDfHJPW4aEmK1xdkUFqCmZlWhQUk"
         moneda: ARS
         calcular_availability_por_stock: true
