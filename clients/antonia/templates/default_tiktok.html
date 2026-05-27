@@ -1,10 +1,10 @@
-<!-- DESC: Placa default Antonia (9:16 Tiktok) — foto full-bleed, precio efectivo, 6 cuotas sobre promo -->
+<!-- DESC: Placa default Antonia (9:16 TikTok) — info en el tercio inferior pero no pegada al fondo (zona UI de TikTok). -->
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap');
 
     * {
         margin: 0;
@@ -18,8 +18,8 @@
         font-family: 'Inter', sans-serif;
         position: relative;
         overflow: hidden;
-        background: #0a0a0a;
-        color: #ffffff;
+        background: #e8ddd0;
+        color: #3a2a24;
         -webkit-font-smoothing: antialiased;
     }
 
@@ -32,15 +32,13 @@
         z-index: 1;
     }
 
-    /* Gradient: oscurece la zona donde está la info (centro-bajo, ~1200-1600px)
-       dejando arriba y la parte inferior más limpios (la parte inferior va a
-       quedar tapada por TikTok igual, no necesita oscurecerse mucho). */
+    /* Gradient: oscurece zona donde está la info (centro-bajo, ~1180-1700px) */
     .overlay-base {
         position: absolute;
         inset: 0;
         background:
-            radial-gradient(ellipse 95% 30% at 50% 72%, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.50) 60%, rgba(0, 0, 0, 0.10) 100%),
-            linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.05) 25%, rgba(0, 0, 0, 0.05) 70%, rgba(0, 0, 0, 0.30) 100%);
+            radial-gradient(ellipse 95% 30% at 50% 73%, rgba(180, 130, 120, 0.88) 0%, rgba(212, 168, 156, 0.45) 60%, rgba(232, 221, 208, 0.10) 100%),
+            linear-gradient(180deg, rgba(255, 245, 235, 0.25) 0%, rgba(232, 221, 208, 0.05) 25%, rgba(232, 221, 208, 0.05) 70%, rgba(180, 130, 120, 0.25) 100%);
         z-index: 2;
     }
 
@@ -48,111 +46,120 @@
         position: absolute;
         inset: 0;
         background:
-            radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0) 30%, rgba(15, 12, 0, 0.30) 100%),
-            linear-gradient(135deg, rgba(212, 160, 23, 0.05) 0%, rgba(0, 0, 0, 0) 50%, rgba(212, 160, 23, 0.05) 100%);
+            radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0) 35%, rgba(180, 130, 120, 0.15) 100%);
         z-index: 3;
         pointer-events: none;
     }
 
-    .accent-line {
+    /* Franja superior rosa empolvado */
+    .top-banner {
         position: absolute;
-        left: 70px;
-        top: 60px;
-        width: 2px;
-        height: 80px;
-        background: linear-gradient(180deg, #d4a017 0%, transparent 100%);
-        z-index: 5;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 70px;
+        background: rgba(212, 168, 156, 0.92);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 8;
+        font-family: 'Inter', sans-serif;
+        font-size: 19px;
+        font-weight: 600;
+        letter-spacing: 1.8px;
+        color: #ffffff;
+        text-transform: uppercase;
+        text-shadow: 0 1px 2px rgba(120, 70, 60, 0.25);
     }
 
     .header {
         position: absolute;
-        top: 50px;
+        top: 110px;
         right: 70px;
         z-index: 10;
     }
 
     .logo {
-        height: 100px;
+        height: 110px;
         width: auto;
         filter: brightness(0) invert(1)
-                drop-shadow(0 2px 14px rgba(0, 0, 0, 0.85))
-                drop-shadow(0 0 30px rgba(0, 0, 0, 0.6));
+                drop-shadow(0 2px 14px rgba(80, 50, 45, 0.6))
+                drop-shadow(0 0 28px rgba(80, 50, 45, 0.4));
         display: block;
     }
 
-    /* Info-zone: empieza a 1/3 desde abajo.
-       Placa = 1920px de alto. 1/3 desde abajo = 1920 - 640 = 1280px del top.
-       Ahí arranca la info y se desarrolla hacia arriba (margin-bottom en cada
-       bloque la "empuja" hacia arriba si crece). */
+    /* Info-zone: empieza a 1/3 desde abajo. */
     .info-zone {
         position: absolute;
-        top: 1180px;
+        top: 1170px;
         left: 0;
         right: 0;
         padding: 0 80px;
         z-index: 10;
         text-align: center;
-        text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9);
+        text-shadow: 0 2px 18px rgba(80, 50, 45, 0.8);
     }
 
     .precio-tachado {
-        font-family: 'Inter', sans-serif;
-        font-size: 46px;
+        font-family: 'Cormorant Garamond', serif;
+        font-style: italic;
+        font-size: 52px;
         font-weight: 500;
-        color: rgba(255, 255, 255, 0.75);
+        color: rgba(255, 245, 235, 0.85);
         text-decoration: line-through;
-        text-decoration-color: #d4a017;
-        text-decoration-thickness: 3px;
+        text-decoration-color: rgba(255, 245, 235, 0.85);
+        text-decoration-thickness: 2.5px;
         letter-spacing: 0.5px;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
 
     .precio-principal {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Playfair Display', serif;
         font-size: 180px;
         font-weight: 900;
-        line-height: 0.95;
-        letter-spacing: -5px;
-        color: #ffffff;
+        line-height: 0.92;
+        letter-spacing: -3px;
+        color: #fff5eb;
         margin-bottom: 14px;
         text-shadow:
-            0 6px 30px rgba(0, 0, 0, 0.95),
-            0 0 80px rgba(0, 0, 0, 0.7),
-            0 0 120px rgba(212, 160, 23, 0.2);
+            0 6px 30px rgba(80, 50, 45, 0.85),
+            0 0 80px rgba(80, 50, 45, 0.5);
     }
 
     .precio-condicion {
         font-family: 'Inter', sans-serif;
-        font-size: 20px;
+        font-size: 21px;
         font-weight: 700;
-        letter-spacing: 3.5px;
-        color: #d4a017;
+        letter-spacing: 4px;
+        color: #fff5eb;
         text-transform: uppercase;
         margin-bottom: 28px;
-        text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);
+        text-shadow: 0 1px 10px rgba(80, 50, 45, 0.9);
+        opacity: 0.95;
     }
 
     .divider {
-        width: 80px;
-        height: 4px;
-        background: #d4a017;
+        width: 90px;
+        height: 2px;
+        background: rgba(255, 245, 235, 0.85);
         margin: 0 auto 26px auto;
-        box-shadow: 0 0 14px rgba(212, 160, 23, 0.6);
     }
 
     .nombre {
-        font-family: 'Inter', sans-serif;
-        font-size: 38px;
+        font-family: 'Cormorant Garamond', serif;
+        font-style: italic;
+        font-size: 50px;
         font-weight: 600;
-        color: #ffffff;
-        letter-spacing: 0.3px;
-        line-height: 1.2;
+        color: #fff5eb;
+        letter-spacing: 0.5px;
+        line-height: 1.15;
         margin-bottom: 36px;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        text-shadow: 0 2px 20px rgba(0, 0, 0, 0.95);
+        text-shadow: 0 2px 20px rgba(80, 50, 45, 0.9);
     }
 
     .pills {
@@ -166,30 +173,28 @@
         display: inline-flex;
         align-items: center;
         font-family: 'Inter', sans-serif;
-        font-size: 24px;
+        font-size: 23px;
         font-weight: 700;
-        letter-spacing: 2.2px;
-        padding: 20px 34px;
-        border: 2.5px solid #d4a017;
-        color: #d4a017;
-        background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(6px);
-        border-radius: 3px;
+        letter-spacing: 2px;
+        padding: 18px 34px;
+        background: rgba(255, 245, 235, 0.95);
+        color: #8a4f44;
+        border-radius: 50px;
         text-transform: uppercase;
         text-shadow: none;
+        box-shadow: 0 4px 18px rgba(80, 50, 45, 0.3);
     }
 
     .pill-cuotas {
-        background: rgba(212, 160, 23, 0.97);
-        color: #0a0a0a;
-        border-color: #d4a017;
+        background: rgba(212, 168, 156, 0.97);
+        color: #fff5eb;
     }
 
     .pill-cuotas .cuotas-mini {
         font-weight: 600;
         margin-left: 12px;
-        color: #0a0a0a;
-        opacity: 0.85;
+        color: #fff5eb;
+        opacity: 0.92;
         font-size: 19px;
         letter-spacing: 0.5px;
         text-transform: none;
@@ -201,7 +206,8 @@
     <img class="product-image" src="{imagen_b64}" alt="producto">
     <div class="overlay-base"></div>
     <div class="overlay-tint"></div>
-    <div class="accent-line"></div>
+
+    <div class="top-banner">Envío gratis +$150.000 · 6 cuotas sin interés · 20% OFF</div>
 
     <div class="header">
         <img class="logo" src="{logo_b64}" alt="logo">
@@ -210,11 +216,11 @@
     <div class="info-zone">
         <div class="precio-tachado">{precio_original_formateado}</div>
         <div class="precio-principal">{precio_efectivo_formateado}</div>
-        <div class="precio-condicion">En efectivo o transferencia</div>
+        <div class="precio-condicion">En transferencia</div>
         <div class="divider"></div>
         <div class="nombre">{nombre}</div>
         <div class="pills">
-            <div class="pill">Envío gratis +$150K</div>
+            <div class="pill">Envío gratis</div>
             <div class="pill pill-cuotas">{cuotas_num} cuotas <span class="cuotas-mini">de {cuota_formateada}</span></div>
         </div>
     </div>
