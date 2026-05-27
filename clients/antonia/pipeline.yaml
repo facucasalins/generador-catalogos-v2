@@ -76,6 +76,7 @@ estilo:
       envio_gratis_desde: "$150.000"
 # ============ BLOQUE 5: DISTRIBUCIÓN ============
 # Reusa la cuenta de Cloudinary compartida (folder distinto).
+# Feed-Output va a un sheet separado del sheet de Selección.
 distribucion:
   storage:
     backend: cloudinary
@@ -87,11 +88,11 @@ distribucion:
   destinos:
     - tipo: meta_catalog
       config:
-        sheet_id: "1B6xSOMG2VfR67FzsDfHJPW4aEmK1xdkUFqCmZlWhQUk"
+        sheet_id: "1C719_BmDZCsdluk5PwVTfUazYFp9BPywQJ_Ubx7FIQs"
         moneda: ARS
         calcular_availability_por_stock: true
     - tipo: tiktok_catalog
       config:
-        sheet_id: "1B6xSOMG2VfR67FzsDfHJPW4aEmK1xdkUFqCmZlWhQUk"
+        sheet_id: "1C719_BmDZCsdluk5PwVTfUazYFp9BPywQJ_Ubx7FIQs"
         moneda: ARS
         calcular_availability_por_stock: true
