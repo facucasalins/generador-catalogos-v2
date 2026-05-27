@@ -115,6 +115,7 @@ def construir_fuente_inventario(cfg_inv: dict):
             store_id=str(store_id),
             access_token=str(token),
             agrupar_por_producto=bool(agrupar),
+            cuotas_num=int(inner.get("cuotas_num", 3)),
         ))
     log.error("Fuente de inventario no soportada: %s", fuente_tipo)
     sys.exit(20)
