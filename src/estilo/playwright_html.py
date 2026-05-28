@@ -6,6 +6,11 @@ Cambio multi-template:
 - Esto permite que un mismo cliente tenga templates de distintas dimensiones
   (ej. default_4x5 + default_9x16 + default_1x1) sin tener que iterar
   aspect_ratios en el cli.py.
+
+Cambio multi-plataforma:
+- El template viene con prefijo de plataforma (ej: 'Meta_default_4x5').
+- El archivo HTML base no tiene prefijo ('default_4x5.html'), así que
+  se saca el prefijo para encontrar el archivo en disco.
 """
 from __future__ import annotations
 import base64
@@ -118,36 +123,36 @@ class PlaywrightHtmlEstilo(MotorEstilo):
             self._playwright = None
 
     def _cargar_template(self, nombre_template: str) -> tuple[str, TemplateMetadata]:
-    """Carga el HTML y su metadata. Cachea ambos.
+        """Carga el HTML y su metadata. Cachea ambos.
 
-    nombre_template viene con prefijo de plataforma (ej: 'Meta_default_4x5').
-    El archivo HTML base no tiene prefijo ('default_4x5.html'), así que
-    lo sacamos para encontrar el archivo.
-    """
-    if nombre_template in self._cache_templates:
-        return self._cache_templates[nombre_template], self._cache_metadata[nombre_template]
+        nombre_template viene con prefijo de plataforma (ej: 'Meta_default_4x5').
+        El archivo HTML base no tiene prefijo ('default_4x5.html'), así que
+        lo sacamos para encontrar el archivo.
+        """
+        if nombre_template in self._cache_templates:
+            return self._cache_templates[nombre_template], self._cache_metadata[nombre_template]
 
-    # Quitar prefijo de plataforma (Meta_ o TikTok_) para encontrar el HTML base
-    nombre_base = nombre_template
-    for prefijo in ("Meta_", "TikTok_"):
-        if nombre_base.startswith(prefijo):
-            nombre_base = nombre_base[len(prefijo):]
-            break
+        # Quitar prefijo de plataforma (Meta_ o TikTok_) para encontrar el HTML base
+        nombre_base = nombre_template
+        for prefijo in ("Meta_", "TikTok_"):
+            if nombre_base.startswith(prefijo):
+                nombre_base = nombre_base[len(prefijo):]
+                break
 
-    path = self.cfg.templates_dir / f"{nombre_base}.html"
-    if not path.exists():
-        raise ErrorEstilo(
-            f"Template '{nombre_template}' (base: '{nombre_base}') no encontrado en {path}"
-        )
+        path = self.cfg.templates_dir / f"{nombre_base}.html"
+        if not path.exists():
+            raise ErrorEstilo(
+                f"Template '{nombre_template}' (base: '{nombre_base}') no encontrado en {path}"
+            )
 
-    with open(path, encoding="utf-8") as f:
-        contenido = f.read()
+        with open(path, encoding="utf-8") as f:
+            contenido = f.read()
 
-    metadata = parsear_metadata_template(contenido, nombre_template)
+        metadata = parsear_metadata_template(contenido, nombre_template)
 
-    self._cache_templates[nombre_template] = contenido
-    self._cache_metadata[nombre_template] = metadata
-    return contenido, metadata
+        self._cache_templates[nombre_template] = contenido
+        self._cache_metadata[nombre_template] = metadata
+        return contenido, metadata
 
     def _descargar_imagen_a_base64(self, url: str) -> str:
         if not url:
