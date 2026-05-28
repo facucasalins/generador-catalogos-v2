@@ -42,7 +42,7 @@ def test_producto_promo_invalida_se_ignora():
         sku="ABC123",
         nombre="Test",
         precio_lista=1000.0,
-        precio_promocional=1200.0,  # mayor que lista
+        precio_promocional=1200.0,
     )
     assert p.tiene_promo is False
 
@@ -54,22 +54,29 @@ def test_decision_seleccion_default():
 
 
 def test_resultado_run_exito():
+    """Sin errores y con decisiones, exito=True."""
     r = ResultadoRun(cliente="morashop", inicio=datetime.now())
-    r.productos_seleccionados = 10
+    r.decisiones_totales = 10
     r.errores = []
     assert r.exito is True
 
 
 def test_resultado_run_muchos_errores():
+    """Si los errores superan la mitad de decisiones_totales, exito=False.
+
+    Nota: la lógica de .exito se basa en decisiones_totales (no en
+    productos_seleccionados), porque 1 producto puede generar N placas
+    (1 por template) y queremos medir errores contra placas, no productos.
+    """
     r = ResultadoRun(cliente="morashop", inicio=datetime.now())
-    r.productos_seleccionados = 10
+    r.decisiones_totales = 10
     r.errores = [("sku1", "err"), ("sku2", "err"), ("sku3", "err"),
                  ("sku4", "err"), ("sku5", "err"), ("sku6", "err")]
     assert r.exito is False
 
 
 def test_resultado_run_nada_que_hacer():
-    """Si no había productos seleccionados, no es un fallo."""
+    """Si no había decisiones, no es un fallo."""
     r = ResultadoRun(cliente="morashop", inicio=datetime.now())
     assert r.exito is True
 
