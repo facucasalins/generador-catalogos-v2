@@ -69,10 +69,12 @@ distribucion:
         sheet_id: "1C719_BmDZCsdluk5PwVTfUazYFp9BPywQJ_Ubx7FIQs"
         moneda: ARS
         calcular_availability_por_stock: true
-        aspect_ratios_aceptados: ["4:5", "1:1"]
+        # Antonia: Meta acepta 4:5 y 9:16. Si solo querés 4:5, sacá "9:16".
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
     - tipo: tiktok_catalog
       config:
         sheet_id: "1C719_BmDZCsdluk5PwVTfUazYFp9BPywQJ_Ubx7FIQs"
         moneda: ARS
         calcular_availability_por_stock: true
-        aspect_ratios_aceptados: ["9:16", "1:1"]
+        # Antonia: TikTok acepta 4:5 y 9:16.
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
