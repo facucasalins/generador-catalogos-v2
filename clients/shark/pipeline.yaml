@@ -12,8 +12,6 @@ inventario:
   config:
     store_id_secret: SHARK_TIENDANUBE_STORE_ID
     access_token_secret: SHARK_TIENDANUBE_TOKEN
-    # Shark vende ropa: 1 fila por producto TN (no por variante).
-    # SKU = handle (Identificador de URL TN).
     agrupar_por_producto: true
     sheet_destino:
       id: "1nRY50vdK-76X_7Jv_I2IZITy_kui_HvqPNHXjdkcct0"
@@ -40,7 +38,6 @@ enriquecimiento:
     tono: "Argentino, jovial, dirigido a personas que les gusta la moda. Usa voseo cuando corresponda (ej: 'llevátelo', 'es para vos'). Lenguaje natural."
 
 # ============ BLOQUE 4: ESTILO ============
-# Cada template declara sus dimensiones en <!-- META --> del HTML.
 estilo:
   motor: playwright_html
   config:
@@ -68,10 +65,10 @@ distribucion:
         sheet_id: "1r1UPXaSgKj142P0dtbztr7ZUNNJV-vOCDAfBnUoWDkE"
         moneda: ARS
         calcular_availability_por_stock: true
-        aspect_ratios_aceptados: ["4:5", "1:1"]
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
     - tipo: tiktok_catalog
       config:
         sheet_id: "1r1UPXaSgKj142P0dtbztr7ZUNNJV-vOCDAfBnUoWDkE"
         moneda: ARS
         calcular_availability_por_stock: true
-        aspect_ratios_aceptados: ["9:16", "1:1"]
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
