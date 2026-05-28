@@ -30,7 +30,7 @@ descripcion: Placa default Juanita Shoes 4:5 - foto full-bleed, panel de precios
     object-fit: cover; z-index: 1;
   }
 
-  /* Scrim superior beige para legibilidad del wordmark */
+  /* Scrim superior beige para legibilidad del logo */
   .scrim-top {
     position: absolute; top: 0; left: 0; right: 0;
     height: 380px;
@@ -41,49 +41,29 @@ descripcion: Placa default Juanita Shoes 4:5 - foto full-bleed, panel de precios
     z-index: 2; pointer-events: none;
   }
 
-  /* MARCA: logo real + wordmark JUANITA SHOES */
+  /* MARCA: logo único (el logo YA contiene el wordmark JUANITA SHOES) */
   .brand {
-    position: absolute; top: 48px; left: 0; right: 0;
+    position: absolute; top: 56px; left: 0; right: 0;
     text-align: center; z-index: 10;
   }
   .brand .logo {
-    height: 92px; width: auto; display: inline-block;
-    margin-bottom: 14px;
-  }
-  .wordmark .line1, .wordmark .line2 {
-    font-family: 'Cormorant Garamond', serif;
-    font-weight: 300; font-size: 44px;
-    letter-spacing: 0.35em; color: #1A1A1A; line-height: 0.95;
-  }
-  .wordmark .line2 { margin-top: 4px; letter-spacing: 0.45em; }
-
-  .divider {
-    width: 60px; height: 1px; background: #A67B5B;
-    margin: 16px auto 0 auto;
+    height: 200px; width: auto; display: inline-block;
   }
 
-  /* BADGE ENVÍO GRATIS - top right */
-  .envio-badge {
-    position: absolute; top: 230px; right: 60px;
-    background: #1A1A1A; color: #F5EFE6;
-    padding: 10px 18px;
-    font-size: 14px; font-weight: 500;
-    letter-spacing: 0.18em; text-transform: uppercase;
+  /* BADGES: par coherente, mismo estilo y altura, flanqueando la placa */
+  .badge {
+    position: absolute; top: 292px;
+    display: inline-flex; align-items: center;
+    height: 52px; padding: 0 24px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    border-radius: 26px;
     z-index: 15;
+    box-shadow: 0 6px 18px rgba(80, 50, 35, 0.22);
   }
-
-  /* BADGE DESCUENTO - top left (cuero) */
-  .discount-badge {
-    position: absolute; top: 215px; left: 60px;
-    background: #A67B5B; color: #F5EFE6;
-    width: 92px; height: 92px; border-radius: 50%;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    z-index: 15;
-    box-shadow: 0 6px 18px rgba(80, 50, 35, 0.28);
-  }
-  .discount-badge .pct { font-size: 30px; font-weight: 700; line-height: 1; }
-  .discount-badge .off { font-size: 11px; letter-spacing: 0.2em; margin-top: 2px; }
+  .badge-descuento { left: 60px; background: #A67B5B; color: #F5EFE6; }
+  .badge-envio { right: 60px; background: #1A1A1A; color: #F5EFE6; }
 
   /* PANEL DE PRECIOS - abajo, beige translúcido para legibilidad sobre foto */
   .price-block {
@@ -127,19 +107,10 @@ descripcion: Placa default Juanita Shoes 4:5 - foto full-bleed, panel de precios
 
   <div class="brand">
     <img class="logo" src="{logo_b64}" alt="Juanita Shoes">
-    <div class="wordmark">
-      <div class="line1">JUANITA</div>
-      <div class="line2">SHOES</div>
-    </div>
-    <div class="divider"></div>
   </div>
 
-  <div class="discount-badge">
-    <div class="pct">20</div>
-    <div class="off">% OFF</div>
-  </div>
-
-  <div class="envio-badge">ENVÍO GRATIS</div>
+  <div class="badge badge-descuento">20% OFF</div>
+  <div class="badge badge-envio">Envío gratis</div>
 
   <div class="price-block">
     <div class="price-transferencia">{precio_efectivo_formateado}</div>
