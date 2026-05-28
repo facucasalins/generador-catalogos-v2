@@ -14,6 +14,7 @@ from pathlib import Path
 
 from src.core.modelo_datos import Producto, DecisionSeleccion
 from src.core.sheets_client import ConfigSheets, SheetsClient
+from src.core.templates import nombre_base_template
 
 
 log = logging.getLogger(__name__)
@@ -46,7 +47,11 @@ class EntradaHistorial:
 
 
 def _leer_template_html(templates_dir: Path, template_name: str) -> str:
-    path = templates_dir / f"{template_name}.html"
+    # El nombre puede venir con prefijo de plataforma (Meta_/TikTok_); el
+    # archivo en disco no lo tiene. Resolvemos con el MISMO helper que usa
+    # el motor de estilo para que el hash refleje el contenido real del HTML.
+    nombre_base = nombre_base_template(template_name)
+    path = templates_dir / f"{nombre_base}.html"
     if not path.exists():
         log.warning("Template '%s' no existe, hash usará string vacío", path)
         return ""

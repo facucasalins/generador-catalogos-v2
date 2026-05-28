@@ -1,0 +1,39 @@
+"""Tests del helper compartido de resolución de nombres de template."""
+from src.core.templates import nombre_base_template, PREFIJOS_PLATAFORMA
+
+
+def test_quita_prefijo_meta():
+    assert nombre_base_template("Meta_default_4x5") == "default_4x5"
+
+
+def test_quita_prefijo_tiktok():
+    assert nombre_base_template("TikTok_juanita_9x16") == "juanita_9x16"
+
+
+def test_sin_prefijo_queda_igual():
+    assert nombre_base_template("default_4x5") == "default_4x5"
+
+
+def test_solo_quita_prefijo_del_inicio_no_toca_el_resto():
+    # Nombres reales de todos los clientes: solo se saca el prefijo de
+    # plataforma, el resto del nombre queda intacto.
+    casos = {
+        "Meta_default_4x5": "default_4x5",
+        "TikTok_default_9x16": "default_9x16",
+        "Meta_cuotas_4x5": "cuotas_4x5",        # antonia
+        "Meta_electro_9x16": "electro_9x16",    # morashop
+        "TikTok_innova_4x5": "innova_4x5",      # morashop
+        "Meta_juanita_4x5": "juanita_4x5",      # juanita
+        "TikTok_juanita_9x16": "juanita_9x16",  # juanita
+    }
+    for entrada, esperado in casos.items():
+        assert nombre_base_template(entrada) == esperado
+
+
+def test_no_quita_prefijo_parcial():
+    # 'Meta' sin '_' no es prefijo de plataforma: no se toca.
+    assert nombre_base_template("Metalico_4x5") == "Metalico_4x5"
+
+
+def test_prefijos_definidos():
+    assert PREFIJOS_PLATAFORMA == ("Meta_", "TikTok_")

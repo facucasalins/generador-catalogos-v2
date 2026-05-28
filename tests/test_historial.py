@@ -91,6 +91,39 @@ def test_hash_cambia_si_cambia_contenido_html():
     assert h1 != h2
 
 
+def test_hash_incluye_contenido_html_con_template_prefijado():
+    # Bug fix: el nombre de template viene con prefijo de plataforma
+    # (Meta_/TikTok_) pero el archivo en disco no lo tiene. Antes el hash
+    # no encontraba el archivo y usaba "" → cambiar el HTML no regeneraba.
+    # Ahora el prefijo se resuelve y el contenido entra al hash.
+    p = _producto()
+    d = _decision(template="Meta_juanita_4x5")
+
+    td_viejo = _templates_dir_con(nombre="juanita_4x5", contenido="<html>HEADER VIEJO</html>")
+    td_nuevo = _templates_dir_con(nombre="juanita_4x5", contenido="<html>HEADER NUEVO</html>")
+
+    h_viejo = calcular_hash(p, d, td_viejo)
+    h_nuevo = calcular_hash(p, d, td_nuevo)
+
+    # Si el contenido entra al hash, cambiar el HTML cambia el hash aun
+    # con el nombre de template prefijado.
+    assert h_viejo != h_nuevo
+
+
+def test_hash_resuelve_mismo_archivo_que_motor_de_estilo():
+    # El HTML base se llama 'juanita_4x5.html'. Tanto 'Meta_juanita_4x5'
+    # como 'TikTok_juanita_4x5' deben leer ESE archivo (no string vacío),
+    # así que su contenido afecta el hash.
+    td = _templates_dir_con(nombre="juanita_4x5", contenido="<html>CONTENIDO REAL</html>")
+    p = _producto()
+
+    # Mismo archivo, contenido real → hash distinto a un dir vacío (donde
+    # el archivo no existe y el contenido cae a "").
+    h_con_contenido = calcular_hash(p, _decision(template="Meta_juanita_4x5"), td)
+    h_sin_archivo = calcular_hash(p, _decision(template="Meta_juanita_4x5"), Path(tempfile.mkdtemp()))
+    assert h_con_contenido != h_sin_archivo
+
+
 def test_hash_no_cambia_si_cambia_stock():
     td = _templates_dir_con()
     d = _decision()

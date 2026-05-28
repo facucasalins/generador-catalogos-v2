@@ -24,6 +24,7 @@ import requests
 from playwright.sync_api import sync_playwright, Browser, BrowserContext
 
 from src.core.modelo_datos import Producto, DecisionSeleccion, Placa, TemplateMetadata
+from src.core.templates import nombre_base_template
 from src.estilo.base import MotorEstilo, ErrorEstilo
 from src.seleccion.sync import parsear_metadata_template
 
@@ -132,12 +133,10 @@ class PlaywrightHtmlEstilo(MotorEstilo):
         if nombre_template in self._cache_templates:
             return self._cache_templates[nombre_template], self._cache_metadata[nombre_template]
 
-        # Quitar prefijo de plataforma (Meta_ o TikTok_) para encontrar el HTML base
-        nombre_base = nombre_template
-        for prefijo in ("Meta_", "TikTok_"):
-            if nombre_base.startswith(prefijo):
-                nombre_base = nombre_base[len(prefijo):]
-                break
+        # Quitar prefijo de plataforma (Meta_ o TikTok_) para encontrar el HTML base.
+        # Mismo helper que usa historial.calcular_hash: ambos DEBEN resolver el
+        # mismo archivo o el hash deja de reflejar el contenido del template.
+        nombre_base = nombre_base_template(nombre_template)
 
         path = self.cfg.templates_dir / f"{nombre_base}.html"
         if not path.exists():
