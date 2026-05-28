@@ -1,18 +1,18 @@
-"""Destino: feed Meta Catalog (refactor Opción B).
+"""Destino: feed Meta Catalog (multi-template).
 
-Escribe N pestañas en el sheet de Feed-Output, una por template.
-Pestañas: Meta_{template}, ej: Meta_default, Meta_electrohogar.
-
-Header del id: 'id' (lo que Meta espera).
+Cambios:
+- 1 pestaña por template (ej: Meta_default_4x5, Meta_cuotas_4x5).
+- Acepta cualquier aspect ratio (Meta soporta 4:5, 1:1, 9:16 para Reels).
+- Si querés restringir a ciertos aspect ratios, configurá `aspect_ratios_aceptados`.
 """
 from __future__ import annotations
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from src.core.modelo_datos import Producto, PlacaSubida, DecisionSeleccion
 from src.distribucion.destinos.base import DestinoFeed, ErrorDestino
 from src.distribucion.destinos._common import (
-    agrupar_por_template,
+    agrupar_decisiones_por_template,
     escribir_pestaña_feed,
 )
 
@@ -20,7 +20,6 @@ from src.distribucion.destinos._common import (
 log = logging.getLogger(__name__)
 
 
-# Headers Meta. Primera columna 'id' (Meta-specific).
 HEADERS_META = [
     "id",
     "title",
@@ -42,10 +41,12 @@ class ConfigMetaCatalog:
     sheet_id: str
     moneda: str = "ARS"
     calcular_availability_por_stock: bool = True
+    # Si está vacío: acepta todos los aspect ratios. Si tiene valores,
+    # filtra placas que NO estén en la lista.
+    aspect_ratios_aceptados: list[str] = field(default_factory=list)
 
 
 class MetaCatalogDestino(DestinoFeed):
-    """Escribe feeds Meta Catalog, una pestaña por template."""
 
     def __init__(self, config: ConfigMetaCatalog):
         if not config.sheet_id:
@@ -61,33 +62,57 @@ class MetaCatalogDestino(DestinoFeed):
         placas_subidas: list[PlacaSubida],
         decisiones: list[DecisionSeleccion],
     ) -> dict[str, int]:
-        """Agrupa por template, escribe 1 pestaña por grupo.
+        # Indexar productos y placas para lookup rápido
+        productos_por_sku = {p.sku: p for p in productos}
 
-        Meta usa las placas 4:5 (Fase H: filtra del set total de placas).
-        """
-        grupos = agrupar_por_template(productos, decisiones)
+        # Filtrar placas por aspect_ratios aceptados (si está configurado)
+        placas_filtradas = placas_subidas
+        if self.cfg.aspect_ratios_aceptados:
+            placas_filtradas = [
+                p for p in placas_subidas
+                if p.aspect_ratio in self.cfg.aspect_ratios_aceptados
+            ]
+
+        placas_por_sku_template: dict[tuple[str, str], PlacaSubida] = {
+            (p.sku, p.template_usado): p for p in placas_filtradas
+        }
+
+        # Filtrar decisiones también por aspect ratio (vía placa subida)
+        grupos = agrupar_decisiones_por_template(decisiones)
 
         if not grupos:
-            log.warning("Meta: no hay productos para publicar")
+            log.warning("Meta: no hay decisiones para publicar")
             return {}
 
         resultados: dict[str, int] = {}
         errores: list[str] = []
 
-        for template, productos_grupo in grupos.items():
+        for template, decisiones_grupo in grupos.items():
+            # Saltar templates cuyo aspect_ratio no es aceptado por este destino
+            placas_de_este_template = [
+                p for p in placas_filtradas if p.template_usado == template
+            ]
+            if not placas_de_este_template and self.cfg.aspect_ratios_aceptados:
+                log.info(
+                    "Meta: template '%s' no tiene placas en aspect_ratios "
+                    "aceptados %s. Pestaña omitida.",
+                    template, self.cfg.aspect_ratios_aceptados,
+                )
+                continue
+
             pestaña = f"{PREFIJO_PESTAÑA}_{template}"
-            log.info("Meta: escribiendo pestaña '%s' (%d productos del template '%s')",
-                     pestaña, len(productos_grupo), template)
+            log.info("Meta: escribiendo pestaña '%s' (%d decisiones)",
+                     pestaña, len(decisiones_grupo))
             try:
                 n = escribir_pestaña_feed(
                     sheet_id=self.cfg.sheet_id,
                     pestaña=pestaña,
                     headers=HEADERS_META,
-                    productos_grupo=productos_grupo,
-                    placas_subidas=placas_subidas,
+                    decisiones_grupo=decisiones_grupo,
+                    productos_por_sku=productos_por_sku,
+                    placas_por_sku_template=placas_por_sku_template,
                     moneda=self.cfg.moneda,
                     calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
-                    aspect_ratio_filtrar="4:5",
                 )
                 resultados[pestaña] = n
             except ErrorDestino as e:
