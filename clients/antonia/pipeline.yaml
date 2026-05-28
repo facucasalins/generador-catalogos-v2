@@ -1,30 +1,23 @@
 # ====================================================================
-# Pipeline de Antonia V1
-# ====================================================================
-# Onboarding: 2026-05-27
-# Tienda: Tiendanube (vía app "Agency Nusa Analytics", App ID 28059)
-# Rubro: Zapatos
+# Pipeline de Antonia V2 (multi-template)
 # ====================================================================
 cliente:
   nombre: antonia
   brand_name: ANTONIA
   zona_horaria: America/Argentina/Buenos_Aires
+
 # ============ BLOQUE 1: INVENTARIO ============
 inventario:
   fuente: tiendanube
   config:
     store_id_secret: ANTONIA_TIENDANUBE_STORE_ID
     access_token_secret: ANTONIA_TIENDANUBE_TOKEN
-    # Antonia vende zapatos: cada producto TN tiene variantes de talle/color,
-    # todas valen lo mismo y el link manda a la página del producto donde
-    # el comprador elige. Misma lógica que Shark: 1 fila por producto TN.
-    # SKU = handle (Identificador de URL TN), ej: "stiletto-negro-clasico".
     agrupar_por_producto: true
-    # Antonia ofrece hasta 6 cuotas sin interés (TN no devuelve cuotas, se setea acá).
     cuotas_num: 6
     sheet_destino:
       id: "1iRy8tQHPB_qDD-Hd3NjnAKWmGa3dARnFQn0sA_ycGX0"
       pestaña: Inventario
+
 # ============ BLOQUE 2: SELECCIÓN ============
 seleccion:
   fuente: sheet_manual
@@ -32,10 +25,8 @@ seleccion:
     sheet:
       id: "1B6xSOMG2VfR67FzsDfHJPW4aEmK1xdkUFqCmZlWhQUk"
       pestaña: Seleccion
-    template_default: default
+
 # ============ BLOQUE 3: ENRIQUECIMIENTO ============
-# Gemini genera titulo_corto + descripcion_corta + tips.
-# Cache en pestaña 'Enriquecimiento' del sheet de Inventario.
 enriquecimiento:
   proveedor: gemini
   config:
@@ -45,39 +36,24 @@ enriquecimiento:
     max_chars_descripcion: 200
     cantidad_tips: 3
     max_chars_tip: 40
-    tono: "Argentino, femenino, elegante pero cercano. Dirigido a mujeres que les gusta la moda y los zapatos. Usa voseo cuando corresponda (ej: 'llevátelos', 'son para vos'). Lenguaje natural, evita lo cursi."
+    tono: "Argentino, femenino, elegante pero cercano. Dirigido a mujeres que les gusta la moda. Usa voseo. Lenguaje natural."
+
 # ============ BLOQUE 4: ESTILO ============
-# Antonia aplica:
-# - 20% off sobre precio promocional para pago en efectivo/transferencia
-#   → variable {precio_efectivo_formateado} = precio_promocional * 0.80
-# - 6 cuotas sin interés sobre precio promocional (SIN aplicar el 20%)
-#   → variable {cuota_formateada} = precio_promocional / 6
-# - Envío gratis a partir de $150.000 (mostrado fijo en el template)
+# Cada template tiene sus dimensiones declaradas en el comentario <!-- META -->
+# del HTML. Ya no se configuran aspect_ratios acá.
 estilo:
   motor: playwright_html
   config:
-    placa_width: 1080
-    placa_height: 1350
     hotsale_discount_factor: 1.0
-    descuento_efectivo_factor: 0.80   # 20% off para transferencia/efectivo
-    cuotas_sobre_promocional: true    # cuotas sobre el precio_promocional
-    aspect_ratios:
-      - label: "4:5"
-        width: 1080
-        height: 1350
-        template_suffix: ""
-      - label: "9:16"
-        width: 1080
-        height: 1920
-        template_suffix: "_tiktok"
+    descuento_efectivo_factor: 0.80
+    cuotas_sobre_promocional: true
     variables_globales:
       brand_name: ANTONIA
       logo_url: "https://acdn-us.mitiendanube.com/stores/005/181/517/themes/common/logo-94768175-1726830880-650fcd77bfd42f301d06dab1a092e1431726830880.png?0"
       evento_legal: ""
       envio_gratis_desde: "$150.000"
+
 # ============ BLOQUE 5: DISTRIBUCIÓN ============
-# Reusa la cuenta de Cloudinary compartida (folder distinto).
-# Feed-Output va a un sheet separado del sheet de Selección.
 distribucion:
   storage:
     backend: cloudinary
@@ -86,14 +62,20 @@ distribucion:
       api_key_secret: CLOUDINARY_API_KEY
       api_secret_secret: CLOUDINARY_API_SECRET
       folder: antonia
+
   destinos:
+    # Meta acepta 4:5, 1:1 y también 9:16 para Reels.
     - tipo: meta_catalog
       config:
         sheet_id: "1C719_BmDZCsdluk5PwVTfUazYFp9BPywQJ_Ubx7FIQs"
         moneda: ARS
         calcular_availability_por_stock: true
+        aspect_ratios_aceptados: ["4:5", "1:1", "9:16"]
+
+    # TikTok acepta cualquier aspect ratio.
     - tipo: tiktok_catalog
       config:
         sheet_id: "1C719_BmDZCsdluk5PwVTfUazYFp9BPywQJ_Ubx7FIQs"
         moneda: ARS
         calcular_availability_por_stock: true
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
