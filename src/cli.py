@@ -7,6 +7,11 @@ Cambio multi-template:
 - Cada DecisionSeleccion = 1 placa a renderizar (1 SKU + 1 template).
 - Las dimensiones vienen del template, no del config.
 - Un SKU puede tener N decisiones (una por template marcado en el sheet).
+
+Cambio idempotencia total:
+- Pestañas del feed-output: las que no tienen decisiones activas se BORRAN.
+- Placas de Cloudinary huérfanas: se BORRAN.
+- El sheet de Selección es la única fuente de verdad.
 """
 from __future__ import annotations
 import argparse
@@ -205,6 +210,7 @@ def correr_pipeline(
         "enriquecimientos_fallidos": 0,
         "skus_huerfanos_borrados": [],
         "skus_huerfanos_fallidos": [],
+        "pestañas_huerfanas_borradas": [],
     }
 
     # ============ BLOQUE 1: INVENTARIO ============
@@ -310,7 +316,6 @@ def correr_pipeline(
         return resultado, metricas
 
     # ============ BLOQUE 3: ENRIQUECIMIENTO ============
-    # Se aplica una sola vez por SKU (no por decisión).
     cfg_enriq = pipeline.get("enriquecimiento")
     if cfg_enriq and not sin_enriquecimiento:
         proveedor_tipo = cfg_enriq.get("proveedor")
@@ -343,7 +348,6 @@ def correr_pipeline(
         productos_por_sku_para_enriq = {p.sku: p for p in productos}
         cache_nuevo = dict(cache_actual)
 
-        # Enriquecer SKUs únicos (no decisiones)
         skus_a_enriquecer = {d.sku for d in decisiones_validas}
         skus_enriquecidos_ok = set()
 
@@ -382,7 +386,6 @@ def correr_pipeline(
             }
             skus_enriquecidos_ok.add(sku)
 
-        # Filtrar decisiones: solo las de SKUs que pasaron enriquecimiento
         decisiones_validas = [
             d for d in decisiones_validas if d.sku in skus_enriquecidos_ok
         ]
@@ -440,7 +443,6 @@ def correr_pipeline(
         cuotas_sobre_promocional=cfg_estilo_inner.get("cuotas_sobre_promocional", False),
     )
 
-    # Storage
     cfg_dist = pipeline.get("distribucion", {})
     cfg_storage = cfg_dist.get("storage")
     storage = None
@@ -448,7 +450,6 @@ def correr_pipeline(
         storage = construir_storage(cfg_storage)
         log.info("[Bloque 5.1] Storage: %s", storage.nombre())
 
-    # Separar regenerar vs reusar
     a_regenerar: list[tuple[Producto, DecisionSeleccion, str]] = []
     a_reusar: list[tuple[Producto, DecisionSeleccion, EntradaHistorial]] = []
 
@@ -470,7 +471,6 @@ def correr_pipeline(
     log.info("[Bloque 4] %d a regenerar, %d a reusar",
              len(a_regenerar), len(a_reusar))
 
-    # Render
     placas_generadas: list[Placa] = []
     decision_por_placa: dict[tuple[str, str], DecisionSeleccion] = {}
     if a_regenerar:
@@ -481,7 +481,6 @@ def correr_pipeline(
                     placas_generadas.append(placa)
                     decision_por_placa[(producto.sku, decision.template)] = decision
 
-                    # Métricas: solo trackear cambio de precio por SKU una vez
                     motivo = _resumir_cambio_precio(
                         producto, historial_actual.get((producto.sku, decision.template)),
                     )
@@ -500,13 +499,11 @@ def correr_pipeline(
                     )
                     raise
 
-    # Subida a storage
     placas_subidas_nuevas: list[PlacaSubida] = []
     if storage and placas_generadas:
         for i, placa in enumerate(placas_generadas, start=1):
             try:
                 subida = storage.subir(placa)
-                # Copiar template_usado y aspect_ratio (storage no los sabe)
                 subida.template_usado = placa.template_usado
                 subida.aspect_ratio = placa.aspect_ratio
                 placas_subidas_nuevas.append(subida)
@@ -520,7 +517,6 @@ def correr_pipeline(
                     (placa.sku, f"storage {placa.template_usado}: {e}")
                 )
 
-    # Reusadas → PlacaSubida virtual
     placas_subidas_reusadas: list[PlacaSubida] = []
     for producto, decision, entrada in a_reusar:
         aspect_ratio_template = templates_por_nombre.get(decision.template)
@@ -554,7 +550,6 @@ def correr_pipeline(
     }
     aspect_por_template = {t.nombre: t.aspect_ratio for t in templates_metadata}
 
-    # Nuevas
     for producto, decision, hash_nuevo in a_regenerar:
         key = (producto.sku, decision.template)
         if key not in skus_template_subidos_ok:
@@ -569,34 +564,29 @@ def correr_pipeline(
             hash_render=hash_nuevo,
             aspect_ratio=aspect_por_template.get(decision.template, "4:5"),
         )
-    # Reusadas
     for producto, decision, entrada_vieja in a_reusar:
         historial_nuevo[(producto.sku, decision.template)] = entrada_vieja
 
-    # ============ LIMPIEZA DE HUÉRFANOS ============
-    # Una placa es huérfana si su (sku, template) estaba en historial pero ya no.
-    # Borrar de Cloudinary solo las que efectivamente desaparecieron.
+    # ============ LIMPIEZA DE HUÉRFANOS EN CLOUDINARY ============
     keys_activas = set(historial_nuevo.keys())
     keys_anteriores = set(historial_actual.keys())
     huerfanas = keys_anteriores - keys_activas
 
     if huerfanas and storage:
-        log.info("[Limpieza] %d placas huérfanas detectadas", len(huerfanas))
+        log.info("[Limpieza Cloudinary] %d placas huérfanas detectadas", len(huerfanas))
         borrados_ok = []
         borrados_falla = []
         for (sku, template) in huerfanas:
-            # public_id en Cloudinary: sku__template (mismo formato que renderizar)
             public_id = f"{sku}__{template}"
             if storage.borrar(public_id):
                 borrados_ok.append(f"{sku}/{template}")
-                log.info("[Limpieza] Borrado: %s/%s", sku, template)
+                log.info("[Limpieza Cloudinary] Borrado: %s/%s", sku, template)
             else:
                 borrados_falla.append(f"{sku}/{template}")
-                log.warning("[Limpieza] No pude borrar: %s/%s", sku, template)
+                log.warning("[Limpieza Cloudinary] No pude borrar: %s/%s", sku, template)
         metricas["skus_huerfanos_borrados"] = borrados_ok
         metricas["skus_huerfanos_fallidos"] = borrados_falla
 
-    # Guardar historial
     try:
         historial.escribir_todo(historial_nuevo)
         log.info("[Historial] Actualizado: %d entradas", len(historial_nuevo))
@@ -634,6 +624,21 @@ def correr_pipeline(
                 log.info("[Bloque 5.2]   - %s: %d filas", pestaña, n)
                 metricas["feeds_resumen"][pestaña] = n
             feeds_publicados += 1
+
+            # ============ LIMPIEZA DE PESTAÑAS HUÉRFANAS ============
+            # Borrar pestañas del feed-output que NO se escribieron este run.
+            # Esto convierte al sheet en un espejo idempotente del Seleccion.
+            try:
+                pestañas_activas = set(resultados.keys())
+                borradas = destino.eliminar_pestañas_huerfanas(pestañas_activas)
+                if borradas:
+                    log.info("[Bloque 5.2] %s: %d pestañas huérfanas borradas: %s",
+                             destino.nombre(), len(borradas), borradas)
+                    metricas["pestañas_huerfanas_borradas"].extend(borradas)
+            except Exception as e:
+                log.warning("[Bloque 5.2] %s: falló limpieza de pestañas huérfanas: %s",
+                            destino.nombre(), e)
+
         except ErrorDestino as e:
             log.error("Falló destino %s: %s", destino.nombre(), e)
             resultado.errores.append((destino.nombre(), str(e)))
@@ -699,7 +704,8 @@ def main() -> None:
     log.info(
         "=== Fin: inventario=%d, seleccionados=%d, decisiones=%d, "
         "enriq=%d nuevos/%d reusados/%d fallidos, "
-        "placas=%d regen/%d reus, subidas=%d, feeds=%d, errores=%d, %.1fs ===",
+        "placas=%d regen/%d reus, subidas=%d, feeds=%d, "
+        "pestañas_huerf=%d, errores=%d, %.1fs ===",
         resultado.productos_inventario,
         resultado.productos_seleccionados,
         resultado.decisiones_totales,
@@ -710,6 +716,7 @@ def main() -> None:
         metricas["placas_reusadas"],
         resultado.placas_subidas,
         resultado.feeds_publicados,
+        len(metricas.get("pestañas_huerfanas_borradas", [])),
         len(resultado.errores),
         resultado.duracion_segundos or 0,
     )
@@ -729,8 +736,8 @@ def main() -> None:
             enriq_nuevos=metricas["enriquecimientos_nuevos"],
             enriq_reusados=metricas["enriquecimientos_reusados"],
             enriq_fallidos=metricas["enriquecimientos_fallidos"],
-            skus_huerfanos_borrados=metricas.get("skus_huerfanos_borrados", []),
-            skus_huerfanos_fallidos=metricas.get("skus_huerfanos_fallidos", []),
+            skus_huerfanos_borrados=metricas["skus_huerfanos_borrados"],
+            skus_huerfanos_fallidos=metricas["skus_huerfanos_fallidos"],
         )
         telegram_notifier.notificar(msg)
 
