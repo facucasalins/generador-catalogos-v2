@@ -1,0 +1,76 @@
+# ====================================================================
+# Pipeline de Juanita Shoes V2 (multi-template)
+# ====================================================================
+cliente:
+  nombre: juanita
+  brand_name: Juanita Shoes
+  zona_horaria: America/Argentina/Buenos_Aires
+
+# ============ BLOQUE 1: INVENTARIO ============
+inventario:
+  fuente: tiendanube
+  config:
+    store_id_secret: JUANITA_TIENDANUBE_STORE_ID
+    access_token_secret: JUANITA_TIENDANUBE_TOKEN
+    cuotas_num: 9
+    sheet_destino:
+      id: "1rW242O3H8HK5wGM6UyjhacDsDF0TR7r3Nft5GIMNFwU"
+      pestaña: Inventario
+
+# ============ BLOQUE 2: SELECCIÓN ============
+seleccion:
+  fuente: sheet_manual
+  config:
+    sheet:
+      id: "1KVGVvIXph89Cmd-YJI-eBw-qjiYrj_EDcJhDjynhCcM"
+      pestaña: Seleccion
+
+# ============ BLOQUE 3: ENRIQUECIMIENTO ============
+enriquecimiento:
+  proveedor: gemini
+  config:
+    api_key_secret: GEMINI_API_KEY
+    modelo: gemini-2.5-flash
+    max_chars_titulo: 60
+    max_chars_descripcion: 200
+    cantidad_tips: 3
+    max_chars_tip: 40
+    tono: "Argentino. Usa voseo cuando corresponda (ej: 'llevátelo', 'es para vos'). Lenguaje natural, sin extranjerismos innecesarios."
+
+# ============ BLOQUE 4: ESTILO ============
+# Cada template declara sus dimensiones en <!-- META --> del HTML.
+estilo:
+  motor: playwright_html
+  config:
+    hotsale_discount_factor: 1.0
+    descuento_efectivo_factor: 0.80
+    cuotas_sobre_promocional: true
+    variables_globales:
+      brand_name: Juanita Shoes
+      logo_url: "REEMPLAZAR_URL_LOGO"
+      evento_legal: ""
+      envio_gratis_desde: "$100.000"
+
+# ============ BLOQUE 5: DISTRIBUCIÓN ============
+distribucion:
+  storage:
+    backend: cloudinary
+    config:
+      cloud_name_secret: CLOUDINARY_CLOUD_NAME
+      api_key_secret: CLOUDINARY_API_KEY
+      api_secret_secret: CLOUDINARY_API_SECRET
+      folder: juanita
+
+  destinos:
+    - tipo: meta_catalog
+      config:
+        sheet_id: "1m0ys0gY-55-s9gP27Iweu7xD4c2e5zdNZe-ErsyT1uQ"
+        moneda: ARS
+        calcular_availability_por_stock: true
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
+    - tipo: tiktok_catalog
+      config:
+        sheet_id: "1m0ys0gY-55-s9gP27Iweu7xD4c2e5zdNZe-ErsyT1uQ"
+        moneda: ARS
+        calcular_availability_por_stock: true
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
