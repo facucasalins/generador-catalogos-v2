@@ -1,13 +1,23 @@
 """Destino: feed Meta Catalog.
 
 El template ya viene con prefijo de plataforma (ej: 'Meta_default_4x5').
-Filtra solo los templates 'Meta_*' y usa el nombre tal cual como pestaña.
+Filtra solo los templates 'Meta_*'.
 
-Idempotencia (multi-template):
-- publicar() devuelve qué pestañas ESCRIBIÓ en este run.
-- eliminar_pestañas_huerfanas() borra del sheet las pestañas con prefijo
-  'Meta_' que NO están en el set activo. Esto convierte al Sheet en un
-  espejo idempotente de las decisiones marcadas en Selección.
+Pestaña MAESTRA 'Meta_Feed':
+- Contiene TODAS las decisiones Meta_* del run.
+- Esta es la pestaña que se conecta a Meta Catalog.
+- id = sku + '__' + template (único)
+- item_group_id = sku (agrupa variantes)
+- Se mueve a posición 0 del sheet (primera pestaña).
+
+Pestañas individuales por template:
+- Se mantienen como visualización (Meta_default_4x5, Meta_cuotas_4x5, etc.)
+
+Idempotencia:
+- Si hay decisiones Meta: se crea/actualiza Meta_Feed + individuales.
+- Si NO hay decisiones Meta: se BORRAN todas las pestañas Meta_* (incluida
+  Meta_Feed). El sheet refleja 1:1 lo marcado en Selección.
+- Las individuales sin decisiones también se borran.
 """
 from __future__ import annotations
 import logging
@@ -19,13 +29,16 @@ from src.distribucion.destinos.base import DestinoFeed, ErrorDestino
 from src.distribucion.destinos._common import (
     agrupar_decisiones_por_template,
     escribir_pestaña_feed,
+    escribir_pestaña_maestra,
+    mover_pestaña_a_posicion,
+    borrar_pestaña_si_existe,
 )
 
 
 log = logging.getLogger(__name__)
 
 
-HEADERS_META = [
+HEADERS_META_INDIVIDUAL = [
     "id",
     "title",
     "description",
@@ -37,7 +50,22 @@ HEADERS_META = [
     "brand",
 ]
 
+HEADERS_META_MAESTRA = [
+    "id",
+    "item_group_id",
+    "title",
+    "description",
+    "availability",
+    "condition",
+    "price",
+    "link",
+    "image_link",
+    "brand",
+]
+
 PREFIJO_PLATAFORMA = "Meta_"
+PESTAÑA_MAESTRA = "Meta_Feed"
+POSICION_MAESTRA = 0  # Primera pestaña del sheet
 
 
 @dataclass
@@ -67,10 +95,13 @@ class MetaCatalogDestino(DestinoFeed):
     ) -> dict[str, int]:
         productos_por_sku = {p.sku: p for p in productos}
 
-        # Filtrar solo decisiones de Meta (template empieza con 'Meta_')
         decisiones_meta = [d for d in decisiones if d.template.startswith(PREFIJO_PLATAFORMA)]
+
+        # Si NO hay decisiones Meta → no creamos nada (idempotencia total).
+        # La pestaña maestra y las individuales se borran después en
+        # eliminar_pestañas_huerfanas() al no estar en el set activo.
         if not decisiones_meta:
-            log.warning("Meta: no hay decisiones con prefijo '%s'", PREFIJO_PLATAFORMA)
+            log.info("Meta: no hay decisiones marcadas. No se crea Meta_Feed.")
             return {}
 
         # Filtrar placas por aspect_ratios aceptados
@@ -81,17 +112,39 @@ class MetaCatalogDestino(DestinoFeed):
                 if p.aspect_ratio in self.cfg.aspect_ratios_aceptados
             ]
 
-        # Indexar placas que sean de templates Meta_
         placas_por_sku_template: dict[tuple[str, str], PlacaSubida] = {
             (p.sku, p.template_usado): p
             for p in placas_filtradas
             if p.template_usado.startswith(PREFIJO_PLATAFORMA)
         }
 
-        grupos = agrupar_decisiones_por_template(decisiones_meta)
-
         resultados: dict[str, int] = {}
         errores: list[str] = []
+
+        # ============ 1. ESCRIBIR PESTAÑA MAESTRA ============
+        try:
+            n_maestra = escribir_pestaña_maestra(
+                sheet_id=self.cfg.sheet_id,
+                pestaña=PESTAÑA_MAESTRA,
+                headers=HEADERS_META_MAESTRA,
+                decisiones_plataforma=decisiones_meta,
+                productos_por_sku=productos_por_sku,
+                placas_por_sku_template=placas_por_sku_template,
+                moneda=self.cfg.moneda,
+                calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
+            )
+            resultados[PESTAÑA_MAESTRA] = n_maestra
+
+            # Mover a posición 0 (primera pestaña del sheet)
+            mover_pestaña_a_posicion(
+                self.cfg.sheet_id, PESTAÑA_MAESTRA, POSICION_MAESTRA,
+            )
+        except ErrorDestino as e:
+            log.error("Meta: falló pestaña maestra '%s': %s", PESTAÑA_MAESTRA, e)
+            errores.append(f"{PESTAÑA_MAESTRA}: {e}")
+
+        # ============ 2. ESCRIBIR PESTAÑAS INDIVIDUALES ============
+        grupos = agrupar_decisiones_por_template(decisiones_meta)
 
         for template, decisiones_grupo in grupos.items():
             placas_de_este_template = [
@@ -100,20 +153,19 @@ class MetaCatalogDestino(DestinoFeed):
             if not placas_de_este_template and self.cfg.aspect_ratios_aceptados:
                 log.info(
                     "Meta: template '%s' no tiene placas en aspect_ratios "
-                    "aceptados %s. Pestaña omitida.",
+                    "aceptados %s. Pestaña individual omitida.",
                     template, self.cfg.aspect_ratios_aceptados,
                 )
                 continue
 
-            # El nombre del template YA tiene 'Meta_' al inicio, lo usamos tal cual
             pestaña = template
-            log.info("Meta: escribiendo pestaña '%s' (%d decisiones)",
+            log.info("Meta: escribiendo pestaña individual '%s' (%d decisiones)",
                      pestaña, len(decisiones_grupo))
             try:
                 n = escribir_pestaña_feed(
                     sheet_id=self.cfg.sheet_id,
                     pestaña=pestaña,
-                    headers=HEADERS_META,
+                    headers=HEADERS_META_INDIVIDUAL,
                     decisiones_grupo=decisiones_grupo,
                     productos_por_sku=productos_por_sku,
                     placas_por_sku_template=placas_por_sku_template,
@@ -133,9 +185,12 @@ class MetaCatalogDestino(DestinoFeed):
     def eliminar_pestañas_huerfanas(self, pestañas_activas: set[str]) -> list[str]:
         """Borra del sheet pestañas con prefijo 'Meta_' que NO están activas.
 
+        IMPORTANTE: incluye Meta_Feed si no fue escrita en este run.
+        Esto es deseable: si nadie marcó nada, Meta_Feed también se borra.
+
         Args:
-            pestañas_activas: set con los nombres de pestañas que SÍ se acaban
-                de escribir en este run.
+            pestañas_activas: set con los nombres de pestañas que SÍ se
+                acaban de escribir en este run.
 
         Returns:
             Lista de nombres de pestañas borradas.
