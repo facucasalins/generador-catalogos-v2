@@ -47,7 +47,7 @@ estilo:
     cuotas_sobre_promocional: true
     variables_globales:
       brand_name: Juanita Shoes
-      logo_url: "REEMPLAZAR_URL_LOGO"
+      logo_url: "https://res.cloudinary.com/dk7bhi4j9/image/upload/v1779997886/ChatGPT_Image_28_may_2026_04_51_06_p.m._t829k5.png"
       evento_legal: ""
       envio_gratis_desde: "$100.000"
 
