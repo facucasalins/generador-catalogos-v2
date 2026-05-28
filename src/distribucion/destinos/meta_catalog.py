@@ -1,9 +1,7 @@
-"""Destino: feed Meta Catalog (multi-template).
+"""Destino: feed Meta Catalog.
 
-Cambios:
-- 1 pestaña por template (ej: Meta_default_4x5, Meta_cuotas_4x5).
-- Acepta cualquier aspect ratio (Meta soporta 4:5, 1:1, 9:16 para Reels).
-- Si querés restringir a ciertos aspect ratios, configurá `aspect_ratios_aceptados`.
+El template ya viene con prefijo de plataforma (ej: 'Meta_default_4x5').
+Filtra solo los templates 'Meta_*' y usa el nombre tal cual como pestaña.
 """
 from __future__ import annotations
 import logging
@@ -32,17 +30,15 @@ HEADERS_META = [
     "brand",
 ]
 
-PREFIJO_PESTAÑA = "Meta"
+PREFIJO_PLATAFORMA = "Meta_"
 
 
 @dataclass
 class ConfigMetaCatalog:
-    """Config Meta. Una pestaña por template, prefijo 'Meta_'."""
+    """Config Meta. Solo procesa templates que empiezan con 'Meta_'."""
     sheet_id: str
     moneda: str = "ARS"
     calcular_availability_por_stock: bool = True
-    # Si está vacío: acepta todos los aspect ratios. Si tiene valores,
-    # filtra placas que NO estén en la lista.
     aspect_ratios_aceptados: list[str] = field(default_factory=list)
 
 
@@ -62,10 +58,15 @@ class MetaCatalogDestino(DestinoFeed):
         placas_subidas: list[PlacaSubida],
         decisiones: list[DecisionSeleccion],
     ) -> dict[str, int]:
-        # Indexar productos y placas para lookup rápido
         productos_por_sku = {p.sku: p for p in productos}
 
-        # Filtrar placas por aspect_ratios aceptados (si está configurado)
+        # Filtrar solo decisiones de Meta (template empieza con 'Meta_')
+        decisiones_meta = [d for d in decisiones if d.template.startswith(PREFIJO_PLATAFORMA)]
+        if not decisiones_meta:
+            log.warning("Meta: no hay decisiones con prefijo '%s'", PREFIJO_PLATAFORMA)
+            return {}
+
+        # Filtrar placas por aspect_ratios aceptados
         placas_filtradas = placas_subidas
         if self.cfg.aspect_ratios_aceptados:
             placas_filtradas = [
@@ -73,22 +74,19 @@ class MetaCatalogDestino(DestinoFeed):
                 if p.aspect_ratio in self.cfg.aspect_ratios_aceptados
             ]
 
+        # Indexar placas que sean de templates Meta_
         placas_por_sku_template: dict[tuple[str, str], PlacaSubida] = {
-            (p.sku, p.template_usado): p for p in placas_filtradas
+            (p.sku, p.template_usado): p
+            for p in placas_filtradas
+            if p.template_usado.startswith(PREFIJO_PLATAFORMA)
         }
 
-        # Filtrar decisiones también por aspect ratio (vía placa subida)
-        grupos = agrupar_decisiones_por_template(decisiones)
-
-        if not grupos:
-            log.warning("Meta: no hay decisiones para publicar")
-            return {}
+        grupos = agrupar_decisiones_por_template(decisiones_meta)
 
         resultados: dict[str, int] = {}
         errores: list[str] = []
 
         for template, decisiones_grupo in grupos.items():
-            # Saltar templates cuyo aspect_ratio no es aceptado por este destino
             placas_de_este_template = [
                 p for p in placas_filtradas if p.template_usado == template
             ]
@@ -100,7 +98,8 @@ class MetaCatalogDestino(DestinoFeed):
                 )
                 continue
 
-            pestaña = f"{PREFIJO_PESTAÑA}_{template}"
+            # El nombre del template YA tiene 'Meta_' al inicio, lo usamos tal cual
+            pestaña = template
             log.info("Meta: escribiendo pestaña '%s' (%d decisiones)",
                      pestaña, len(decisiones_grupo))
             try:
