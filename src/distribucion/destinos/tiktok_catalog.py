@@ -1,20 +1,17 @@
-"""Destino: feed TikTok Catalog.
+"""Destino: feed TikTok Catalog (multi-template).
 
-Igual que Meta pero con:
-- Header del id: 'sku_id' (TikTok-specific, no 'id')
+Idéntico a Meta pero con:
+- Header del id: 'sku_id' (TikTok-specific)
 - Prefijo de pestaña: 'TikTok_'
-
-Las demás 8 columnas son idénticas a Meta. Si en el futuro TikTok cambia
-algún campo, se ajusta acá sin tocar Meta.
 """
 from __future__ import annotations
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from src.core.modelo_datos import Producto, PlacaSubida, DecisionSeleccion
 from src.distribucion.destinos.base import DestinoFeed, ErrorDestino
 from src.distribucion.destinos._common import (
-    agrupar_por_template,
+    agrupar_decisiones_por_template,
     escribir_pestaña_feed,
 )
 
@@ -22,7 +19,6 @@ from src.distribucion.destinos._common import (
 log = logging.getLogger(__name__)
 
 
-# Headers TikTok. La diferencia con Meta: 'sku_id' en vez de 'id'.
 HEADERS_TIKTOK = [
     "sku_id",
     "title",
@@ -40,14 +36,13 @@ PREFIJO_PESTAÑA = "TikTok"
 
 @dataclass
 class ConfigTikTokCatalog:
-    """Config TikTok. Una pestaña por template, prefijo 'TikTok_'."""
     sheet_id: str
     moneda: str = "ARS"
     calcular_availability_por_stock: bool = True
+    aspect_ratios_aceptados: list[str] = field(default_factory=list)
 
 
 class TikTokCatalogDestino(DestinoFeed):
-    """Escribe feeds TikTok Catalog, una pestaña por template."""
 
     def __init__(self, config: ConfigTikTokCatalog):
         if not config.sheet_id:
@@ -63,35 +58,53 @@ class TikTokCatalogDestino(DestinoFeed):
         placas_subidas: list[PlacaSubida],
         decisiones: list[DecisionSeleccion],
     ) -> dict[str, int]:
-        """Agrupa por template, escribe 1 pestaña por grupo.
+        productos_por_sku = {p.sku: p for p in productos}
 
-        TikTok usa las placas 9:16 (Fase H: filtra del set total de placas).
-        Si todavía no hay placas 9:16 para los SKUs, la pestaña queda vacía
-        con warning.
-        """
-        grupos = agrupar_por_template(productos, decisiones)
+        placas_filtradas = placas_subidas
+        if self.cfg.aspect_ratios_aceptados:
+            placas_filtradas = [
+                p for p in placas_subidas
+                if p.aspect_ratio in self.cfg.aspect_ratios_aceptados
+            ]
+
+        placas_por_sku_template: dict[tuple[str, str], PlacaSubida] = {
+            (p.sku, p.template_usado): p for p in placas_filtradas
+        }
+
+        grupos = agrupar_decisiones_por_template(decisiones)
 
         if not grupos:
-            log.warning("TikTok: no hay productos para publicar")
+            log.warning("TikTok: no hay decisiones para publicar")
             return {}
 
         resultados: dict[str, int] = {}
         errores: list[str] = []
 
-        for template, productos_grupo in grupos.items():
+        for template, decisiones_grupo in grupos.items():
+            placas_de_este_template = [
+                p for p in placas_filtradas if p.template_usado == template
+            ]
+            if not placas_de_este_template and self.cfg.aspect_ratios_aceptados:
+                log.info(
+                    "TikTok: template '%s' no tiene placas en aspect_ratios "
+                    "aceptados %s. Pestaña omitida.",
+                    template, self.cfg.aspect_ratios_aceptados,
+                )
+                continue
+
             pestaña = f"{PREFIJO_PESTAÑA}_{template}"
-            log.info("TikTok: escribiendo pestaña '%s' (%d productos del template '%s')",
-                     pestaña, len(productos_grupo), template)
+            log.info("TikTok: escribiendo pestaña '%s' (%d decisiones)",
+                     pestaña, len(decisiones_grupo))
             try:
                 n = escribir_pestaña_feed(
                     sheet_id=self.cfg.sheet_id,
                     pestaña=pestaña,
                     headers=HEADERS_TIKTOK,
-                    productos_grupo=productos_grupo,
-                    placas_subidas=placas_subidas,
+                    decisiones_grupo=decisiones_grupo,
+                    productos_por_sku=productos_por_sku,
+                    placas_por_sku_template=placas_por_sku_template,
                     moneda=self.cfg.moneda,
                     calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
-                    aspect_ratio_filtrar="9:16",
                 )
                 resultados[pestaña] = n
             except ErrorDestino as e:
