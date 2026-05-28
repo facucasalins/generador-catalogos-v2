@@ -16,11 +16,16 @@ dist/
 
 # Credenciales locales (NUNCA commitear)
 .env
-.env.local
+.env.*
 *.pem
 *.key
 service-account-*.json
 google-credentials.json
+*credentials*.json
+*secret*.json
+
+# Node
+node_modules/
 
 # IDE
 .vscode/
