@@ -118,24 +118,36 @@ class PlaywrightHtmlEstilo(MotorEstilo):
             self._playwright = None
 
     def _cargar_template(self, nombre_template: str) -> tuple[str, TemplateMetadata]:
-        """Carga el HTML y su metadata. Cachea ambos."""
-        if nombre_template in self._cache_templates:
-            return self._cache_templates[nombre_template], self._cache_metadata[nombre_template]
+    """Carga el HTML y su metadata. Cachea ambos.
 
-        path = self.cfg.templates_dir / f"{nombre_template}.html"
-        if not path.exists():
-            raise ErrorEstilo(
-                f"Template '{nombre_template}' no encontrado en {path}"
-            )
+    nombre_template viene con prefijo de plataforma (ej: 'Meta_default_4x5').
+    El archivo HTML base no tiene prefijo ('default_4x5.html'), así que
+    lo sacamos para encontrar el archivo.
+    """
+    if nombre_template in self._cache_templates:
+        return self._cache_templates[nombre_template], self._cache_metadata[nombre_template]
 
-        with open(path, encoding="utf-8") as f:
-            contenido = f.read()
+    # Quitar prefijo de plataforma (Meta_ o TikTok_) para encontrar el HTML base
+    nombre_base = nombre_template
+    for prefijo in ("Meta_", "TikTok_"):
+        if nombre_base.startswith(prefijo):
+            nombre_base = nombre_base[len(prefijo):]
+            break
 
-        metadata = parsear_metadata_template(contenido, nombre_template)
+    path = self.cfg.templates_dir / f"{nombre_base}.html"
+    if not path.exists():
+        raise ErrorEstilo(
+            f"Template '{nombre_template}' (base: '{nombre_base}') no encontrado en {path}"
+        )
 
-        self._cache_templates[nombre_template] = contenido
-        self._cache_metadata[nombre_template] = metadata
-        return contenido, metadata
+    with open(path, encoding="utf-8") as f:
+        contenido = f.read()
+
+    metadata = parsear_metadata_template(contenido, nombre_template)
+
+    self._cache_templates[nombre_template] = contenido
+    self._cache_metadata[nombre_template] = metadata
+    return contenido, metadata
 
     def _descargar_imagen_a_base64(self, url: str) -> str:
         if not url:
