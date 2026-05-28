@@ -1,0 +1,26 @@
+{
+  "client_name": "juanita",
+  "display_name": "Juanita Shoes",
+  "sheet_id": "PEGAR_ID_DEL_SHEET_DE_JUANITA",
+  "cloudinary_folder": "juanita",
+  "templates": {
+    "4x5": {
+      "path": "clients/juanita/templates/juanita_4x5.html",
+      "width": 1080,
+      "height": 1350
+    },
+    "9x16": {
+      "path": "clients/juanita/templates/juanita_9x16.html",
+      "width": 1080,
+      "height": 1920
+    }
+  },
+  "pricing": {
+    "transferencia_factor": 0.8,
+    "cuotas_count": 9,
+    "cuotas_min_amount": 100000,
+    "envio_gratis_min": 100000,
+    "hotsale_discount_factor": 1.0
+  },
+  "feed_destinations": ["meta", "tiktok"]
+}
