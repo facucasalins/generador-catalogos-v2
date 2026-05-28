@@ -196,15 +196,31 @@ def sync_templates(
 ) -> list[TemplateMetadata]:
     """Escanea HTMLs del cliente y escribe sus metadatos en la pestaña Templates.
 
-    Returns:
-        Lista de TemplateMetadata con todos los templates encontrados.
-    """
-    templates = descubrir_templates(templates_dir)
+    Cada HTML se EXPONE COMO 2 templates: uno con prefijo 'Meta_' y otro con
+    prefijo 'TikTok_'. Esto permite que el usuario marque por plataforma en
+    la pestaña Seleccion.
 
-    if not templates:
+    Ejemplo: si hay default_4x5.html → genera Meta_default_4x5 y TikTok_default_4x5.
+
+    Returns:
+        Lista de TemplateMetadata con los templates expuestos (HTMLs × 2 plataformas).
+    """
+    templates_base = descubrir_templates(templates_dir)
+
+    if not templates_base:
         log.warning("No se encontraron templates en %s", templates_dir)
-        # Escribir solo headers para que el sheet quede inicializado
-        templates = []
+
+    # Expandir cada HTML a sus 2 variantes por plataforma
+    templates_expuestos: list[TemplateMetadata] = []
+    for base in templates_base:
+        for plataforma in ("Meta", "TikTok"):
+            templates_expuestos.append(TemplateMetadata(
+                nombre=f"{plataforma}_{base.nombre}",
+                aspect_ratio=base.aspect_ratio,
+                width=base.width,
+                height=base.height,
+                descripcion=f"{plataforma} · {base.descripcion}" if base.descripcion else plataforma,
+            ))
 
     client = SheetsClient(ConfigSheets(
         sheet_id=sheet_id,
@@ -214,14 +230,15 @@ def sync_templates(
 
     filas = [
         [t.nombre, t.descripcion, t.aspect_ratio, t.width, t.height, "SI"]
-        for t in templates
+        for t in templates_expuestos
     ]
     client.escribir_replace(HEADERS_TEMPLATES, filas)
     congelar_header(client, filas=1)
 
-    log.info("Templates: %d encontrados (%s)",
-             len(templates), [t.nombre for t in templates])
-    return templates
+    log.info("Templates: %d HTMLs base, %d expuestos (%s)",
+             len(templates_base), len(templates_expuestos),
+             [t.nombre for t in templates_expuestos])
+    return templates_expuestos
 
 
 def inicializar_pestaña_seleccion(
