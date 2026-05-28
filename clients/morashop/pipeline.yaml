@@ -1,11 +1,6 @@
 # ====================================================================
-# Pipeline de MoraShop V2
+# Pipeline de MoraShop V2 (multi-template)
 # ====================================================================
-# Estado: Fases B, C, D, E.1, E.2 (refactor), E.3 (TikTok), F (diff +
-# Telegram), G (enriquecimiento Gemini), H (limpieza huérfanos +
-# reintento TN + placas 9:16 activadas).
-# ====================================================================
-
 cliente:
   nombre: morashop
   brand_name: MORASHOP
@@ -28,12 +23,8 @@ seleccion:
     sheet:
       id: "1NOG91buD9co2Er4G0lobFGySyFql1i23vEZSjzqcWCI"
       pestaña: Seleccion
-    template_default: default
 
-# ============ BLOQUE 3: ENRIQUECIMIENTO (Fase G) ============
-# Llama a Gemini para generar titulo_corto + descripcion_corta + tips.
-# Cache en pestaña 'Enriquecimiento' del sheet de Inventario.
-# Si Gemini falla en un SKU → ese SKU NO entra al feed.
+# ============ BLOQUE 3: ENRIQUECIMIENTO ============
 enriquecimiento:
   proveedor: gemini
   config:
@@ -46,41 +37,13 @@ enriquecimiento:
     tono: "Argentino. Usa voseo cuando corresponda (ej: 'llevátelo', 'es para vos'). Lenguaje natural, sin extranjerismos innecesarios."
 
 # ============ BLOQUE 4: ESTILO ============
-# Fase H activada: dos aspect_ratios por SKU.
-#  - 4:5 (1080x1350) → Meta, usa template tal como está en la selección.
-#  - 9:16 (1080x1920) → TikTok, usa template + sufijo "_tiktok".
-# Cada aspect_ratio se trackea por separado en el historial (clave compuesta).
-# Para que 9:16 funcione, en clients/morashop/templates/ deben existir los HTML
-# con sufijo _tiktok (ej: default_tiktok.html, electro_tiktok.html).
+# Cada template declara sus dimensiones en <!-- META --> del HTML.
 estilo:
   motor: playwright_html
   config:
-    # Defaults legados (usados si NO se define aspect_ratios). Se mantienen
-    # por retrocompat; el loop de aspect_ratios los ignora porque define los
-    # suyos. No los borres todavía: otros tests/clientes pueden depender.
-    placa_width: 1080
-    placa_height: 1350
     hotsale_discount_factor: 1.0
-
-    # 15% off sobre el precio web (precio_promocional de TN).
-    # Genera la variable {precio_efectivo_formateado} que va GRANDE en placa.
     descuento_efectivo_factor: 0.85
-
-    # Cuotas se calculan sobre precio_promocional (precio web) en vez de
-    # precio_lista. Refleja que las cuotas sin interés aplican al precio web.
     cuotas_sobre_promocional: true
-
-    # Loop multi-aspect-ratio (Fase H activación)
-    aspect_ratios:
-      - label: "4:5"
-        width: 1080
-        height: 1350
-        template_suffix: ""        # template tal cual (default, electro, ...)
-      - label: "9:16"
-        width: 1080
-        height: 1920
-        template_suffix: "_tiktok" # default → default_tiktok, electro → electro_tiktok
-
     variables_globales:
       brand_name: MORASHOP
       logo_url: "https://acdn-us.mitiendanube.com/stores/002/268/228/themes/toluca/img-479084497-1715570316-13b884ee9ca022bcfa337bfec6db35451715570316.png?3248503917"
@@ -97,16 +60,15 @@ distribucion:
       folder: morashop
 
   destinos:
-    # Meta filtra automáticamente las placas 4:5
     - tipo: meta_catalog
       config:
         sheet_id: "1oDOXmgeVgSAuC3J20NaQ5t5J8FSuCaH0Gv2lecluqlw"
         moneda: ARS
         calcular_availability_por_stock: true
-
-    # TikTok filtra automáticamente las placas 9:16
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
     - tipo: tiktok_catalog
       config:
         sheet_id: "1oDOXmgeVgSAuC3J20NaQ5t5J8FSuCaH0Gv2lecluqlw"
         moneda: ARS
         calcular_availability_por_stock: true
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
