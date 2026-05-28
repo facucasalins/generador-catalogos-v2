@@ -1,8 +1,7 @@
-"""Destino: feed TikTok Catalog (multi-template).
+"""Destino: feed TikTok Catalog.
 
-Idéntico a Meta pero con:
-- Header del id: 'sku_id' (TikTok-specific)
-- Prefijo de pestaña: 'TikTok_'
+El template ya viene con prefijo de plataforma (ej: 'TikTok_default_9x16').
+Filtra solo los templates 'TikTok_*' y usa el nombre tal cual como pestaña.
 """
 from __future__ import annotations
 import logging
@@ -31,7 +30,7 @@ HEADERS_TIKTOK = [
     "brand",
 ]
 
-PREFIJO_PESTAÑA = "TikTok"
+PREFIJO_PLATAFORMA = "TikTok_"
 
 
 @dataclass
@@ -60,6 +59,11 @@ class TikTokCatalogDestino(DestinoFeed):
     ) -> dict[str, int]:
         productos_por_sku = {p.sku: p for p in productos}
 
+        decisiones_tt = [d for d in decisiones if d.template.startswith(PREFIJO_PLATAFORMA)]
+        if not decisiones_tt:
+            log.warning("TikTok: no hay decisiones con prefijo '%s'", PREFIJO_PLATAFORMA)
+            return {}
+
         placas_filtradas = placas_subidas
         if self.cfg.aspect_ratios_aceptados:
             placas_filtradas = [
@@ -68,14 +72,12 @@ class TikTokCatalogDestino(DestinoFeed):
             ]
 
         placas_por_sku_template: dict[tuple[str, str], PlacaSubida] = {
-            (p.sku, p.template_usado): p for p in placas_filtradas
+            (p.sku, p.template_usado): p
+            for p in placas_filtradas
+            if p.template_usado.startswith(PREFIJO_PLATAFORMA)
         }
 
-        grupos = agrupar_decisiones_por_template(decisiones)
-
-        if not grupos:
-            log.warning("TikTok: no hay decisiones para publicar")
-            return {}
+        grupos = agrupar_decisiones_por_template(decisiones_tt)
 
         resultados: dict[str, int] = {}
         errores: list[str] = []
@@ -92,7 +94,7 @@ class TikTokCatalogDestino(DestinoFeed):
                 )
                 continue
 
-            pestaña = f"{PREFIJO_PESTAÑA}_{template}"
+            pestaña = template  # YA viene con 'TikTok_'
             log.info("TikTok: escribiendo pestaña '%s' (%d decisiones)",
                      pestaña, len(decisiones_grupo))
             try:
