@@ -2,12 +2,18 @@
 
 El template ya viene con prefijo de plataforma (ej: 'TikTok_default_9x16').
 Filtra solo los templates 'TikTok_*' y usa el nombre tal cual como pestaña.
+
+Idempotencia (multi-template):
+- publicar() devuelve qué pestañas ESCRIBIÓ en este run.
+- eliminar_pestañas_huerfanas() borra del sheet las pestañas con prefijo
+  'TikTok_' que NO están en el set activo.
 """
 from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
 from src.core.modelo_datos import Producto, PlacaSubida, DecisionSeleccion
+from src.core.sheets_client import ConfigSheets, SheetsClient
 from src.distribucion.destinos.base import DestinoFeed, ErrorDestino
 from src.distribucion.destinos._common import (
     agrupar_decisiones_por_template,
@@ -117,3 +123,37 @@ class TikTokCatalogDestino(DestinoFeed):
             raise ErrorDestino(f"TikTok: todas las pestañas fallaron: {errores}")
 
         return resultados
+
+    def eliminar_pestañas_huerfanas(self, pestañas_activas: set[str]) -> list[str]:
+        """Borra del sheet pestañas con prefijo 'TikTok_' que NO están activas.
+
+        Args:
+            pestañas_activas: set con los nombres de pestañas que SÍ se acaban
+                de escribir en este run.
+
+        Returns:
+            Lista de nombres de pestañas borradas.
+        """
+        client = SheetsClient(ConfigSheets(
+            sheet_id=self.cfg.sheet_id, pestaña="_dummy",
+        ))
+        sheet = client._abrir_sheet()
+        worksheets = sheet.worksheets()
+
+        borradas: list[str] = []
+        for ws in worksheets:
+            nombre = ws.title
+            if not nombre.startswith(PREFIJO_PLATAFORMA):
+                continue
+            if nombre in pestañas_activas:
+                continue
+            try:
+                sheet.del_worksheet(ws)
+                borradas.append(nombre)
+                log.info("TikTok: pestaña huérfana borrada → %s", nombre)
+            except Exception as e:
+                log.warning("TikTok: no pude borrar pestaña '%s': %s", nombre, e)
+
+        if borradas:
+            log.info("TikTok: %d pestañas huérfanas borradas", len(borradas))
+        return borradas
