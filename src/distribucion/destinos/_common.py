@@ -1,17 +1,16 @@
 """Lógica compartida entre destinos Meta y TikTok (multi-template).
 
-Cambio multi-template:
-- Las decisiones llegan como list[DecisionSeleccion] donde un SKU puede
-  aparecer N veces con distintos templates.
-- Cada template = 1 pestaña individual en el feed (visualización/debug).
-- Hay además una pestaña MAESTRA consolidada (Meta_Feed / TikTok_Feed) que
-  contiene TODAS las decisiones de la plataforma con id único e item_group_id.
+Estructura de salida por destino:
+- 1 pestaña MAESTRA consolidada (Meta_Feed / TikTok_Feed) con TODAS las
+  decisiones de la plataforma. Cada fila tiene id único e item_group_id
+  con el SKU base. Se conecta a Meta/TikTok Catalog Manager.
+- N pestañas INDIVIDUALES (1 por template) para visualización/debug.
 
 Sobre el id consolidado:
-- id            = sku + '__' + template     (ej: "bota-X__Meta_default_4x5")
-- item_group_id = sku                        (ej: "bota-X")
-- Esto permite que Meta acepte el mismo SKU varias veces (distintas placas)
-  y entienda que son VARIANTES del mismo producto físico.
+- id (Meta) / sku_id (TikTok) = sku + '__' + template
+- item_group_id = sku
+- Esto permite que Meta/TikTok acepte el mismo SKU varias veces (distintas
+  placas) y entienda que son VARIANTES del mismo producto físico.
 """
 from __future__ import annotations
 import logging
@@ -59,10 +58,9 @@ def producto_a_fila_individual(
 ) -> list:
     """Fila para pestaña INDIVIDUAL (1 por template).
 
-    id = SKU directo (sin sufijo). Estas pestañas existen para
-    visualización/debug. Si conectás esta pestaña directamente a Meta,
-    Meta sigue aceptando porque no hay duplicación de id (cada pestaña
-    individual tiene 1 fila por SKU como máximo).
+    Identificador = SKU directo (sin sufijo). Estas pestañas existen para
+    visualización/debug. No tienen duplicados (cada pestaña individual tiene
+    1 fila por SKU como máximo).
     """
     enriq = producto.enriquecimiento or {}
     title = enriq.get("titulo_corto") or producto.nombre
@@ -100,11 +98,12 @@ def producto_a_fila_maestra(
 ) -> list:
     """Fila para pestaña MAESTRA (Meta_Feed / TikTok_Feed).
 
-    id            = sku + '__' + template (ej: "bota-X__Meta_default_4x5")
-    item_group_id = sku                    (ej: "bota-X")
+    Identificador consolidado = sku + '__' + template (único)
+    item_group_id            = sku                    (agrupa variantes)
 
-    Esto permite que el mismo SKU aparezca N veces (1 por template), y
-    Meta/TikTok entienden que son variantes del mismo producto físico.
+    Funciona para Meta (columna 'id') y TikTok (columna 'sku_id'): la
+    función devuelve los VALORES, los nombres de columnas los define
+    cada destino en sus HEADERS.
     """
     enriq = producto.enriquecimiento or {}
     title = enriq.get("titulo_corto") or producto.nombre
@@ -117,7 +116,7 @@ def producto_a_fila_maestra(
     id_consolidado = f"{producto.sku}__{template}"
 
     return [
-        id_consolidado,              # id (único)
+        id_consolidado,              # id (Meta) / sku_id (TikTok)
         producto.sku,                # item_group_id (= SKU base)
         title,
         description,
@@ -144,8 +143,7 @@ def escribir_pestaña_feed(
 ) -> int:
     """Escribe UNA pestaña INDIVIDUAL del feed (modo replace).
 
-    Las pestañas individuales tienen 1 fila por SKU (porque cada
-    decisión del grupo es de un template único + SKU único).
+    Las pestañas individuales tienen 1 fila por SKU.
     """
     filas = []
     sin_placa = 0
@@ -196,12 +194,8 @@ def escribir_pestaña_maestra(
 ) -> int:
     """Escribe la pestaña MAESTRA consolidada (Meta_Feed o TikTok_Feed).
 
-    Esta pestaña contiene TODAS las decisiones de la plataforma (no agrupadas
-    por template). Cada fila tiene id único = sku + '__' + template y
-    item_group_id = sku.
-
-    Esta es la pestaña que se conecta a Meta Catalog / TikTok Catalog.
-    Las pestañas individuales por template existen además como visualización.
+    Esta pestaña contiene TODAS las decisiones de la plataforma. Esta es la
+    pestaña que se conecta a Meta Catalog / TikTok Catalog.
     """
     filas = []
     sin_placa = 0
@@ -240,3 +234,53 @@ def escribir_pestaña_maestra(
     log.info("Pestaña maestra '%s': %d filas escritas (consolidadas)",
              pestaña, len(filas))
     return len(filas)
+
+
+def mover_pestaña_a_posicion(sheet_id: str, pestaña: str, posicion: int) -> bool:
+    """Mueve una pestaña a una posición específica del sheet.
+
+    Args:
+        sheet_id: ID del Google Sheet.
+        pestaña: nombre de la pestaña a mover.
+        posicion: índice destino (0-based). 0 = primera pestaña.
+
+    Returns:
+        True si se movió OK, False si la pestaña no existía o falló.
+    """
+    try:
+        client = SheetsClient(ConfigSheets(sheet_id=sheet_id, pestaña="_dummy"))
+        sheet = client._abrir_sheet()
+        ws = None
+        for w in sheet.worksheets():
+            if w.title == pestaña:
+                ws = w
+                break
+        if ws is None:
+            return False
+        # gspread expone update_index() para reordenar
+        ws.update_index(posicion)
+        return True
+    except Exception as e:
+        log.warning("No pude reordenar pestaña '%s' a posición %d: %s",
+                    pestaña, posicion, e)
+        return False
+
+
+def borrar_pestaña_si_existe(sheet_id: str, pestaña: str) -> bool:
+    """Borra una pestaña del sheet si existe.
+
+    Returns:
+        True si la borró, False si no existía o falló.
+    """
+    try:
+        client = SheetsClient(ConfigSheets(sheet_id=sheet_id, pestaña="_dummy"))
+        sheet = client._abrir_sheet()
+        for w in sheet.worksheets():
+            if w.title == pestaña:
+                sheet.del_worksheet(w)
+                log.info("Pestaña '%s' borrada", pestaña)
+                return True
+        return False
+    except Exception as e:
+        log.warning("No pude borrar pestaña '%s': %s", pestaña, e)
+        return False
