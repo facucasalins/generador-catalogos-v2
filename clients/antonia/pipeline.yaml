@@ -64,18 +64,10 @@ distribucion:
       folder: antonia
 
   destinos:
-    # Meta acepta 4:5, 1:1 y también 9:16 para Reels.
-    - tipo: meta_catalog
-      config:
-        sheet_id: "1C719_BmDZCsdluk5PwVTfUazYFp9BPywQJ_Ubx7FIQs"
-        moneda: ARS
-        calcular_availability_por_stock: true
-        aspect_ratios_aceptados: ["4:5", "1:1", "9:16"]
+  - tipo: meta_catalog
+    config:
+      aspect_ratios_aceptados: ["4:5", "1:1"]   # ← solo Meta
 
-    # TikTok acepta cualquier aspect ratio.
-    - tipo: tiktok_catalog
-      config:
-        sheet_id: "1C719_BmDZCsdluk5PwVTfUazYFp9BPywQJ_Ubx7FIQs"
-        moneda: ARS
-        calcular_availability_por_stock: true
-        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
+  - tipo: tiktok_catalog
+    config:
+      aspect_ratios_aceptados: ["9:16", "1:1"]  # ← solo TikTok
