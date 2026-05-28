@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Juanita 9x16</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #F5EFE6;
+    position: relative;
+    color: #1A1A1A;
+  }
+
+  body::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(166, 123, 91, 0.06), transparent 50%),
+      radial-gradient(circle at 80% 90%, rgba(166, 123, 91, 0.08), transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* WORDMARK arriba */
+  .wordmark {
+    position: absolute;
+    top: 110px;
+    left: 0; right: 0;
+    text-align: center;
+    z-index: 10;
+  }
+  .wordmark .line1, .wordmark .line2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 64px;
+    letter-spacing: 0.35em;
+    color: #1A1A1A;
+    line-height: 0.95;
+  }
+  .wordmark .line2 {
+    margin-top: 6px;
+    letter-spacing: 0.45em;
+  }
+
+  .divider {
+    position: absolute;
+    top: 280px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 1px;
+    background: #A67B5B;
+    z-index: 10;
+  }
+
+  /* IMAGEN PRODUCTO */
+  .product-wrap {
+    position: absolute;
+    top: 360px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 880px;
+    height: 880px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+  }
+  .product-wrap img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  /* BADGE ENVÍO GRATIS */
+  .envio-badge {
+    position: absolute;
+    top: 420px;
+    right: 70px;
+    background: #1A1A1A;
+    color: #F5EFE6;
+    padding: 12px 22px;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    z-index: 15;
+  }
+
+  /* BADGE DESCUENTO */
+  .discount-badge {
+    position: absolute;
+    top: 420px;
+    left: 70px;
+    background: #A67B5B;
+    color: #F5EFE6;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 15;
+  }
+  .discount-badge .pct {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .discount-badge .off {
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    margin-top: 2px;
+  }
+
+  /* BLOQUE PRECIOS */
+  .price-block {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    padding: 50px 70px 100px;
+    z-index: 10;
+    text-align: center;
+  }
+
+  .price-transferencia {
+    font-family: 'Inter', sans-serif;
+    font-size: 128px;
+    font-weight: 700;
+    color: #1A1A1A;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .transfer-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: #7A8471;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  .price-list {
+    font-family: 'Inter', sans-serif;
+    font-size: 30px;
+    font-weight: 400;
+    color: #8A8A8A;
+    text-decoration: line-through;
+    margin-top: 20px;
+  }
+
+  .cuotas {
+    font-family: 'Inter', sans-serif;
+    font-size: 24px;
+    font-weight: 500;
+    color: #1A1A1A;
+    margin-top: 26px;
+    letter-spacing: 0.03em;
+  }
+  .cuotas .highlight {
+    color: #A67B5B;
+    font-weight: 600;
+  }
+
+  .discount-badge.hidden,
+  .price-list.hidden { display: none; }
+</style>
+</head>
+<body>
+
+  <div class="wordmark">
+    <div class="line1">JUANITA</div>
+    <div class="line2">SHOES</div>
+  </div>
+  <div class="divider"></div>
+
+  <div class="discount-badge" id="discountBadge">
+    <div class="pct" id="discountPct">35</div>
+    <div class="off">% OFF</div>
+  </div>
+
+  <div class="envio-badge">ENVÍO GRATIS</div>
+
+  <div class="product-wrap">
+    <img id="productImg" src="" alt="">
+  </div>
+
+  <div class="price-block">
+    <div class="price-transferencia" id="precioTransferencia">$153.600</div>
+    <div class="transfer-label">precio con transferencia · 20% off</div>
+    <div class="price-list" id="precioLista">$192.000</div>
+    <div class="cuotas">
+      <span class="highlight">9 cuotas sin interés</span> de <span id="precioCuota">$21.333</span>
+    </div>
+  </div>
+
+</body>
+</html>
