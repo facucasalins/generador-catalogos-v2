@@ -3,122 +3,40 @@ nombre: juanita_4x5
 aspect_ratio: 4:5
 width: 1080
 height: 1350
-descripcion: Placa default Juanita Shoes 4:5 - foto full-bleed, panel de precios cuero/beige abajo
+descripcion: Placa Juanita Shoes 4:5 - foto full-bleed, panel degradé de info abajo
 -->
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Juanita 4x5</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    width: 1080px; height: 1350px;
-    font-family: 'Inter', sans-serif;
-    position: relative; overflow: hidden;
-    background: #F5EFE6;
-    color: #1A1A1A;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  /* FOTO DEL PRODUCTO: full-bleed (no asume fondo blanco) */
-  .product-image {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover; z-index: 1;
-  }
-
-  /* Scrim superior beige para legibilidad del logo */
-  .scrim-top {
-    position: absolute; top: 0; left: 0; right: 0;
-    height: 380px;
-    background: linear-gradient(180deg,
-      rgba(245, 239, 230, 0.85) 0%,
-      rgba(245, 239, 230, 0.45) 45%,
-      rgba(245, 239, 230, 0) 100%);
-    z-index: 2; pointer-events: none;
-  }
-
-  /* MARCA: logo único (el logo YA contiene el wordmark JUANITA SHOES) */
-  .brand {
-    position: absolute; top: 56px; left: 0; right: 0;
-    text-align: center; z-index: 10;
-  }
-  .brand .logo {
-    height: 200px; width: auto; display: inline-block;
-  }
-
-  /* BADGES: par coherente, mismo estilo y altura, flanqueando la placa */
-  .badge {
-    position: absolute; top: 292px;
-    display: inline-flex; align-items: center;
-    height: 52px; padding: 0 24px;
-    font-family: 'Inter', sans-serif;
-    font-size: 15px; font-weight: 600;
-    letter-spacing: 0.16em; text-transform: uppercase;
-    border-radius: 26px;
-    z-index: 15;
-    box-shadow: 0 6px 18px rgba(80, 50, 35, 0.22);
-  }
-  .badge-descuento { left: 60px; background: #A67B5B; color: #F5EFE6; }
-  .badge-envio { right: 60px; background: #1A1A1A; color: #F5EFE6; }
-
-  /* PANEL DE PRECIOS - abajo, beige translúcido para legibilidad sobre foto */
-  .price-block {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    padding: 44px 60px 54px;
-    z-index: 10; text-align: center;
-    background: linear-gradient(180deg,
-      rgba(245, 239, 230, 0) 0%,
-      rgba(245, 239, 230, 0.85) 22%,
-      rgba(245, 239, 230, 0.97) 100%);
-  }
-
-  .price-transferencia {
-    font-family: 'Inter', sans-serif;
-    font-size: 96px; font-weight: 700;
-    color: #1A1A1A; line-height: 1; letter-spacing: -0.02em;
-  }
-  .transfer-label {
-    font-family: 'Inter', sans-serif;
-    font-size: 14px; font-weight: 500;
-    color: #A67B5B; letter-spacing: 0.3em;
-    text-transform: uppercase; margin-top: 8px;
-  }
-  .price-list {
-    font-family: 'Inter', sans-serif;
-    font-size: 22px; font-weight: 400;
-    color: #8A8A8A; text-decoration: line-through;
-    margin-top: 14px; letter-spacing: 0.02em;
-  }
-  .cuotas {
-    font-family: 'Inter', sans-serif;
-    font-size: 18px; font-weight: 500;
-    color: #1A1A1A; margin-top: 18px; letter-spacing: 0.03em;
-  }
-  .cuotas .highlight { color: #A67B5B; font-weight: 600; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{width:1080px;height:1350px;font-family:'Inter',sans-serif;position:relative;overflow:hidden;background:#F5EFE6;color:#1A1A1A;-webkit-font-smoothing:antialiased}
+  .product-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+  .scrim-top{position:absolute;top:0;left:0;right:0;height:240px;background:linear-gradient(180deg,rgba(245,239,230,.75)0%,rgba(245,239,230,0)100%);z-index:2;pointer-events:none}
+  .brand{position:absolute;top:40px;left:56px;z-index:10}
+  .brand .logo{height:170px;width:auto;display:block}
+  .info-panel{position:absolute;bottom:0;left:0;right:0;height:470px;padding:130px 70px 50px;z-index:10;text-align:center;background:linear-gradient(180deg,rgba(245,239,230,0)0%,rgba(245,239,230,.55)34%,rgba(245,239,230,.95)62%,#F5EFE6 100%)}
+  .benefits{font-size:25px;font-weight:800;color:#1A1A1A;letter-spacing:.16em;text-transform:uppercase;margin-bottom:22px}
+  .benefits .dot{color:#A67B5B;margin:0 14px;font-weight:700}
+  .price{font-size:124px;font-weight:800;color:#1A1A1A;line-height:1;letter-spacing:-.03em}
+  .price-label{font-size:17px;font-weight:600;color:#A67B5B;letter-spacing:.26em;text-transform:uppercase;margin-top:14px}
+  .price-list{font-size:27px;font-weight:400;color:#8f8f8f;text-decoration:line-through;margin-top:14px}
+  .cuotas{font-size:24px;font-weight:500;color:#1A1A1A;margin-top:16px}
+  .cuotas b{color:#A67B5B;font-weight:700}
 </style>
 </head>
 <body>
   <img class="product-image" src="{imagen_b64}" alt="producto">
   <div class="scrim-top"></div>
-
-  <div class="brand">
-    <img class="logo" src="{logo_b64}" alt="Juanita Shoes">
-  </div>
-
-  <div class="badge badge-descuento">20% OFF</div>
-  <div class="badge badge-envio">Envío gratis</div>
-
-  <div class="price-block">
-    <div class="price-transferencia">{precio_efectivo_formateado}</div>
-    <div class="transfer-label">precio con transferencia · 20% off</div>
+  <div class="brand"><img class="logo" src="{logo_b64}" alt="Juanita Shoes"></div>
+  <div class="info-panel">
+    <div class="benefits">20% OFF <span class="dot">·</span> Envío gratis</div>
+    <div class="price">{precio_efectivo_formateado}</div>
+    <div class="price-label">precio con transferencia</div>
     <div class="price-list">{precio_original_formateado}</div>
-    <div class="cuotas">
-      <span class="highlight">{cuotas_num} cuotas sin interés</span> de {cuota_formateada}
-    </div>
+    <div class="cuotas"><b>{cuotas_num} cuotas sin interés</b> de {cuota_formateada}</div>
   </div>
 </body>
 </html>
