@@ -1,23 +1,26 @@
-"""Sync de las pestañas Catalogo y Templates del sheet de Selección.
+"""Sync de las pestañas Catalogo, Templates y Seleccion del sheet de Selección.
 
-Estas dos pestañas se REGENERAN cada vez que corre el bloque. La pestaña
-Seleccion (editable) NO se toca acá.
+Catalogo y Templates se REGENERAN cada vez que corre el bloque.
+Seleccion: las columnas FIJAS (sku, generar, prioridad, notas) se inicializan
+solo si la pestaña no existe; las columnas de templates las maneja el Apps
+Script del sheet (al abrir sincroniza con Templates activos).
 
 Catalogo: espejo del Inventario con thumbnails IMAGE(). Sirve para que el
   usuario busque SKUs visualmente.
 
 Templates: lista de archivos HTML disponibles en clients/{cliente}/templates/.
-  Es el source del dropdown de la columna template en Seleccion.
+  Cada fila representa un template (nombre, descripcion, activo). El Apps
+  Script del sheet usa esta tabla para sincronizar las columnas de Seleccion.
 """
 from __future__ import annotations
 import logging
+import re
 from pathlib import Path
 
-from src.core.modelo_datos import Producto
+from src.core.modelo_datos import Producto, TemplateMetadata
 from src.core.sheets_client import ConfigSheets, SheetsClient
 from src.core.sheets_helpers import (
     escribir_pestaña_con_formulas,
-    aplicar_data_validation_dropdown,
     aplicar_checkboxes,
     congelar_header,
 )
@@ -40,10 +43,10 @@ HEADERS_CATALOGO = [
     "tn_published",
 ]
 
-HEADERS_SELECCION = [
+# Las columnas fijas de Seleccion. Las de templates las agrega el Apps Script.
+HEADERS_SELECCION_FIJOS = [
     "sku",
     "generar",
-    "template",
     "prioridad",
     "notas",
 ]
@@ -51,8 +54,102 @@ HEADERS_SELECCION = [
 HEADERS_TEMPLATES = [
     "nombre_template",
     "descripcion",
+    "aspect_ratio",
+    "width",
+    "height",
     "activo",
 ]
+
+
+def parsear_metadata_template(contenido_html: str, nombre_template: str) -> TemplateMetadata:
+    """Extrae metadata del comentario <!-- META ... --> al inicio del HTML.
+
+    Formato esperado:
+        <!-- META
+        aspect_ratio: 4:5
+        width: 1080
+        height: 1350
+        descripcion: Texto descriptivo
+        -->
+
+    Si falta algún campo obligatorio (aspect_ratio, width, height) loguea
+    warning y usa defaults razonables (1080x1350 / 4:5). Esto evita que un
+    template mal escrito rompa el pipeline; sale con warning visible.
+    """
+    aspect_ratio = "4:5"
+    width = 1080
+    height = 1350
+    descripcion = ""
+
+    m = re.search(r"<!--\s*META\s*(.+?)\s*-->", contenido_html, re.DOTALL)
+    if not m:
+        # Fallback: buscar el formato viejo <!-- DESC: ... --> para retrocompat
+        m_desc = re.search(r"<!--\s*DESC:\s*(.+?)\s*-->", contenido_html)
+        if m_desc:
+            descripcion = m_desc.group(1).strip()
+        log.warning(
+            "Template '%s' sin bloque META. Usando defaults: 4:5 (1080x1350). "
+            "Agrega un comentario <!-- META ... --> al inicio del HTML.",
+            nombre_template,
+        )
+        return TemplateMetadata(
+            nombre=nombre_template,
+            aspect_ratio=aspect_ratio,
+            width=width,
+            height=height,
+            descripcion=descripcion,
+        )
+
+    bloque = m.group(1)
+    for linea in bloque.split("\n"):
+        linea = linea.strip()
+        if not linea or ":" not in linea:
+            continue
+        clave, _, valor = linea.partition(":")
+        clave = clave.strip().lower()
+        valor = valor.strip()
+        if clave == "aspect_ratio":
+            aspect_ratio = valor
+        elif clave == "width":
+            try:
+                width = int(valor)
+            except ValueError:
+                log.warning("Template '%s': width inválido '%s'", nombre_template, valor)
+        elif clave == "height":
+            try:
+                height = int(valor)
+            except ValueError:
+                log.warning("Template '%s': height inválido '%s'", nombre_template, valor)
+        elif clave in ("descripcion", "descripción", "desc"):
+            descripcion = valor
+
+    return TemplateMetadata(
+        nombre=nombre_template,
+        aspect_ratio=aspect_ratio,
+        width=width,
+        height=height,
+        descripcion=descripcion,
+    )
+
+
+def descubrir_templates(templates_dir: Path) -> list[TemplateMetadata]:
+    """Escanea los .html del cliente y devuelve su metadata."""
+    if not templates_dir.exists():
+        log.warning("Directorio de templates no existe: %s", templates_dir)
+        templates_dir.mkdir(parents=True, exist_ok=True)
+        return []
+
+    templates: list[TemplateMetadata] = []
+    for html in sorted(templates_dir.glob("*.html")):
+        nombre = html.stem
+        try:
+            contenido = html.read_text(encoding="utf-8")
+        except Exception as e:
+            log.warning("No pude leer template %s: %s", html, e)
+            continue
+        templates.append(parsear_metadata_template(contenido, nombre))
+
+    return templates
 
 
 def sync_catalogo(
@@ -61,11 +158,7 @@ def sync_catalogo(
     credenciales_json: str | None = None,
     pestaña: str = "Catalogo",
 ) -> int:
-    """Regenera la pestaña Catalogo con espejo del inventario actual.
-
-    Returns:
-        Cantidad de productos escritos.
-    """
+    """Regenera la pestaña Catalogo con espejo del inventario actual."""
     client = SheetsClient(ConfigSheets(
         sheet_id=sheet_id,
         pestaña=pestaña,
@@ -74,9 +167,7 @@ def sync_catalogo(
 
     filas = []
     for p in productos:
-        # =IMAGE() necesita comillas dobles ESCAPADAS porque va dentro de string
         imagen_formula = f'=IMAGE("{p.imagen_url}")' if p.imagen_url else ""
-
         filas.append([
             p.sku,
             imagen_formula,
@@ -102,32 +193,34 @@ def sync_templates(
     templates_dir: Path,
     credenciales_json: str | None = None,
     pestaña: str = "Templates",
-) -> list[str]:
-    """Escanea archivos HTML del cliente y los lista en la pestaña Templates.
+) -> list[TemplateMetadata]:
+    """Escanea HTMLs del cliente y escribe sus metadatos en la pestaña Templates.
+
+    Cada HTML se EXPONE COMO 2 templates: uno con prefijo 'Meta_' y otro con
+    prefijo 'TikTok_'. Esto permite que el usuario marque por plataforma en
+    la pestaña Seleccion.
+
+    Ejemplo: si hay default_4x5.html → genera Meta_default_4x5 y TikTok_default_4x5.
 
     Returns:
-        Lista de nombres de template encontrados.
+        Lista de TemplateMetadata con los templates expuestos (HTMLs × 2 plataformas).
     """
-    if not templates_dir.exists():
-        log.warning("Directorio de templates no existe: %s", templates_dir)
-        templates_dir.mkdir(parents=True, exist_ok=True)
+    templates_base = descubrir_templates(templates_dir)
 
-    templates: list[tuple[str, str]] = []  # (nombre, descripcion)
-    for html in sorted(templates_dir.glob("*.html")):
-        nombre = html.stem  # sin extensión
-        # Buscar comentario al inicio del HTML con descripción: <!-- DESC: ... -->
-        try:
-            with open(html, encoding="utf-8") as f:
-                contenido_inicio = f.read(500)
-            desc = _extraer_descripcion(contenido_inicio)
-        except Exception as e:
-            log.warning("No pude leer descripción de %s: %s", html, e)
-            desc = ""
-        templates.append((nombre, desc))
-
-    if not templates:
+    if not templates_base:
         log.warning("No se encontraron templates en %s", templates_dir)
-        templates = [("default", "Template por defecto (falta crear archivo)")]
+
+    # Expandir cada HTML a sus 2 variantes por plataforma
+    templates_expuestos: list[TemplateMetadata] = []
+    for base in templates_base:
+        for plataforma in ("Meta", "TikTok"):
+            templates_expuestos.append(TemplateMetadata(
+                nombre=f"{plataforma}_{base.nombre}",
+                aspect_ratio=base.aspect_ratio,
+                width=base.width,
+                height=base.height,
+                descripcion=f"{plataforma} · {base.descripcion}" if base.descripcion else plataforma,
+            ))
 
     client = SheetsClient(ConfigSheets(
         sheet_id=sheet_id,
@@ -135,20 +228,17 @@ def sync_templates(
         credenciales_json=credenciales_json,
     ))
 
-    filas = [[nombre, desc, "SI"] for nombre, desc in templates]
+    filas = [
+        [t.nombre, t.descripcion, t.aspect_ratio, t.width, t.height, "SI"]
+        for t in templates_expuestos
+    ]
     client.escribir_replace(HEADERS_TEMPLATES, filas)
     congelar_header(client, filas=1)
 
-    log.info("Templates: %d encontrados (%s)",
-             len(templates), [t[0] for t in templates])
-    return [t[0] for t in templates]
-
-
-def _extraer_descripcion(contenido: str) -> str:
-    """Busca <!-- DESC: ... --> en el inicio del HTML."""
-    import re
-    m = re.search(r"<!--\s*DESC:\s*(.+?)\s*-->", contenido)
-    return m.group(1).strip() if m else ""
+    log.info("Templates: %d HTMLs base, %d expuestos (%s)",
+             len(templates_base), len(templates_expuestos),
+             [t.nombre for t in templates_expuestos])
+    return templates_expuestos
 
 
 def inicializar_pestaña_seleccion(
@@ -157,10 +247,12 @@ def inicializar_pestaña_seleccion(
     pestaña: str = "Seleccion",
     filas_max: int = 1000,
 ) -> None:
-    """Si la pestaña Seleccion no existe, la crea con headers, checkboxes
-    y dropdown. NO toca contenido existente (no es destructivo).
+    """Si la pestaña Seleccion no existe, la crea con headers FIJOS y checkboxes.
 
-    Esto se llama solo la primera vez o cuando la pestaña fue borrada.
+    Las columnas de templates las agrega el Apps Script del sheet al abrir
+    (lee la pestaña Templates y agrega 1 columna por cada template activo).
+
+    NO toca contenido existente. Solo inicializa si la pestaña está vacía.
     """
     client = SheetsClient(ConfigSheets(
         sheet_id=sheet_id,
@@ -168,35 +260,27 @@ def inicializar_pestaña_seleccion(
         credenciales_json=credenciales_json,
     ))
 
-    # Si ya hay headers, asumimos que la pestaña está inicializada
     sheet = client._abrir_sheet()
     try:
         ws = sheet.worksheet(pestaña)
         valores_existentes = ws.row_values(1)
-        if valores_existentes and valores_existentes[0] == HEADERS_SELECCION[0]:
+        if valores_existentes and valores_existentes[0] == HEADERS_SELECCION_FIJOS[0]:
             log.info("Pestaña '%s' ya estaba inicializada. No la toco.", pestaña)
             return
     except Exception:
-        pass  # No existe, la crea _abrir_pestaña
+        pass
 
-    # Escribir solo headers (filas vacías para que el usuario complete)
     ws = client._abrir_pestaña(sheet)
     ws.clear()
-    ws.update(values=[HEADERS_SELECCION], range_name="A1")
+    ws.update(values=[HEADERS_SELECCION_FIJOS], range_name="A1")
 
-    # Aplicar checkboxes en la columna 'generar' (col B, filas 2 a filas_max)
+    # Checkboxes en la columna 'generar' (col B)
     aplicar_checkboxes(client, columna_letra="B", fila_inicio=2, fila_fin=filas_max)
-
-    # Aplicar dropdown en la columna 'template' (col C) apuntando a Templates!A
-    aplicar_data_validation_dropdown(
-        client,
-        columna_letra="C",
-        fila_inicio=2,
-        fila_fin=filas_max,
-        source_pestaña="Templates",
-        source_columna_letra="A",
-    )
 
     congelar_header(client, filas=1)
 
-    log.info("Pestaña '%s' inicializada con checkboxes y dropdown", pestaña)
+    log.info(
+        "Pestaña '%s' inicializada con columnas fijas. "
+        "Las columnas de templates las agrega el Apps Script al abrir el sheet.",
+        pestaña,
+    )

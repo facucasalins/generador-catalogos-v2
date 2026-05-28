@@ -1,17 +1,22 @@
-"""Tests de los destinos (Meta + TikTok) post refactor Opción B."""
+"""Tests de destinos Meta + TikTok (multi-template + pestaña maestra)."""
 from unittest.mock import patch, MagicMock
 import pytest
 
 from src.core.modelo_datos import Producto, PlacaSubida, DecisionSeleccion
 from src.distribucion.destinos.base import ErrorDestino
 from src.distribucion.destinos.meta_catalog import (
-    ConfigMetaCatalog, MetaCatalogDestino, HEADERS_META,
+    ConfigMetaCatalog, MetaCatalogDestino,
+    HEADERS_META_INDIVIDUAL, HEADERS_META_MAESTRA,
+    PESTAÑA_MAESTRA as META_MAESTRA,
 )
 from src.distribucion.destinos.tiktok_catalog import (
-    ConfigTikTokCatalog, TikTokCatalogDestino, HEADERS_TIKTOK,
+    ConfigTikTokCatalog, TikTokCatalogDestino,
+    HEADERS_TIKTOK_INDIVIDUAL, HEADERS_TIKTOK_MAESTRA,
+    PESTAÑA_MAESTRA as TIKTOK_MAESTRA,
 )
 from src.distribucion.destinos._common import (
-    calcular_availability, formatear_precio, agrupar_por_template,
+    calcular_availability, formatear_precio, agrupar_decisiones_por_template,
+    producto_a_fila_individual, producto_a_fila_maestra,
 )
 
 
@@ -24,26 +29,17 @@ def _producto(sku="A", stock=10, marca="MarcaX", promo=800.0):
     )
 
 
-def _placa(sku="A", aspect_ratio="4:5"):
+def _placa(sku="A", template="Meta_default_4x5", aspect="4:5"):
     return PlacaSubida(
-        sku=sku, url_publica=f"https://cdn/{sku}.png", storage_backend="cloudinary",
-        aspect_ratio=aspect_ratio,
+        sku=sku, template_usado=template,
+        url_publica=f"https://cdn/{sku}__{template}.png",
+        storage_backend="cloudinary", aspect_ratio=aspect,
     )
 
 
-def _placa_tiktok(sku="A"):
-    """Helper específico para tests de TikTok (placas 9:16)."""
-    return PlacaSubida(
-        sku=sku, url_publica=f"https://cdn/{sku}_9x16.png", storage_backend="cloudinary",
-        aspect_ratio="9:16",
-    )
-
-
-def _decision(sku="A", template="default"):
+def _decision(sku="A", template="Meta_default_4x5"):
     return DecisionSeleccion(sku=sku, generar=True, template=template)
 
-
-# ============ Helpers comunes ============
 
 def test_formato_precio():
     assert formatear_precio(1234.0, "ARS") == "1234.00 ARS"
@@ -60,29 +56,82 @@ def test_availability_sin_calcular():
     assert calcular_availability(_producto(stock=0), False) == "in stock"
 
 
-def test_agrupar_por_template_basico():
-    productos = [_producto("A"), _producto("B"), _producto("C")]
+def test_agrupar_decisiones_por_template():
     decisiones = [
-        _decision("A", "default"),
-        _decision("B", "electrohogar"),
-        _decision("C", "default"),
+        _decision("A", "Meta_default_4x5"),
+        _decision("B", "Meta_cuotas_4x5"),
+        _decision("C", "Meta_default_4x5"),
     ]
-    grupos = agrupar_por_template(productos, decisiones)
-    assert set(grupos.keys()) == {"default", "electrohogar"}
-    assert len(grupos["default"]) == 2
-    assert len(grupos["electrohogar"]) == 1
+    grupos = agrupar_decisiones_por_template(decisiones)
+    assert set(grupos.keys()) == {"Meta_default_4x5", "Meta_cuotas_4x5"}
+    assert len(grupos["Meta_default_4x5"]) == 2
+    assert len(grupos["Meta_cuotas_4x5"]) == 1
 
 
-def test_agrupar_excluye_skus_sin_decision():
-    """Si un producto no tiene decisión (caso defensivo), se excluye."""
-    productos = [_producto("A"), _producto("B")]
-    decisiones = [_decision("A", "default")]  # B sin decisión
-    grupos = agrupar_por_template(productos, decisiones)
-    assert "default" in grupos
-    assert len(grupos["default"]) == 1
+def test_headers_meta_individual_empieza_con_id():
+    assert HEADERS_META_INDIVIDUAL[0] == "id"
+    assert "item_group_id" not in HEADERS_META_INDIVIDUAL
 
 
-# ============ Meta ============
+def test_headers_meta_maestra_incluye_item_group_id():
+    assert HEADERS_META_MAESTRA[0] == "id"
+    assert HEADERS_META_MAESTRA[1] == "item_group_id"
+
+
+def test_headers_tiktok_individual_usa_sku_id():
+    assert HEADERS_TIKTOK_INDIVIDUAL[0] == "sku_id"
+
+
+def test_headers_tiktok_maestra_usa_sku_id_y_item_group():
+    assert HEADERS_TIKTOK_MAESTRA[0] == "sku_id"
+    assert HEADERS_TIKTOK_MAESTRA[1] == "item_group_id"
+
+
+def test_fila_individual_no_lleva_item_group():
+    p = _producto("A")
+    fila = producto_a_fila_individual(p, "https://cdn/x.png", "ARS", True)
+    assert fila[0] == "A"
+    assert len(fila) == len(HEADERS_META_INDIVIDUAL)
+
+
+def test_fila_maestra_lleva_id_consolidado():
+    p = _producto("A")
+    fila = producto_a_fila_maestra(p, "Meta_default_4x5", "https://cdn/x.png", "ARS", True)
+    assert fila[0] == "A__Meta_default_4x5"
+    assert fila[1] == "A"
+    assert len(fila) == len(HEADERS_META_MAESTRA)
+
+
+def test_fila_maestra_dos_templates_mismo_sku_difieren_solo_en_id():
+    p = _producto("A")
+    f1 = producto_a_fila_maestra(p, "Meta_default_4x5", "u1", "ARS", True)
+    f2 = producto_a_fila_maestra(p, "Meta_cuotas_4x5", "u2", "ARS", True)
+    assert f1[0] != f2[0]
+    assert f1[1] == f2[1] == "A"
+
+
+def test_fila_usa_titulo_corto_si_hay_enriquecimiento():
+    p = _producto("A")
+    p.nombre = "Nombre LARGO aburrido"
+    p.descripcion = "Descripción larga aburrida"
+    p.enriquecimiento = {
+        "titulo_corto": "Título Punchy",
+        "descripcion_corta": "Desc 200ch",
+    }
+    fila = producto_a_fila_individual(p, "https://cdn/x.png", "ARS", True)
+    assert fila[1] == "Título Punchy"
+    assert fila[2] == "Desc 200ch"
+
+
+def test_fila_fallback_a_nombre_si_no_hay_enriquecimiento():
+    p = _producto("A")
+    p.nombre = "Producto Original"
+    p.descripcion = "Desc Original"
+    p.enriquecimiento = {}
+    fila = producto_a_fila_individual(p, "https://cdn/x.png", "ARS", True)
+    assert fila[1] == "Producto Original"
+    assert fila[2] == "Desc Original"
+
 
 @pytest.fixture
 def meta():
@@ -98,80 +147,73 @@ def test_meta_nombre(meta):
     assert meta.nombre() == "meta_catalog"
 
 
-def test_meta_header_id_no_sku_id():
-    """Meta usa 'id', no 'sku_id'."""
-    assert HEADERS_META[0] == "id"
+def test_meta_constantes_clave():
+    assert META_MAESTRA == "Meta_Feed"
 
 
-@patch("src.distribucion.destinos._common.SheetsClient")
-def test_meta_publica_una_pestaña_por_template(mock_sheets_class, meta):
-    """2 templates → 2 pestañas escritas."""
-    mock_client = MagicMock()
-    mock_sheets_class.return_value = mock_client
+@patch("src.distribucion.destinos.meta_catalog.escribir_pestaña_maestra")
+@patch("src.distribucion.destinos.meta_catalog.escribir_pestaña_feed")
+@patch("src.distribucion.destinos.meta_catalog.mover_pestaña_a_posicion")
+def test_meta_publica_maestra_y_individuales(
+    mock_mover, mock_escribir_feed, mock_escribir_maestra, meta,
+):
+    mock_escribir_maestra.return_value = 3
+    mock_escribir_feed.return_value = 2
 
     productos = [_producto("A"), _producto("B"), _producto("C")]
-    placas = [_placa("A"), _placa("B"), _placa("C")]
+    placas = [
+        _placa("A", "Meta_default_4x5"),
+        _placa("B", "Meta_cuotas_4x5"),
+        _placa("C", "Meta_default_4x5"),
+    ]
     decisiones = [
-        _decision("A", "default"),
-        _decision("B", "electrohogar"),
-        _decision("C", "default"),
+        _decision("A", "Meta_default_4x5"),
+        _decision("B", "Meta_cuotas_4x5"),
+        _decision("C", "Meta_default_4x5"),
     ]
 
     resultados = meta.publicar(productos, placas, decisiones)
 
-    # Esperamos 2 pestañas: Meta_default y Meta_electrohogar
-    assert set(resultados.keys()) == {"Meta_default", "Meta_electrohogar"}
-    assert resultados["Meta_default"] == 2
-    assert resultados["Meta_electrohogar"] == 1
-
-    # Se llamó escribir_replace 2 veces (una por pestaña)
-    assert mock_client.escribir_replace.call_count == 2
+    assert "Meta_Feed" in resultados
+    assert resultados["Meta_Feed"] == 3
+    assert "Meta_default_4x5" in resultados
+    assert "Meta_cuotas_4x5" in resultados
+    mock_mover.assert_called_with("sheet-123", "Meta_Feed", 0)
 
 
-@patch("src.distribucion.destinos._common.SheetsClient")
-def test_meta_excluye_productos_sin_placa(mock_sheets_class, meta):
-    mock_client = MagicMock()
-    mock_sheets_class.return_value = mock_client
+@patch("src.distribucion.destinos.meta_catalog.escribir_pestaña_maestra")
+@patch("src.distribucion.destinos.meta_catalog.escribir_pestaña_feed")
+@patch("src.distribucion.destinos.meta_catalog.mover_pestaña_a_posicion")
+def test_meta_filtra_decisiones_no_meta(
+    mock_mover, mock_escribir_feed, mock_escribir_maestra, meta,
+):
+    mock_escribir_maestra.return_value = 1
+    mock_escribir_feed.return_value = 1
 
-    productos = [_producto("A"), _producto("B")]
-    placas = [_placa("A")]  # solo A tiene placa
-    decisiones = [_decision("A", "default"), _decision("B", "default")]
+    productos = [_producto("A")]
+    placas = [_placa("A", "Meta_default_4x5")]
+    decisiones = [
+        _decision("A", "Meta_default_4x5"),
+        _decision("A", "TikTok_default_9x16"),
+    ]
 
     resultados = meta.publicar(productos, placas, decisiones)
-    assert resultados["Meta_default"] == 1  # solo A
+    assert "TikTok_default_9x16" not in resultados
+    assert "Meta_default_4x5" in resultados
 
 
-@patch("src.distribucion.destinos._common.SheetsClient")
-def test_meta_sin_productos_no_escribe_nada(mock_sheets_class, meta):
-    """Sin productos válidos, no se crea ninguna pestaña (no la del template
-    porque no llegó nada)."""
-    mock_client = MagicMock()
-    mock_sheets_class.return_value = mock_client
-
+def test_meta_sin_decisiones_no_escribe_nada(meta):
     resultados = meta.publicar([], [], [])
     assert resultados == {}
-    mock_client.escribir_replace.assert_not_called()
 
 
-@patch("src.distribucion.destinos._common.SheetsClient")
-def test_meta_fila_usa_id_no_sku_id(mock_sheets_class, meta):
-    """La primera columna de la fila escrita es el SKU bajo header 'id'."""
-    mock_client = MagicMock()
-    mock_sheets_class.return_value = mock_client
+def test_meta_decisiones_solo_tiktok_no_escribe_nada(meta):
+    productos = [_producto("A")]
+    placas = [_placa("A", "TikTok_default_9x16", "9:16")]
+    decisiones = [_decision("A", "TikTok_default_9x16")]
+    resultados = meta.publicar(productos, placas, decisiones)
+    assert resultados == {}
 
-    meta.publicar(
-        [_producto("A")], [_placa("A")], [_decision("A", "default")],
-    )
-
-    call = mock_client.escribir_replace.call_args
-    headers = call[0][0]
-    filas = call[0][1]
-
-    assert headers[0] == "id"
-    assert filas[0][0] == "A"  # primera columna = SKU
-
-
-# ============ TikTok ============
 
 @pytest.fixture
 def tiktok():
@@ -187,105 +229,46 @@ def test_tiktok_nombre(tiktok):
     assert tiktok.nombre() == "tiktok_catalog"
 
 
-def test_tiktok_header_es_sku_id():
-    """TikTok usa 'sku_id', no 'id'. Diferencia clave con Meta."""
-    assert HEADERS_TIKTOK[0] == "sku_id"
+def test_tiktok_constantes_clave():
+    assert TIKTOK_MAESTRA == "TikTok_Feed"
 
 
-def test_tiktok_y_meta_difieren_solo_en_id():
-    """Las otras 8 columnas son idénticas."""
-    assert HEADERS_META[1:] == HEADERS_TIKTOK[1:]
-
-
-@patch("src.distribucion.destinos._common.SheetsClient")
-def test_tiktok_publica_con_prefijo_tiktok(mock_sheets_class, tiktok):
-    mock_client = MagicMock()
-    mock_sheets_class.return_value = mock_client
+@patch("src.distribucion.destinos.tiktok_catalog.escribir_pestaña_maestra")
+@patch("src.distribucion.destinos.tiktok_catalog.escribir_pestaña_feed")
+@patch("src.distribucion.destinos.tiktok_catalog.mover_pestaña_a_posicion")
+def test_tiktok_publica_maestra_y_individuales(
+    mock_mover, mock_escribir_feed, mock_escribir_maestra, tiktok,
+):
+    mock_escribir_maestra.return_value = 1
+    mock_escribir_feed.return_value = 1
 
     productos = [_producto("A")]
-    placas = [_placa_tiktok("A")]  # 9:16 para TikTok
-    decisiones = [_decision("A", "electrohogar")]
+    placas = [_placa("A", "TikTok_default_9x16", "9:16")]
+    decisiones = [_decision("A", "TikTok_default_9x16")]
 
     resultados = tiktok.publicar(productos, placas, decisiones)
-    assert "TikTok_electrohogar" in resultados
+    assert "TikTok_Feed" in resultados
+    assert "TikTok_default_9x16" in resultados
 
 
-@patch("src.distribucion.destinos._common.SheetsClient")
-def test_tiktok_fila_usa_sku_id(mock_sheets_class, tiktok):
-    """La fila escrita debe tener header 'sku_id' como primera columna."""
-    mock_client = MagicMock()
-    mock_sheets_class.return_value = mock_client
-
-    tiktok.publicar(
-        [_producto("A")], [_placa_tiktok("A")], [_decision("A", "default")],
-    )
-
-    call = mock_client.escribir_replace.call_args
-    headers = call[0][0]
-    filas = call[0][1]
-
-    assert headers[0] == "sku_id"
-    assert filas[0][0] == "A"
-
-
-# ============ Mismo sheet para ambos destinos ============
-
-@patch("src.distribucion.destinos._common.SheetsClient")
-def test_meta_y_tiktok_pueden_compartir_sheet(mock_sheets_class):
-    """Apuntando al mismo sheet, no se pisan: prefijos distintos.
-
-    Cada destino filtra por su aspect_ratio: Meta usa 4:5, TikTok usa 9:16.
-    Por eso pasamos placas de ambos aspect_ratios.
-    """
-    mock_client = MagicMock()
-    mock_sheets_class.return_value = mock_client
-
-    sheet_id = "same-sheet"
-    meta = MetaCatalogDestino(ConfigMetaCatalog(sheet_id=sheet_id))
-    tiktok = TikTokCatalogDestino(ConfigTikTokCatalog(sheet_id=sheet_id))
+@patch("src.distribucion.destinos.tiktok_catalog.escribir_pestaña_maestra")
+@patch("src.distribucion.destinos.tiktok_catalog.escribir_pestaña_feed")
+@patch("src.distribucion.destinos.tiktok_catalog.mover_pestaña_a_posicion")
+def test_tiktok_filtra_decisiones_meta(
+    mock_mover, mock_escribir_feed, mock_escribir_maestra, tiktok,
+):
+    mock_escribir_maestra.return_value = 1
+    mock_escribir_feed.return_value = 1
 
     productos = [_producto("A")]
-    # Pasamos ambas placas: cada destino filtra la que necesita
-    placas = [_placa("A"), _placa_tiktok("A")]
-    decisiones = [_decision("A", "default")]
+    placas = [
+        _placa("A", "Meta_default_4x5"),
+        _placa("A", "TikTok_default_9x16", "9:16"),
+    ]
+    decisiones = [
+        _decision("A", "Meta_default_4x5"),
+        _decision("A", "TikTok_default_9x16"),
+    ]
 
-    r_meta = meta.publicar(productos, placas, decisiones)
-    r_tiktok = tiktok.publicar(productos, placas, decisiones)
-
-    # Las pestañas no se solapan
-    assert set(r_meta.keys()) == {"Meta_default"}
-    assert set(r_tiktok.keys()) == {"TikTok_default"}
-
-
-# ============ Integración con enriquecimiento (Fase G) ============
-
-def test_fila_usa_titulo_corto_si_hay_enriquecimiento():
-    """Si producto.enriquecimiento tiene titulo_corto, lo usa en el feed."""
-    from src.distribucion.destinos._common import producto_a_fila
-
-    p = _producto("A")
-    p.nombre = "Nombre LARGO y aburrido del producto original"
-    p.descripcion = "Descripción larga aburrida del producto original"
-    p.enriquecimiento = {
-        "titulo_corto": "Título Punchy 60ch",
-        "descripcion_corta": "Descripción optimizada 200ch",
-        "tips": ["a", "b", "c"],
-    }
-
-    fila = producto_a_fila(p, "https://cdn/x.png", "ARS", True)
-    assert fila[1] == "Título Punchy 60ch"      # title
-    assert fila[2] == "Descripción optimizada 200ch"  # description
-
-
-def test_fila_fallback_a_nombre_si_no_hay_enriquecimiento():
-    """Sin enriquecimiento: usa el nombre/descripción originales (retrocompat)."""
-    from src.distribucion.destinos._common import producto_a_fila
-
-    p = _producto("A")
-    p.nombre = "Producto Original"
-    p.descripcion = "Desc Original"
-    p.enriquecimiento = {}  # vacío
-
-    fila = producto_a_fila(p, "https://cdn/x.png", "ARS", True)
-    assert fila[1] == "Producto Original"
-    assert fila[2] == "Desc Original"
+    resultados = tiktok.publicar(productos, placas, decisiones)
+    assert "Meta_default_4x5" not in resultados

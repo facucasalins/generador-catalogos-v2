@@ -1,4 +1,8 @@
-"""Tests del módulo historial."""
+"""Tests del módulo historial (multi-template).
+
+Clave del historial: (sku, template). El refactor cambió esta clave
+desde (sku, aspect_ratio).
+"""
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import tempfile
@@ -18,21 +22,17 @@ def _producto(sku="A", precio=1000.0, promo=800.0, nombre="P", imagen="img.jpg")
     )
 
 
-def _decision(sku="A", template="default"):
+def _decision(sku="A", template="default_4x5"):
     return DecisionSeleccion(sku=sku, generar=True, template=template)
 
 
-def _templates_dir_con(default_html="<html>X</html>") -> Path:
-    """Crea un dir temporal con default.html dentro."""
+def _templates_dir_con(nombre="default_4x5", contenido="<html>X</html>") -> Path:
     d = Path(tempfile.mkdtemp())
-    (d / "default.html").write_text(default_html, encoding="utf-8")
+    (d / f"{nombre}.html").write_text(contenido, encoding="utf-8")
     return d
 
 
-# ============ calcular_hash ============
-
 def test_hash_determinista():
-    """Mismo input → mismo hash."""
     td = _templates_dir_con()
     p, d = _producto(), _decision()
     h1 = calcular_hash(p, d, td)
@@ -73,27 +73,25 @@ def test_hash_cambia_si_cambia_nombre():
 
 
 def test_hash_cambia_si_cambia_template_asignado():
-    """SKU cambia de template=default a template=electrohogar → hash diff."""
-    td = _templates_dir_con()
-    (td / "electrohogar.html").write_text("<html>Y</html>", encoding="utf-8")
+    d_a = Path(tempfile.mkdtemp())
+    (d_a / "default_4x5.html").write_text("<html>X</html>", encoding="utf-8")
+    (d_a / "cuotas_4x5.html").write_text("<html>Y</html>", encoding="utf-8")
     p = _producto()
-    h1 = calcular_hash(p, _decision(template="default"), td)
-    h2 = calcular_hash(p, _decision(template="electrohogar"), td)
+    h1 = calcular_hash(p, _decision(template="default_4x5"), d_a)
+    h2 = calcular_hash(p, _decision(template="cuotas_4x5"), d_a)
     assert h1 != h2
 
 
 def test_hash_cambia_si_cambia_contenido_html():
-    """Esto es CLAVE: si editás default.html, el hash debe cambiar."""
     p, d = _producto(), _decision()
-    td1 = _templates_dir_con(default_html="<html>VIEJO</html>")
-    td2 = _templates_dir_con(default_html="<html>NUEVO</html>")
+    td1 = _templates_dir_con(contenido="<html>VIEJO</html>")
+    td2 = _templates_dir_con(contenido="<html>NUEVO</html>")
     h1 = calcular_hash(p, d, td1)
     h2 = calcular_hash(p, d, td2)
     assert h1 != h2
 
 
 def test_hash_no_cambia_si_cambia_stock():
-    """Stock NO afecta visualmente la placa → no debe regenerar."""
     td = _templates_dir_con()
     d = _decision()
     p1 = _producto()
@@ -106,19 +104,15 @@ def test_hash_no_cambia_si_cambia_stock():
 
 
 def test_hash_tolera_template_inexistente():
-    """Si el template no existe, no rompe (hash con string vacío)."""
-    td = Path(tempfile.mkdtemp())  # vacío
+    td = Path(tempfile.mkdtemp())
     p = _producto()
     d = _decision(template="no_existe")
     h = calcular_hash(p, d, td)
     assert isinstance(h, str) and len(h) == 16
 
 
-# ============ HistorialPlacas: leer ============
-
 @patch("src.distribucion.historial.SheetsClient")
 def test_leer_todo_pestaña_vacia(mock_client_class):
-    """Si la pestaña no existe, devuelve {}."""
     mock_client = MagicMock()
     mock_client.leer_todas_las_filas.side_effect = Exception("no existe")
     mock_client_class.return_value = mock_client
@@ -129,7 +123,6 @@ def test_leer_todo_pestaña_vacia(mock_client_class):
 
 @patch("src.distribucion.historial.SheetsClient")
 def test_leer_todo_solo_headers(mock_client_class):
-    """Pestaña con solo headers → {}."""
     mock_client = MagicMock()
     mock_client.leer_todas_las_filas.return_value = [HEADERS_HISTORIAL]
     mock_client_class.return_value = mock_client
@@ -140,13 +133,12 @@ def test_leer_todo_solo_headers(mock_client_class):
 
 @patch("src.distribucion.historial.SheetsClient")
 def test_leer_todo_devuelve_entradas(mock_client_class):
-    """Headers actuales incluyen aspect_ratio. Filas con esa columna se leen OK."""
     mock_client = MagicMock()
     mock_client.leer_todas_las_filas.return_value = [
-        HEADERS_HISTORIAL,  # ["sku", "template", "aspect_ratio", ...]
-        ["SKU-1", "default", "4:5", "1000.00", "800.00",
+        HEADERS_HISTORIAL,
+        ["SKU-1", "default_4x5", "4:5", "1000.00", "800.00",
          "https://cdn/1.png", "2026-05-24 06:00:00", "abc123"],
-        ["SKU-2", "electrohogar", "4:5", "2000.00", "1500.00",
+        ["SKU-2", "cuotas_4x5", "4:5", "2000.00", "1500.00",
          "https://cdn/2.png", "2026-05-24 06:00:00", "def456"],
     ]
     mock_client_class.return_value = mock_client
@@ -154,74 +146,64 @@ def test_leer_todo_devuelve_entradas(mock_client_class):
     h = HistorialPlacas("sheet-123")
     entradas = h.leer_todo()
 
-    # Clave es (sku, aspect_ratio)
     assert len(entradas) == 2
-    assert entradas[("SKU-1", "4:5")].hash_render == "abc123"
-    assert entradas[("SKU-1", "4:5")].precio_lista == 1000.0
-    assert entradas[("SKU-2", "4:5")].template == "electrohogar"
+    assert entradas[("SKU-1", "default_4x5")].hash_render == "abc123"
+    assert entradas[("SKU-1", "default_4x5")].precio_lista == 1000.0
+    assert entradas[("SKU-2", "cuotas_4x5")].template == "cuotas_4x5"
 
 
 @patch("src.distribucion.historial.SheetsClient")
-def test_leer_todo_mismo_sku_dos_aspect_ratios(mock_client_class):
-    """Un SKU con 4:5 y 9:16 genera 2 entradas distintas."""
+def test_leer_todo_mismo_sku_dos_templates(mock_client_class):
     mock_client = MagicMock()
     mock_client.leer_todas_las_filas.return_value = [
         HEADERS_HISTORIAL,
-        ["SKU-X", "default", "4:5", "1000", "800",
+        ["SKU-X", "default_4x5", "4:5", "1000", "800",
          "https://cdn/x.png", "2026", "hash4x5"],
-        ["SKU-X", "default_tiktok", "9:16", "1000", "800",
+        ["SKU-X", "default_9x16", "9:16", "1000", "800",
          "https://cdn/x_9x16.png", "2026", "hash9x16"],
     ]
     mock_client_class.return_value = mock_client
 
     h = HistorialPlacas("sheet-123")
     entradas = h.leer_todo()
-    assert ("SKU-X", "4:5") in entradas
-    assert ("SKU-X", "9:16") in entradas
-    assert entradas[("SKU-X", "4:5")].hash_render == "hash4x5"
-    assert entradas[("SKU-X", "9:16")].hash_render == "hash9x16"
+    assert ("SKU-X", "default_4x5") in entradas
+    assert ("SKU-X", "default_9x16") in entradas
 
 
 @patch("src.distribucion.historial.SheetsClient")
 def test_leer_todo_filas_sin_aspect_ratio_default_a_4_5(mock_client_class):
-    """Retrocompat: filas viejas sin columna aspect_ratio se interpretan como 4:5."""
     headers_viejos = ["sku", "template", "precio_lista", "precio_promo",
                       "url_cloudinary", "fecha_render", "hash_render"]
     mock_client = MagicMock()
     mock_client.leer_todas_las_filas.return_value = [
         headers_viejos,
-        ["SKU-OLD", "default", "1000", "800", "https://x", "2026", "abc"],
+        ["SKU-OLD", "default_4x5", "1000", "800", "https://x", "2026", "abc"],
     ]
     mock_client_class.return_value = mock_client
 
     h = HistorialPlacas("sheet-123")
     entradas = h.leer_todo()
-    # Default a 4:5 si la columna no existe
-    assert ("SKU-OLD", "4:5") in entradas
+    assert ("SKU-OLD", "default_4x5") in entradas
+    assert entradas[("SKU-OLD", "default_4x5")].aspect_ratio == "4:5"
 
 
 @patch("src.distribucion.historial.SheetsClient")
 def test_leer_todo_tolera_filas_corruptas(mock_client_class):
-    """Si una fila tiene menos columnas, no rompe."""
     mock_client = MagicMock()
     mock_client.leer_todas_las_filas.return_value = [
         HEADERS_HISTORIAL,
-        ["SKU-1", "default", "4:5", "1000", "800", "https://x", "2026", "abc"],
-        ["SKU-INCOMPLETO"],  # corrupta
-        [],  # vacía
-        ["SKU-2", "default", "4:5", "1000", "800", "https://x", "2026", "xyz"],
+        ["SKU-1", "default_4x5", "4:5", "1000", "800", "https://x", "2026", "abc"],
+        ["SKU-INCOMPLETO"],
+        [],
+        ["SKU-2", "default_4x5", "4:5", "1000", "800", "https://x", "2026", "xyz"],
     ]
     mock_client_class.return_value = mock_client
 
     h = HistorialPlacas("sheet-123")
     entradas = h.leer_todo()
+    assert ("SKU-1", "default_4x5") in entradas
+    assert ("SKU-2", "default_4x5") in entradas
 
-    # Las 2 válidas se devuelven con clave compuesta; las otras se ignoran
-    assert ("SKU-1", "4:5") in entradas
-    assert ("SKU-2", "4:5") in entradas
-
-
-# ============ HistorialPlacas: escribir ============
 
 @patch("src.distribucion.historial.SheetsClient")
 def test_escribir_todo_replace_completo(mock_client_class):
@@ -230,8 +212,8 @@ def test_escribir_todo_replace_completo(mock_client_class):
 
     h = HistorialPlacas("sheet-123")
     entradas = {
-        ("SKU-1", "4:5"): EntradaHistorial(
-            sku="SKU-1", template="default",
+        ("SKU-1", "default_4x5"): EntradaHistorial(
+            sku="SKU-1", template="default_4x5",
             precio_lista=1000.0, precio_promo=800.0,
             url_cloudinary="https://cdn/1.png",
             fecha_render="2026-05-24 06:00:00",
@@ -248,9 +230,7 @@ def test_escribir_todo_replace_completo(mock_client_class):
 
     assert headers == HEADERS_HISTORIAL
     assert len(filas) == 1
-    # Orden de columnas según HEADERS_HISTORIAL:
-    # ["sku", "template", "aspect_ratio", "precio_lista", ...]
     assert filas[0][0] == "SKU-1"
-    assert filas[0][1] == "default"
+    assert filas[0][1] == "default_4x5"
     assert filas[0][2] == "4:5"
     assert filas[0][3] == "1000.00"

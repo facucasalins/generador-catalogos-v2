@@ -1,17 +1,16 @@
-"""Lógica compartida entre destinos Meta y TikTok.
+"""Lógica compartida entre destinos Meta y TikTok (multi-template).
 
-Ambos destinos:
-- Agrupan productos por template
-- Escriben 1 pestaña por template ({prefijo}_{template})
-- Tienen las mismas 9 columnas (con diferente nombre del id)
-- Filtran productos sin placa subida
-- Mismo manejo de availability, precio y brand
+Estructura de salida por destino:
+- 1 pestaña MAESTRA consolidada (Meta_Feed / TikTok_Feed) con TODAS las
+  decisiones de la plataforma. Cada fila tiene id único e item_group_id
+  con el SKU base. Se conecta a Meta/TikTok Catalog Manager.
+- N pestañas INDIVIDUALES (1 por template) para visualización/debug.
 
-Diferencias:
-- Header del id ('id' en Meta, 'sku_id' en TikTok)
-- Prefijo de pestaña ('Meta' vs 'TikTok')
-- Posible diferencia futura en otros campos (acá centralizamos para
-  cambiarlo fácil)
+Sobre el id consolidado:
+- id (Meta) / sku_id (TikTok) = sku + '__' + template
+- item_group_id = sku
+- Esto permite que Meta/TikTok acepte el mismo SKU varias veces (distintas
+  placas) y entienda que son VARIANTES del mismo producto físico.
 """
 from __future__ import annotations
 import logging
@@ -25,12 +24,9 @@ from src.distribucion.destinos.base import ErrorDestino
 log = logging.getLogger(__name__)
 
 
-def calcular_availability(producto: Producto, calcular_por_stock: bool) -> str:
-    """Devuelve 'in stock' o 'out of stock'.
+# ===================== HELPERS GENERALES =====================
 
-    Si calcular_por_stock=False, siempre 'in stock'.
-    Si stock es None, asumimos 'in stock' (mejor incluir de más).
-    """
+def calcular_availability(producto: Producto, calcular_por_stock: bool) -> str:
     if not calcular_por_stock:
         return "in stock"
     if producto.stock is None:
@@ -39,25 +35,32 @@ def calcular_availability(producto: Producto, calcular_por_stock: bool) -> str:
 
 
 def formatear_precio(valor: float, moneda: str) -> str:
-    """Formato Meta/TikTok: '1234.00 ARS' (sin separador miles, 2 decimales)."""
     return f"{valor:.2f} {moneda}"
 
 
-def producto_a_fila(
+def agrupar_decisiones_por_template(
+    decisiones: list[DecisionSeleccion],
+) -> dict[str, list[DecisionSeleccion]]:
+    """Agrupa decisiones por template. 1 template = 1 grupo = 1 pestaña individual."""
+    grupos: dict[str, list[DecisionSeleccion]] = defaultdict(list)
+    for d in decisiones:
+        grupos[d.template].append(d)
+    return dict(grupos)
+
+
+# ===================== FILAS: PESTAÑAS INDIVIDUALES =====================
+
+def producto_a_fila_individual(
     producto: Producto,
     url_imagen: str,
     moneda: str,
     calcular_availability_por_stock: bool,
 ) -> list:
-    """Convierte producto + URL placa en fila del feed (9 columnas).
+    """Fila para pestaña INDIVIDUAL (1 por template).
 
-    Orden de columnas fijo: id, title, description, availability, condition,
-    price, link, image_link, brand. El header del 'id' cambia (id vs sku_id)
-    pero la estructura es la misma para Meta y TikTok.
-
-    Si el producto fue enriquecido (Fase G), usa titulo_corto / descripcion_corta
-    del campo .enriquecimiento. Si no, usa nombre / descripcion crudos
-    (retrocompat con runs sin Bloque 3).
+    Identificador = SKU directo (sin sufijo). Estas pestañas existen para
+    visualización/debug. No tienen duplicados (cada pestaña individual tiene
+    1 fila por SKU como máximo).
     """
     enriq = producto.enriquecimiento or {}
     title = enriq.get("titulo_corto") or producto.nombre
@@ -68,86 +71,105 @@ def producto_a_fila(
     )
 
     return [
-        producto.sku,                                              # id / sku_id
-        title,                                                     # title
-        description,                                               # description
-        calcular_availability(producto, calcular_availability_por_stock),  # availability
-        "new",                                                     # condition
-        formatear_precio(producto.precio_efectivo, moneda),        # price
-        producto.url_producto,                                     # link
-        url_imagen,                                                # image_link
-        producto.marca or "MoraShop",                              # brand
+        producto.sku,
+        title,
+        description,
+        calcular_availability(producto, calcular_availability_por_stock),
+        "new",
+        formatear_precio(producto.precio_efectivo, moneda),
+        producto.url_producto,
+        url_imagen,
+        producto.marca or "Agency Nusa",
     ]
 
 
-def agrupar_por_template(
-    productos: list[Producto],
-    decisiones: list[DecisionSeleccion],
-) -> dict[str, list[Producto]]:
-    """Agrupa productos por el template con el que se renderizaron."""
-    template_por_sku = {d.sku: d.template for d in decisiones}
+# Alias para compatibilidad con código existente
+producto_a_fila = producto_a_fila_individual
 
-    grupos: dict[str, list[Producto]] = defaultdict(list)
-    sin_template = 0
-    for p in productos:
-        template = template_por_sku.get(p.sku)
-        if template is None:
-            # Defensive: este producto pasó por Bloque 4 pero no aparece en
-            # decisiones (no debería pasar, pero por las dudas)
-            log.warning("SKU %s no tiene template asignado, se excluye", p.sku)
-            sin_template += 1
-            continue
-        grupos[template].append(p)
 
-    if sin_template:
-        log.warning("%d productos sin template, excluidos del feed", sin_template)
-    return dict(grupos)
+# ===================== FILAS: PESTAÑA MAESTRA CONSOLIDADA =====================
 
+def producto_a_fila_maestra(
+    producto: Producto,
+    template: str,
+    url_imagen: str,
+    moneda: str,
+    calcular_availability_por_stock: bool,
+) -> list:
+    """Fila para pestaña MAESTRA (Meta_Feed / TikTok_Feed).
+
+    Identificador consolidado = sku + '__' + template (único)
+    item_group_id            = sku                    (agrupa variantes)
+
+    Funciona para Meta (columna 'id') y TikTok (columna 'sku_id'): la
+    función devuelve los VALORES, los nombres de columnas los define
+    cada destino en sus HEADERS.
+    """
+    enriq = producto.enriquecimiento or {}
+    title = enriq.get("titulo_corto") or producto.nombre
+    description = (
+        enriq.get("descripcion_corta")
+        or producto.descripcion
+        or producto.nombre
+    )
+
+    id_consolidado = f"{producto.sku}__{template}"
+
+    return [
+        id_consolidado,              # id (Meta) / sku_id (TikTok)
+        producto.sku,                # item_group_id (= SKU base)
+        title,
+        description,
+        calcular_availability(producto, calcular_availability_por_stock),
+        "new",
+        formatear_precio(producto.precio_efectivo, moneda),
+        producto.url_producto,
+        url_imagen,
+        producto.marca or "Agency Nusa",
+    ]
+
+
+# ===================== ESCRITURA =====================
 
 def escribir_pestaña_feed(
     sheet_id: str,
     pestaña: str,
     headers: list[str],
-    productos_grupo: list[Producto],
-    placas_subidas: list[PlacaSubida],
+    decisiones_grupo: list[DecisionSeleccion],
+    productos_por_sku: dict[str, Producto],
+    placas_por_sku_template: dict[tuple[str, str], PlacaSubida],
     moneda: str,
     calcular_availability_por_stock: bool,
-    aspect_ratio_filtrar: str = "4:5",
 ) -> int:
-    """Escribe UNA pestaña del feed (modo replace).
+    """Escribe UNA pestaña INDIVIDUAL del feed (modo replace).
 
-    Si la pestaña no existe, se crea (lo hace SheetsClient automáticamente).
-    Si productos_grupo está vacío, escribe solo los headers (limpia data vieja).
-
-    Args:
-        placas_subidas: lista de TODAS las placas subidas (4:5 + 9:16).
-            Adentro filtramos por aspect_ratio_filtrar.
-        aspect_ratio_filtrar: solo se incluyen placas con este aspect ratio.
-            "4:5" para feed Meta, "9:16" para feed TikTok.
-
-    Returns:
-        Cantidad de filas de datos escritas (sin contar header).
+    Las pestañas individuales tienen 1 fila por SKU.
     """
-    # Filtrar por aspect ratio e indexar por SKU
-    placas_por_sku: dict[str, PlacaSubida] = {
-        p.sku: p for p in placas_subidas if p.aspect_ratio == aspect_ratio_filtrar
-    }
-
     filas = []
     sin_placa = 0
-    for p in productos_grupo:
-        placa = placas_por_sku.get(p.sku)
+    sin_producto = 0
+    for decision in decisiones_grupo:
+        producto = productos_por_sku.get(decision.sku)
+        if not producto:
+            sin_producto += 1
+            continue
+        placa = placas_por_sku_template.get((decision.sku, decision.template))
         if not placa:
             sin_placa += 1
             continue
-        filas.append(producto_a_fila(
-            p, placa.url_publica, moneda, calcular_availability_por_stock,
+        filas.append(producto_a_fila_individual(
+            producto, placa.url_publica, moneda, calcular_availability_por_stock,
         ))
 
     if sin_placa:
         log.warning(
-            "Pestaña '%s' (%s): %d productos excluidos por falta de placa subida",
-            pestaña, aspect_ratio_filtrar, sin_placa,
+            "Pestaña '%s': %d decisiones sin placa subida",
+            pestaña, sin_placa,
+        )
+    if sin_producto:
+        log.warning(
+            "Pestaña '%s': %d decisiones sin producto en inventario",
+            pestaña, sin_producto,
         )
 
     client = SheetsClient(ConfigSheets(sheet_id=sheet_id, pestaña=pestaña))
@@ -156,6 +178,109 @@ def escribir_pestaña_feed(
     except Exception as e:
         raise ErrorDestino(f"Falló escritura pestaña '{pestaña}': {e}") from e
 
-    log.info("Pestaña '%s': %d filas escritas (aspect_ratio=%s)",
-             pestaña, len(filas), aspect_ratio_filtrar)
+    log.info("Pestaña '%s': %d filas escritas", pestaña, len(filas))
     return len(filas)
+
+
+def escribir_pestaña_maestra(
+    sheet_id: str,
+    pestaña: str,
+    headers: list[str],
+    decisiones_plataforma: list[DecisionSeleccion],
+    productos_por_sku: dict[str, Producto],
+    placas_por_sku_template: dict[tuple[str, str], PlacaSubida],
+    moneda: str,
+    calcular_availability_por_stock: bool,
+) -> int:
+    """Escribe la pestaña MAESTRA consolidada (Meta_Feed o TikTok_Feed).
+
+    Esta pestaña contiene TODAS las decisiones de la plataforma. Esta es la
+    pestaña que se conecta a Meta Catalog / TikTok Catalog.
+    """
+    filas = []
+    sin_placa = 0
+    sin_producto = 0
+    for decision in decisiones_plataforma:
+        producto = productos_por_sku.get(decision.sku)
+        if not producto:
+            sin_producto += 1
+            continue
+        placa = placas_por_sku_template.get((decision.sku, decision.template))
+        if not placa:
+            sin_placa += 1
+            continue
+        filas.append(producto_a_fila_maestra(
+            producto, decision.template, placa.url_publica,
+            moneda, calcular_availability_por_stock,
+        ))
+
+    if sin_placa:
+        log.warning(
+            "Pestaña maestra '%s': %d decisiones sin placa subida",
+            pestaña, sin_placa,
+        )
+    if sin_producto:
+        log.warning(
+            "Pestaña maestra '%s': %d decisiones sin producto en inventario",
+            pestaña, sin_producto,
+        )
+
+    client = SheetsClient(ConfigSheets(sheet_id=sheet_id, pestaña=pestaña))
+    try:
+        client.escribir_replace(headers, filas)
+    except Exception as e:
+        raise ErrorDestino(f"Falló escritura pestaña maestra '{pestaña}': {e}") from e
+
+    log.info("Pestaña maestra '%s': %d filas escritas (consolidadas)",
+             pestaña, len(filas))
+    return len(filas)
+
+
+def mover_pestaña_a_posicion(sheet_id: str, pestaña: str, posicion: int) -> bool:
+    """Mueve una pestaña a una posición específica del sheet.
+
+    Args:
+        sheet_id: ID del Google Sheet.
+        pestaña: nombre de la pestaña a mover.
+        posicion: índice destino (0-based). 0 = primera pestaña.
+
+    Returns:
+        True si se movió OK, False si la pestaña no existía o falló.
+    """
+    try:
+        client = SheetsClient(ConfigSheets(sheet_id=sheet_id, pestaña="_dummy"))
+        sheet = client._abrir_sheet()
+        ws = None
+        for w in sheet.worksheets():
+            if w.title == pestaña:
+                ws = w
+                break
+        if ws is None:
+            return False
+        # gspread expone update_index() para reordenar
+        ws.update_index(posicion)
+        return True
+    except Exception as e:
+        log.warning("No pude reordenar pestaña '%s' a posición %d: %s",
+                    pestaña, posicion, e)
+        return False
+
+
+def borrar_pestaña_si_existe(sheet_id: str, pestaña: str) -> bool:
+    """Borra una pestaña del sheet si existe.
+
+    Returns:
+        True si la borró, False si no existía o falló.
+    """
+    try:
+        client = SheetsClient(ConfigSheets(sheet_id=sheet_id, pestaña="_dummy"))
+        sheet = client._abrir_sheet()
+        for w in sheet.worksheets():
+            if w.title == pestaña:
+                sheet.del_worksheet(w)
+                log.info("Pestaña '%s' borrada", pestaña)
+                return True
+        return False
+    except Exception as e:
+        log.warning("No pude borrar pestaña '%s': %s", pestaña, e)
+        return False

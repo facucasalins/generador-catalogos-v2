@@ -97,10 +97,14 @@ class MetaCatalogDestino(DestinoFeed):
 
         decisiones_meta = [d for d in decisiones if d.template.startswith(PREFIJO_PLATAFORMA)]
 
+        # Si NO hay decisiones Meta → no creamos nada (idempotencia total).
+        # La pestaña maestra y las individuales se borran después en
+        # eliminar_pestañas_huerfanas() al no estar en el set activo.
         if not decisiones_meta:
             log.info("Meta: no hay decisiones marcadas. No se crea Meta_Feed.")
             return {}
 
+        # Filtrar placas por aspect_ratios aceptados
         placas_filtradas = placas_subidas
         if self.cfg.aspect_ratios_aceptados:
             placas_filtradas = [
@@ -117,6 +121,7 @@ class MetaCatalogDestino(DestinoFeed):
         resultados: dict[str, int] = {}
         errores: list[str] = []
 
+        # ============ 1. ESCRIBIR PESTAÑA MAESTRA ============
         try:
             n_maestra = escribir_pestaña_maestra(
                 sheet_id=self.cfg.sheet_id,
@@ -130,6 +135,7 @@ class MetaCatalogDestino(DestinoFeed):
             )
             resultados[PESTAÑA_MAESTRA] = n_maestra
 
+            # Mover a posición 0 (primera pestaña del sheet)
             mover_pestaña_a_posicion(
                 self.cfg.sheet_id, PESTAÑA_MAESTRA, POSICION_MAESTRA,
             )
@@ -137,6 +143,7 @@ class MetaCatalogDestino(DestinoFeed):
             log.error("Meta: falló pestaña maestra '%s': %s", PESTAÑA_MAESTRA, e)
             errores.append(f"{PESTAÑA_MAESTRA}: {e}")
 
+        # ============ 2. ESCRIBIR PESTAÑAS INDIVIDUALES ============
         grupos = agrupar_decisiones_por_template(decisiones_meta)
 
         for template, decisiones_grupo in grupos.items():
@@ -179,6 +186,14 @@ class MetaCatalogDestino(DestinoFeed):
         """Borra del sheet pestañas con prefijo 'Meta_' que NO están activas.
 
         IMPORTANTE: incluye Meta_Feed si no fue escrita en este run.
+        Esto es deseable: si nadie marcó nada, Meta_Feed también se borra.
+
+        Args:
+            pestañas_activas: set con los nombres de pestañas que SÍ se
+                acaban de escribir en este run.
+
+        Returns:
+            Lista de nombres de pestañas borradas.
         """
         client = SheetsClient(ConfigSheets(
             sheet_id=self.cfg.sheet_id, pestaña="_dummy",

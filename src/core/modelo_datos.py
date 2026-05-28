@@ -5,6 +5,12 @@ Estas dataclasses son el CONTRATO entre bloques. Cualquier módulo nuevo
 objetos. No se modifican a la ligera.
 
 Diseñado siguiendo §6 de docs/ARCHITECTURE.md.
+
+Cambio importante (multi-template):
+- DecisionSeleccion ahora representa UNA placa a renderizar (1 SKU + 1 template).
+  Antes representaba 1 SKU y el aspect_ratio se iteraba en el cli.py.
+- Un SKU puede generar N DecisionSeleccion (una por template marcado en el sheet).
+- El template ya trae su aspect_ratio y dimensiones; no se deducen del config global.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -68,10 +74,22 @@ class Producto:
 
 @dataclass
 class DecisionSeleccion:
-    """Una decisión por SKU: si va al feed hoy y con qué diseño."""
+    """Una decisión de qué placa renderizar.
+
+    IMPORTANTE: representa UNA placa, no UN producto. Un SKU puede tener
+    N DecisionSeleccion en el mismo run (una por cada template marcado en
+    la pestaña Seleccion). Ejemplo:
+
+        sku=bota-x con default_4x5 marcado + cuotas_9x16 marcado
+        → 2 DecisionSeleccion, mismo SKU, distintos templates.
+
+    El template lleva implícito su aspect_ratio (ej: 'default_4x5' es 4:5).
+    El motor de Estilo lee las dimensiones del HTML mismo (metadata en el
+    comentario inicial del template).
+    """
     sku: str
-    generar: bool  # True = "SI" en el Sheet
-    template: str = "default"  # nombre del template HTML a usar
+    generar: bool  # True = "SI" en el Sheet (master switch de la fila)
+    template: str = "default"  # nombre del template HTML (sin extensión)
     prioridad: int = 100  # 1 = alta. Para ordenar el feed.
     notas: str = ""  # texto libre del cliente/Vladimir
 
@@ -109,16 +127,29 @@ class Enriquecimiento:
 # ============================================================
 
 @dataclass
+class TemplateMetadata:
+    """Metadata extraída del comentario <!-- META --> al inicio del HTML.
+
+    Cada template HTML autodescribe sus dimensiones y aspect_ratio. Esto
+    permite que distintos templates del mismo cliente tengan distintas
+    dimensiones sin necesidad de configurarlo en pipeline.yaml.
+    """
+    nombre: str           # ej: "default_4x5"
+    aspect_ratio: str     # ej: "4:5", "9:16", "1:1"
+    width: int            # ej: 1080
+    height: int           # ej: 1350
+    descripcion: str = ""
+
+
+@dataclass
 class Placa:
     """Una placa renderizada en disco, lista para subir a storage."""
     sku: str
-    template_usado: str  # qué template HTML generó esta placa
-    path_local: str  # archivo PNG en disco
+    template_usado: str   # qué template HTML generó esta placa (sin extensión)
+    path_local: str       # archivo PNG en disco
     width: int = 1080
     height: int = 1350
-    # "4:5" (1080x1350, Meta) o "9:16" (1080x1920, TikTok)
-    # Por default "4:5" para retrocompatibilidad con código existente.
-    aspect_ratio: str = "4:5"
+    aspect_ratio: str = "4:5"  # derivado de la metadata del template
 
 
 # ============================================================
@@ -129,9 +160,10 @@ class Placa:
 class PlacaSubida:
     """Placa que ya está subida al storage y tiene URL pública."""
     sku: str
+    template_usado: str   # NUEVO: necesario porque un SKU puede tener N placas (distintos templates)
     url_publica: str
     storage_backend: str  # "cloudinary", "s3", etc.
-    aspect_ratio: str = "4:5"  # "4:5" Meta, "9:16" TikTok
+    aspect_ratio: str = "4:5"  # info derivada (filtrar feeds por destino)
 
 
 @dataclass
@@ -166,7 +198,8 @@ class ResultadoRun:
 
     # Conteos por bloque:
     productos_inventario: int = 0
-    productos_seleccionados: int = 0
+    productos_seleccionados: int = 0  # SKUs únicos seleccionados (no decisiones)
+    decisiones_totales: int = 0       # NUEVO: total de placas a renderizar
     productos_enriquecidos: int = 0
     placas_generadas: int = 0
     placas_subidas: int = 0
@@ -185,6 +218,6 @@ class ResultadoRun:
     def exito(self) -> bool:
         """Si pasó al menos la mitad del trabajo, consideramos éxito.
         El threshold se puede ajustar por cliente en el pipeline.yaml."""
-        if self.productos_seleccionados == 0:
+        if self.decisiones_totales == 0:
             return True  # no había nada que hacer
-        return len(self.errores) < self.productos_seleccionados / 2
+        return len(self.errores) < self.decisiones_totales / 2

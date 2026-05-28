@@ -1,14 +1,4 @@
-"""Tests del Bloque 4: estilo/playwright_html.py
-
-NO ejecutan Playwright real (lento, requiere browser instalado en CI).
-Mockean la parte del browser y validan:
-- Formateo de precios
-- Cálculo de cuotas
-- Construcción de variables del template
-- Cache de imágenes
-- Reemplazo de placeholders
-- Manejo de errores (imagen rota, template inexistente, etc.)
-"""
+"""Tests del Bloque 4: estilo/playwright_html.py (multi-template)."""
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 import pytest
@@ -20,16 +10,14 @@ from src.estilo.playwright_html import (
     PlaywrightHtmlEstilo,
     formatear_precio_ars,
     calcular_cuota,
-    _sanitizar_sku,
+    _sanitizar_id,
 )
 
-
-# ============ Helpers de formateo ============
 
 @pytest.mark.parametrize("valor,esperado", [
     (97656.0, "$97.656"),
     (114890.0, "$114.890"),
-    (1234567.89, "$1.234.568"),  # se redondea
+    (1234567.89, "$1.234.568"),
     (999.0, "$999"),
     (0.0, "$0"),
     (1000.0, "$1.000"),
@@ -39,34 +27,40 @@ def test_formatear_precio_ars(valor, esperado):
 
 
 def test_calcular_cuota_basico():
-    # $114.890 / 3 = $38.296.67
     assert calcular_cuota(114890.0, 3) == pytest.approx(38296.67, rel=1e-3)
 
 
-def test_calcular_cuota_cuotas_cero_devuelve_lista():
+def test_calcular_cuota_cero_devuelve_base():
     assert calcular_cuota(1000.0, 0) == 1000.0
 
 
-def test_sanitizar_sku_con_espacios():
-    assert _sanitizar_sku("GOLDNU0 CREA 300G") == "GOLDNU0_CREA_300G"
+def test_sanitizar_id_con_espacios():
+    assert _sanitizar_id("GOLDNU0 CREA 300G") == "GOLDNU0_CREA_300G"
 
 
-def test_sanitizar_sku_con_caracteres_especiales():
-    assert _sanitizar_sku("SKU/ABC-123") == "SKU_ABC-123"
+def test_sanitizar_id_con_caracteres_especiales():
+    assert _sanitizar_id("SKU/ABC-123") == "SKU_ABC-123"
 
 
-def test_sanitizar_sku_alfanumerico_no_se_modifica():
-    assert _sanitizar_sku("ABC123-XYZ") == "ABC123-XYZ"
+def test_sanitizar_id_alfanumerico_no_se_modifica():
+    assert _sanitizar_id("ABC123-XYZ") == "ABC123-XYZ"
 
 
-# ============ Setup ============
+METADATA_HEADER = (
+    "<!-- META\n"
+    "aspect_ratio: 4:5\n"
+    "width: 1080\n"
+    "height: 1350\n"
+    "-->\n"
+)
+
 
 @pytest.fixture
 def templates_dir(tmp_path):
-    """Crea un directorio temporal con un template HTML mínimo."""
     d = tmp_path / "templates"
     d.mkdir()
-    (d / "default.html").write_text(
+    (d / "default_4x5.html").write_text(
+        METADATA_HEADER +
         "<html><body>"
         "<img src='{logo_b64}'>"
         "<img src='{imagen_b64}'>"
@@ -112,10 +106,8 @@ def producto_basico():
 
 @pytest.fixture
 def decision_basica():
-    return DecisionSeleccion(sku="TEST-001", generar=True, template="default")
+    return DecisionSeleccion(sku="TEST-001", generar=True, template="Meta_default_4x5")
 
-
-# ============ Validaciones de config ============
 
 def test_config_falla_sin_templates_dir(tmp_path):
     cfg = ConfigPlaywrightHtml(
@@ -134,11 +126,8 @@ def test_config_crea_output_dir_si_no_existe(templates_dir, tmp_path):
     assert out.exists()
 
 
-# ============ Cache de imágenes ============
-
 @patch("src.estilo.playwright_html.requests.get")
 def test_imagen_se_descarga_una_sola_vez(mock_get, motor):
-    """Si pido la misma URL 3 veces, requests.get se llama 1 vez."""
     mock_resp = MagicMock()
     mock_resp.content = b"fake-image-bytes"
     mock_resp.headers = {"Content-Type": "image/png"}
@@ -171,10 +160,9 @@ def test_imagen_falla_si_url_vacia(motor):
 
 @patch("src.estilo.playwright_html.requests.get")
 def test_content_type_default_a_jpeg_si_no_viene(mock_get, motor):
-    """Si el server no manda Content-Type, asumimos image/jpeg."""
     mock_resp = MagicMock()
     mock_resp.content = b"fake"
-    mock_resp.headers = {}  # sin Content-Type
+    mock_resp.headers = {}
     mock_resp.raise_for_status = MagicMock()
     mock_get.return_value = mock_resp
 
@@ -182,13 +170,10 @@ def test_content_type_default_a_jpeg_si_no_viene(mock_get, motor):
     assert result.startswith("data:image/jpeg;base64,")
 
 
-# ============ Construcción de variables ============
-
 @patch("src.estilo.playwright_html.requests.get")
 def test_construir_variables_basico(
     mock_get, motor, producto_basico, decision_basica
 ):
-    """Validar que las variables clave se construyen bien."""
     mock_resp = MagicMock()
     mock_resp.content = b"fake"
     mock_resp.headers = {"Content-Type": "image/jpeg"}
@@ -201,12 +186,10 @@ def test_construir_variables_basico(
     assert vars_["nombre"] == "Producto de Prueba"
     assert vars_["precio_original_formateado"] == "$10.000"
     assert vars_["precio_hotsale_formateado"] == "$8.000"
-    # Cuota = precio_lista / 3 = 10000/3 = 3333.33 → redondea a $3.333
     assert vars_["cuota_formateada"] == "$3.333"
     assert vars_["cuotas_num"] == "3"
     assert vars_["brand_name"] == "TEST"
     assert vars_["evento_legal"] == "Promo válida hasta el 30/06."
-    # base64 de imágenes
     assert vars_["imagen_b64"].startswith("data:image/jpeg;base64,")
     assert vars_["logo_b64"].startswith("data:image/jpeg;base64,")
 
@@ -215,7 +198,6 @@ def test_construir_variables_basico(
 def test_variables_sin_promo_usa_precio_lista(
     mock_get, motor, decision_basica
 ):
-    """Si el producto no tiene promo, precio_hotsale = precio_lista * factor."""
     mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
     mock_resp.raise_for_status = MagicMock()
     mock_get.return_value = mock_resp
@@ -226,7 +208,6 @@ def test_variables_sin_promo_usa_precio_lista(
         imagen_url="https://example.com/x.jpg",
     )
     vars_ = motor._construir_variables(p, decision_basica)
-    # factor 1.0 → precio_hotsale = precio_lista
     assert vars_["precio_original_formateado"] == "$5.000"
     assert vars_["precio_hotsale_formateado"] == "$5.000"
 
@@ -235,7 +216,6 @@ def test_variables_sin_promo_usa_precio_lista(
 def test_variables_aplica_hotsale_discount_factor(
     mock_get, templates_dir, tmp_path, decision_basica
 ):
-    """Validar que hotsale_discount_factor < 1.0 reduce el precio cuando no hay promo."""
     mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
     mock_resp.raise_for_status = MagicMock()
     mock_get.return_value = mock_resp
@@ -244,25 +224,26 @@ def test_variables_aplica_hotsale_discount_factor(
         templates_dir=templates_dir,
         output_dir=tmp_path / "out",
         variables_globales={"logo_url": "https://example.com/l.png"},
-        hotsale_discount_factor=0.8,  # 20% off
+        hotsale_discount_factor=0.8,
     )
     motor = PlaywrightHtmlEstilo(cfg)
 
     p = Producto(
         sku="X", nombre="X", precio_lista=10000.0,
-        precio_promocional=None,  # SIN promo → aplica factor
+        precio_promocional=None,
         imagen_url="https://example.com/x.jpg",
     )
     vars_ = motor._construir_variables(p, decision_basica)
     assert vars_["precio_hotsale_formateado"] == "$8.000"
 
 
-def test_falla_si_no_hay_logo_url(templates_dir, tmp_path, producto_basico, decision_basica):
-    """Sin logo_url en variables_globales, debe fallar (config error)."""
+def test_falla_si_no_hay_logo_url(
+    templates_dir, tmp_path, producto_basico, decision_basica
+):
     cfg = ConfigPlaywrightHtml(
         templates_dir=templates_dir,
         output_dir=tmp_path / "out",
-        variables_globales={},  # ❌ sin logo_url
+        variables_globales={},
     )
     motor = PlaywrightHtmlEstilo(cfg)
 
@@ -278,8 +259,6 @@ def test_falla_si_no_hay_logo_url(templates_dir, tmp_path, producto_basico, deci
 def test_variables_globales_no_sobreescriben_calculadas(
     mock_get, templates_dir, tmp_path, producto_basico, decision_basica
 ):
-    """Si el yaml mete 'sku' en variables_globales por error, no debe pisar
-    el sku real del producto."""
     mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
     mock_resp.raise_for_status = MagicMock()
     mock_get.return_value = mock_resp
@@ -289,15 +268,13 @@ def test_variables_globales_no_sobreescriben_calculadas(
         output_dir=tmp_path / "out",
         variables_globales={
             "logo_url": "https://example.com/l.png",
-            "sku": "VARIABLE-GLOBAL-MALA",  # tentación: pisar
+            "sku": "VARIABLE-GLOBAL-MALA",
         },
     )
     motor = PlaywrightHtmlEstilo(cfg)
     vars_ = motor._construir_variables(producto_basico, decision_basica)
-    assert vars_["sku"] == "TEST-001"  # gana el del producto
+    assert vars_["sku"] == "TEST-001"
 
-
-# ============ Reemplazo de placeholders ============
 
 def test_reemplazar_variables_simple(motor):
     html = "<p>{nombre}</p>"
@@ -306,48 +283,51 @@ def test_reemplazar_variables_simple(motor):
 
 
 def test_reemplazar_variables_no_existente_queda_literal(motor, caplog):
-    """Una variable referenciada en HTML que no está en el dict NO rompe,
-    solo loguea warning."""
     import logging
     caplog.set_level(logging.WARNING)
     html = "<p>{existe} - {no_existe}</p>"
     out = motor._reemplazar_variables(html, {"existe": "OK"})
     assert "OK" in out
-    assert "{no_existe}" in out  # quedó literal
+    assert "{no_existe}" in out
     assert "no_existe" in caplog.text
 
 
-# ============ Carga de templates ============
-
 def test_cargar_template_inexistente_falla(motor):
     with pytest.raises(ErrorEstilo, match="no encontrado"):
-        motor._cargar_template("template-que-no-existe")
+        motor._cargar_template("Meta_template-que-no-existe")
+
+
+def test_cargar_template_quita_prefijo_meta(motor, templates_dir):
+    """'Meta_default_4x5' carga el archivo 'default_4x5.html'."""
+    contenido, metadata = motor._cargar_template("Meta_default_4x5")
+    assert "{nombre}" in contenido
+    assert metadata.aspect_ratio == "4:5"
+    assert metadata.width == 1080
+    assert metadata.height == 1350
+
+
+def test_cargar_template_quita_prefijo_tiktok(motor, templates_dir):
+    """'TikTok_default_4x5' también carga 'default_4x5.html'."""
+    contenido, metadata = motor._cargar_template("TikTok_default_4x5")
+    assert "{nombre}" in contenido
 
 
 def test_cargar_template_cachea(motor, templates_dir):
-    """Si pido el mismo template 2 veces, solo se lee del disco 1."""
-    motor._cargar_template("default")
-    # Modificar el archivo para detectar si se relee
-    (templates_dir / "default.html").write_text("MODIFICADO", encoding="utf-8")
-    # Segunda lectura: debería venir del cache (NO ver "MODIFICADO")
-    contenido = motor._cargar_template("default")
+    motor._cargar_template("Meta_default_4x5")
+    (templates_dir / "default_4x5.html").write_text("MODIFICADO", encoding="utf-8")
+    contenido, _ = motor._cargar_template("Meta_default_4x5")
     assert "MODIFICADO" not in contenido
-    assert "{nombre}" in contenido  # el original
+    assert "{nombre}" in contenido
 
-
-# ============ Identidad del módulo ============
 
 def test_nombre_motor(motor):
     assert motor.nombre() == "playwright_html"
 
 
-# ============ Tests nuevos: precio_efectivo + cuotas_sobre_promocional ============
-
 @patch("src.estilo.playwright_html.requests.get")
 def test_precio_efectivo_no_se_expone_si_factor_es_none(
     mock_get, motor, producto_basico, decision_basica
 ):
-    """Sin descuento_efectivo_factor, la variable no existe (retrocompat)."""
     mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
     mock_resp.raise_for_status = MagicMock()
     mock_get.return_value = mock_resp
@@ -359,7 +339,6 @@ def test_precio_efectivo_no_se_expone_si_factor_es_none(
 def test_precio_efectivo_caso_mora(
     mock_get, templates_dir, tmp_path, decision_basica
 ):
-    """Caso Mora real: promo=$82.294 × 0.85 = $69.950."""
     mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
     mock_resp.raise_for_status = MagicMock()
     mock_get.return_value = mock_resp
@@ -386,19 +365,17 @@ def test_precio_efectivo_caso_mora(
 def test_cuotas_default_sobre_precio_lista(
     mock_get, motor, producto_basico, decision_basica
 ):
-    """Default (sin flag): cuotas sobre precio_lista. Retrocompat."""
     mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
     mock_resp.raise_for_status = MagicMock()
     mock_get.return_value = mock_resp
     vars_ = motor._construir_variables(producto_basico, decision_basica)
-    assert vars_["cuota_formateada"] == "$3.333"  # 10000/3
+    assert vars_["cuota_formateada"] == "$3.333"
 
 
 @patch("src.estilo.playwright_html.requests.get")
 def test_cuotas_sobre_promocional_caso_mora(
     mock_get, templates_dir, tmp_path, decision_basica
 ):
-    """Con flag activo: cuotas sobre precio_promocional. Caso Mora."""
     mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
     mock_resp.raise_for_status = MagicMock()
     mock_get.return_value = mock_resp
@@ -418,14 +395,13 @@ def test_cuotas_sobre_promocional_caso_mora(
         imagen_url="https://example.com/x.jpg",
     )
     vars_ = motor._construir_variables(p, decision_basica)
-    assert vars_["cuota_formateada"] == "$27.431"  # 82294/3
+    assert vars_["cuota_formateada"] == "$27.431"
 
 
 @patch("src.estilo.playwright_html.requests.get")
 def test_combo_efectivo_y_cuotas_caso_mora_completo(
     mock_get, templates_dir, tmp_path, decision_basica
 ):
-    """Caso Mora completo: ambos flags activos."""
     mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
     mock_resp.raise_for_status = MagicMock()
     mock_get.return_value = mock_resp
