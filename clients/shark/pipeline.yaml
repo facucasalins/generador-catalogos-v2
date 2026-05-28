@@ -63,15 +63,17 @@ distribucion:
       folder: shark
 
   destinos:
+    # Meta y TikTok aceptan TODOS los aspect ratios. El cliente decide por
+    # fila qué templates marca en cada plataforma.
     - tipo: meta_catalog
       config:
         sheet_id: "1r1UPXaSgKj142P0dtbztr7ZUNNJV-vOCDAfBnUoWDkE"
         moneda: ARS
         calcular_availability_por_stock: true
-        aspect_ratios_aceptados: ["4:5", "1:1"]
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
     - tipo: tiktok_catalog
       config:
         sheet_id: "1r1UPXaSgKj142P0dtbztr7ZUNNJV-vOCDAfBnUoWDkE"
         moneda: ARS
         calcular_availability_por_stock: true
-        aspect_ratios_aceptados: ["9:16", "1:1"]
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
