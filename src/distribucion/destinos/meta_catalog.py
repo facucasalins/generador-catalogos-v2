@@ -1,18 +1,23 @@
-"""Destino: feed Meta Catalog (refactor Opción B).
+"""Destino: feed Meta Catalog.
 
-Escribe N pestañas en el sheet de Feed-Output, una por template.
-Pestañas: Meta_{template}, ej: Meta_default, Meta_electrohogar.
+El template ya viene con prefijo de plataforma (ej: 'Meta_default_4x5').
+Filtra solo los templates 'Meta_*' y usa el nombre tal cual como pestaña.
 
-Header del id: 'id' (lo que Meta espera).
+Idempotencia (multi-template):
+- publicar() devuelve qué pestañas ESCRIBIÓ en este run.
+- eliminar_pestañas_huerfanas() borra del sheet las pestañas con prefijo
+  'Meta_' que NO están en el set activo. Esto convierte al Sheet en un
+  espejo idempotente de las decisiones marcadas en Selección.
 """
 from __future__ import annotations
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from src.core.modelo_datos import Producto, PlacaSubida, DecisionSeleccion
+from src.core.sheets_client import ConfigSheets, SheetsClient
 from src.distribucion.destinos.base import DestinoFeed, ErrorDestino
 from src.distribucion.destinos._common import (
-    agrupar_por_template,
+    agrupar_decisiones_por_template,
     escribir_pestaña_feed,
 )
 
@@ -20,7 +25,6 @@ from src.distribucion.destinos._common import (
 log = logging.getLogger(__name__)
 
 
-# Headers Meta. Primera columna 'id' (Meta-specific).
 HEADERS_META = [
     "id",
     "title",
@@ -33,19 +37,19 @@ HEADERS_META = [
     "brand",
 ]
 
-PREFIJO_PESTAÑA = "Meta"
+PREFIJO_PLATAFORMA = "Meta_"
 
 
 @dataclass
 class ConfigMetaCatalog:
-    """Config Meta. Una pestaña por template, prefijo 'Meta_'."""
+    """Config Meta. Solo procesa templates que empiezan con 'Meta_'."""
     sheet_id: str
     moneda: str = "ARS"
     calcular_availability_por_stock: bool = True
+    aspect_ratios_aceptados: list[str] = field(default_factory=list)
 
 
 class MetaCatalogDestino(DestinoFeed):
-    """Escribe feeds Meta Catalog, una pestaña por template."""
 
     def __init__(self, config: ConfigMetaCatalog):
         if not config.sheet_id:
@@ -61,33 +65,60 @@ class MetaCatalogDestino(DestinoFeed):
         placas_subidas: list[PlacaSubida],
         decisiones: list[DecisionSeleccion],
     ) -> dict[str, int]:
-        """Agrupa por template, escribe 1 pestaña por grupo.
+        productos_por_sku = {p.sku: p for p in productos}
 
-        Meta usa las placas 4:5 (Fase H: filtra del set total de placas).
-        """
-        grupos = agrupar_por_template(productos, decisiones)
-
-        if not grupos:
-            log.warning("Meta: no hay productos para publicar")
+        # Filtrar solo decisiones de Meta (template empieza con 'Meta_')
+        decisiones_meta = [d for d in decisiones if d.template.startswith(PREFIJO_PLATAFORMA)]
+        if not decisiones_meta:
+            log.warning("Meta: no hay decisiones con prefijo '%s'", PREFIJO_PLATAFORMA)
             return {}
+
+        # Filtrar placas por aspect_ratios aceptados
+        placas_filtradas = placas_subidas
+        if self.cfg.aspect_ratios_aceptados:
+            placas_filtradas = [
+                p for p in placas_subidas
+                if p.aspect_ratio in self.cfg.aspect_ratios_aceptados
+            ]
+
+        # Indexar placas que sean de templates Meta_
+        placas_por_sku_template: dict[tuple[str, str], PlacaSubida] = {
+            (p.sku, p.template_usado): p
+            for p in placas_filtradas
+            if p.template_usado.startswith(PREFIJO_PLATAFORMA)
+        }
+
+        grupos = agrupar_decisiones_por_template(decisiones_meta)
 
         resultados: dict[str, int] = {}
         errores: list[str] = []
 
-        for template, productos_grupo in grupos.items():
-            pestaña = f"{PREFIJO_PESTAÑA}_{template}"
-            log.info("Meta: escribiendo pestaña '%s' (%d productos del template '%s')",
-                     pestaña, len(productos_grupo), template)
+        for template, decisiones_grupo in grupos.items():
+            placas_de_este_template = [
+                p for p in placas_filtradas if p.template_usado == template
+            ]
+            if not placas_de_este_template and self.cfg.aspect_ratios_aceptados:
+                log.info(
+                    "Meta: template '%s' no tiene placas en aspect_ratios "
+                    "aceptados %s. Pestaña omitida.",
+                    template, self.cfg.aspect_ratios_aceptados,
+                )
+                continue
+
+            # El nombre del template YA tiene 'Meta_' al inicio, lo usamos tal cual
+            pestaña = template
+            log.info("Meta: escribiendo pestaña '%s' (%d decisiones)",
+                     pestaña, len(decisiones_grupo))
             try:
                 n = escribir_pestaña_feed(
                     sheet_id=self.cfg.sheet_id,
                     pestaña=pestaña,
                     headers=HEADERS_META,
-                    productos_grupo=productos_grupo,
-                    placas_subidas=placas_subidas,
+                    decisiones_grupo=decisiones_grupo,
+                    productos_por_sku=productos_por_sku,
+                    placas_por_sku_template=placas_por_sku_template,
                     moneda=self.cfg.moneda,
                     calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
-                    aspect_ratio_filtrar="4:5",
                 )
                 resultados[pestaña] = n
             except ErrorDestino as e:
@@ -98,3 +129,37 @@ class MetaCatalogDestino(DestinoFeed):
             raise ErrorDestino(f"Meta: todas las pestañas fallaron: {errores}")
 
         return resultados
+
+    def eliminar_pestañas_huerfanas(self, pestañas_activas: set[str]) -> list[str]:
+        """Borra del sheet pestañas con prefijo 'Meta_' que NO están activas.
+
+        Args:
+            pestañas_activas: set con los nombres de pestañas que SÍ se acaban
+                de escribir en este run.
+
+        Returns:
+            Lista de nombres de pestañas borradas.
+        """
+        client = SheetsClient(ConfigSheets(
+            sheet_id=self.cfg.sheet_id, pestaña="_dummy",
+        ))
+        sheet = client._abrir_sheet()
+        worksheets = sheet.worksheets()
+
+        borradas: list[str] = []
+        for ws in worksheets:
+            nombre = ws.title
+            if not nombre.startswith(PREFIJO_PLATAFORMA):
+                continue
+            if nombre in pestañas_activas:
+                continue
+            try:
+                sheet.del_worksheet(ws)
+                borradas.append(nombre)
+                log.info("Meta: pestaña huérfana borrada → %s", nombre)
+            except Exception as e:
+                log.warning("Meta: no pude borrar pestaña '%s': %s", nombre, e)
+
+        if borradas:
+            log.info("Meta: %d pestañas huérfanas borradas", len(borradas))
+        return borradas
