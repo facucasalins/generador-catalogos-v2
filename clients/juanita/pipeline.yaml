@@ -12,6 +12,9 @@ inventario:
   config:
     store_id_secret: JUANITA_TIENDANUBE_STORE_ID
     access_token_secret: JUANITA_TIENDANUBE_TOKEN
+    # Juanita vende calzado: 1 fila por producto TN (no por talle/variante).
+    # SKU = handle (Identificador de URL TN). Agrupa todas las variantes.
+    agrupar_por_producto: true
     cuotas_num: 9
     sheet_destino:
       id: "1rW242O3H8HK5wGM6UyjhacDsDF0TR7r3Nft5GIMNFwU"
