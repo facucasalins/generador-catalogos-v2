@@ -10,7 +10,6 @@ Diseño:
 """
 from __future__ import annotations
 import logging
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,6 +17,7 @@ import cloudinary
 import cloudinary.uploader
 
 from src.core.modelo_datos import Placa, PlacaSubida
+from src.core.templates import sanitizar_id
 from src.distribucion.storage.base import StorageBackend, ErrorStorage
 
 
@@ -71,11 +71,12 @@ class CloudinaryStorage(StorageBackend):
         Ej: ('bota-soraya-negro', 'default_4x5')
             → 'antonia/bota-soraya-negro__default_4x5'
 
-        Importante: el sanitizado debe ser el MISMO que usa playwright_html
-        (para que el nombre del PNG en disco coincida con el public_id).
+        Importante: usa el MISMO sanitizador (sanitizar_id, en src/core/
+        templates.py) que playwright_html para el nombre del PNG, para que
+        el archivo en disco y el public_id coincidan.
         """
-        sku_sanitizado = _sanitizar(sku)
-        template_sanitizado = _sanitizar(template)
+        sku_sanitizado = sanitizar_id(sku)
+        template_sanitizado = sanitizar_id(template)
         return f"{self.cfg.folder}/{sku_sanitizado}__{template_sanitizado}"
 
     def subir(self, placa: Placa) -> PlacaSubida:
@@ -155,8 +156,3 @@ class CloudinaryStorage(StorageBackend):
         except Exception as e:
             log.warning("Cloudinary: falló borrado de %s: %s", public_id, e)
             return False
-
-
-def _sanitizar(valor: str) -> str:
-    """Sanea string para usar en public_id. Debe coincidir con playwright_html."""
-    return re.sub(r"[^A-Za-z0-9_\-]", "_", valor.strip())

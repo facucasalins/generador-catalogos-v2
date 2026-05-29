@@ -14,9 +14,27 @@ sola función compartida.
 """
 from __future__ import annotations
 
+import re
+
 # Prefijos de plataforma con los que se exponen los templates en la pestaña
 # Seleccion. Mantener en sync con src/seleccion/sync.py (sync_templates).
 PREFIJOS_PLATAFORMA = ("Meta_", "TikTok_")
+
+
+def sanitizar_id(valor: str) -> str:
+    """Sanea un sku/template para usarlo como ID estable.
+
+    Se usa para DOS cosas que DEBEN coincidir exactamente:
+      - el nombre del PNG en disco (motor de estilo), y
+      - el public_id de Cloudinary (storage).
+    Mismo (sku, template) → mismo ID → misma URL. Si las dos puntas no
+    sanitizan igual, se rompen las subidas y la limpieza de huérfanos. Por
+    eso vive en una sola función compartida (mismo motivo que
+    nombre_base_template).
+
+    Reemplaza cualquier carácter fuera de [A-Za-z0-9_-] por '_'.
+    """
+    return re.sub(r"[^A-Za-z0-9_\-]", "_", valor.strip())
 
 
 def nombre_base_template(nombre_template: str) -> str:
