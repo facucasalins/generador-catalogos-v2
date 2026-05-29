@@ -101,11 +101,18 @@ def producto_a_fila_maestra(
     moneda: str,
     calcular_availability_por_stock: bool,
     brand_fallback: str = "",
+    internal_label: str = "",
 ) -> list:
     """Fila para pestaña MAESTRA (Meta_Feed / TikTok_Feed).
 
     Identificador consolidado = sku + '__' + template (único)
-    item_group_id            = sku                    (agrupa variantes)
+    item_group_id            = id numérico de producto de Tiendanube
+                               (tn_product_id), con fallback al sku.
+    internal_label           = etiqueta fija configurable (para filtrar).
+
+    item_group_id usa el id numérico de TN para que el feed comparta criterio
+    de agrupación con el feed nativo de Tiendanube (retargeting con 2 orígenes
+    en un mismo catálogo). Si por algún motivo no hay tn_product_id, cae al sku.
 
     Funciona para Meta (columna 'id') y TikTok (columna 'sku_id'): la
     función devuelve los VALORES, los nombres de columnas los define
@@ -121,9 +128,21 @@ def producto_a_fila_maestra(
 
     id_consolidado = f"{producto.sku}__{template}"
 
+    tn_product_id = enriq.get("tn_product_id")
+    if tn_product_id:
+        item_group_id = str(tn_product_id)
+    else:
+        # No debería pasar (tiendanube siempre setea tn_product_id), pero si
+        # falta usamos el sku para no romper el feed. Lo logueamos para detectarlo.
+        item_group_id = producto.sku
+        log.warning(
+            "Producto %s sin tn_product_id: item_group_id cae al sku '%s'",
+            producto.sku, producto.sku,
+        )
+
     return [
         id_consolidado,              # id (Meta) / sku_id (TikTok)
-        producto.sku,                # item_group_id (= SKU base)
+        item_group_id,               # item_group_id = id numérico TN (fallback sku)
         title,
         description,
         calcular_availability(producto, calcular_availability_por_stock),
@@ -132,6 +151,7 @@ def producto_a_fila_maestra(
         producto.url_producto,
         url_imagen,
         producto.marca or brand_fallback,
+        internal_label,
     ]
 
 
@@ -200,6 +220,7 @@ def escribir_pestaña_maestra(
     moneda: str,
     calcular_availability_por_stock: bool,
     brand_fallback: str = "",
+    internal_label: str = "",
 ) -> int:
     """Escribe la pestaña MAESTRA consolidada (Meta_Feed o TikTok_Feed).
 
@@ -222,6 +243,7 @@ def escribir_pestaña_maestra(
             producto, decision.template, placa.url_publica,
             moneda, calcular_availability_por_stock,
             brand_fallback=brand_fallback,
+            internal_label=internal_label,
         ))
 
     if sin_placa:

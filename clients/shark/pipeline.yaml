@@ -54,6 +54,9 @@ estilo:
 
 # ============ BLOQUE 5: DISTRIBUCIÓN ============
 distribucion:
+  # Etiqueta fija del feed: distingue las placas de este pipeline del feed
+  # nativo de Tiendanube cuando conviven en el mismo catálogo (filtro/retargeting).
+  internal_label: "nusa_placa"
   storage:
     backend: cloudinary
     config:
