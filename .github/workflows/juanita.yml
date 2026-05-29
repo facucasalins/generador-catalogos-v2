@@ -3,9 +3,9 @@ name: Juanita - Generador
 on:
   workflow_dispatch:
   schedule:
-    # 08:00 ART = 11:00 UTC. (Mora 06:00, Shark 06:30, Antonia 07:00 ART;
-    # corremos Juanita con gap para no pisar cuotas de APIs.)
-    - cron: '0 11 * * *'
+    # 08:17 ART = 11:17 UTC. Minuto no-redondo; escalonado con los demás
+    # clientes para no pisar cuotas de APIs.
+    - cron: '17 11 * * *'
 
 jobs:
   pipeline:

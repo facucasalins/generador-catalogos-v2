@@ -3,9 +3,9 @@ name: SHARK - Pipeline completo
 on:
   workflow_dispatch:
   schedule:
-    # 07:00 ART = 10:00 UTC. (Mora corre a 06:00 ART; los corremos
-    # separados con 1 hora de gap para no pisar cuotas de APIs.)
-    - cron: '30 9 * * *'
+    # 06:37 ART = 09:37 UTC. Minuto no-redondo; escalonado con los demás
+    # clientes para no pisar cuotas de APIs.
+    - cron: '37 9 * * *'
 
 jobs:
   pipeline:
