@@ -133,6 +133,51 @@ def test_fila_fallback_a_nombre_si_no_hay_enriquecimiento():
     assert fila[2] == "Desc Original"
 
 
+# ===================== brand: marca TN vs fallback del cliente =====================
+
+def test_brand_individual_respeta_marca_de_tiendanube():
+    # Si Tiendanube trae marca, se usa esa (aunque haya brand_fallback).
+    p = _producto("A", marca="MarcaReal")
+    fila = producto_a_fila_individual(
+        p, "https://cdn/x.png", "ARS", True, brand_fallback="Juanita Shoes",
+    )
+    assert fila[-1] == "MarcaReal"
+
+
+def test_brand_individual_cae_a_brand_fallback_si_no_hay_marca():
+    # Sin marca de TN → usa el brand_name del cliente (no "Agency Nusa").
+    p = _producto("A", marca="")
+    fila = producto_a_fila_individual(
+        p, "https://cdn/x.png", "ARS", True, brand_fallback="Juanita Shoes",
+    )
+    assert fila[-1] == "Juanita Shoes"
+
+
+def test_brand_maestra_respeta_marca_de_tiendanube():
+    p = _producto("A", marca="MarcaReal")
+    fila = producto_a_fila_maestra(
+        p, "Meta_default_4x5", "u", "ARS", True, brand_fallback="SHARK",
+    )
+    assert fila[-1] == "MarcaReal"
+
+
+def test_brand_maestra_cae_a_brand_fallback_si_no_hay_marca():
+    p = _producto("A", marca="")
+    fila = producto_a_fila_maestra(
+        p, "Meta_default_4x5", "u", "ARS", True, brand_fallback="SHARK",
+    )
+    assert fila[-1] == "SHARK"
+
+
+def test_brand_nunca_es_agency_nusa():
+    # Regresión: el viejo hardcode "Agency Nusa" no debe volver a aparecer.
+    p = _producto("A", marca="")
+    fila_ind = producto_a_fila_individual(p, "u", "ARS", True, brand_fallback="X")
+    fila_mae = producto_a_fila_maestra(p, "Meta_default_4x5", "u", "ARS", True, brand_fallback="X")
+    assert "Agency Nusa" not in fila_ind
+    assert "Agency Nusa" not in fila_mae
+
+
 @pytest.fixture
 def meta():
     return MetaCatalogDestino(ConfigMetaCatalog(sheet_id="sheet-123"))

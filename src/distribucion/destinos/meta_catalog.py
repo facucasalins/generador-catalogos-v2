@@ -75,6 +75,9 @@ class ConfigMetaCatalog:
     moneda: str = "ARS"
     calcular_availability_por_stock: bool = True
     aspect_ratios_aceptados: list[str] = field(default_factory=list)
+    # Marca del cliente (cliente.brand_name). Fallback del campo 'brand' del
+    # feed cuando Tiendanube no trae marca en el producto.
+    brand_fallback: str = ""
 
 
 class MetaCatalogDestino(DestinoFeed):
@@ -132,6 +135,7 @@ class MetaCatalogDestino(DestinoFeed):
                 placas_por_sku_template=placas_por_sku_template,
                 moneda=self.cfg.moneda,
                 calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
+                brand_fallback=self.cfg.brand_fallback,
             )
             resultados[PESTAÑA_MAESTRA] = n_maestra
 
@@ -171,6 +175,7 @@ class MetaCatalogDestino(DestinoFeed):
                     placas_por_sku_template=placas_por_sku_template,
                     moneda=self.cfg.moneda,
                     calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
+                    brand_fallback=self.cfg.brand_fallback,
                 )
                 resultados[pestaña] = n
             except ErrorDestino as e:
