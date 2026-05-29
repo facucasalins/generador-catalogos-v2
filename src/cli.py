@@ -494,12 +494,17 @@ def correr_pipeline(
                              i, len(a_regenerar),
                              producto.sku, decision.template, placa.path_local)
                 except ErrorEstilo as e:
-                    log.error("Falló render de %s [%s]: %s",
+                    # Fallo de ITEM (imagen 404, template inválido, etc.):
+                    # se saltea esta placa y la corrida sigue con el resto.
+                    # Los errores sistémicos (browser de Playwright caído,
+                    # timeout de página) NO son ErrorEstilo: propagan crudos
+                    # y abortan la corrida (fail-fast), que es lo deseado.
+                    log.error("Falló render de %s [%s]: %s. Se saltea esta placa.",
                               producto.sku, decision.template, e)
                     resultado.errores.append(
                         (producto.sku, f"{decision.template}: {e}")
                     )
-                    raise
+                    continue
 
     placas_subidas_nuevas: list[PlacaSubida] = []
     if storage and placas_generadas:
@@ -744,6 +749,7 @@ def main() -> None:
             enriq_fallidos=metricas["enriquecimientos_fallidos"],
             skus_huerfanos_borrados=metricas["skus_huerfanos_borrados"],
             skus_huerfanos_fallidos=metricas["skus_huerfanos_fallidos"],
+            errores=resultado.errores,
         )
         telegram_notifier.notificar(msg)
 
