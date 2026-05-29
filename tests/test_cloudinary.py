@@ -7,8 +7,10 @@ from src.distribucion.storage.base import ErrorStorage
 from src.distribucion.storage.cloudinary import (
     ConfigCloudinary,
     CloudinaryStorage,
-    _sanitizar,
 )
+# El sanitizador se unificó en el helper compartido src/core/templates.
+# Se importa con alias para no tocar el cuerpo de los tests.
+from src.core.templates import sanitizar_id as _sanitizar
 
 
 @pytest.fixture

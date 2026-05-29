@@ -10,8 +10,10 @@ from src.estilo.playwright_html import (
     PlaywrightHtmlEstilo,
     formatear_precio_ars,
     calcular_cuota,
-    _sanitizar_id,
 )
+# El sanitizador se unificó en el helper compartido src/core/templates.
+# Se importa con alias para no tocar el cuerpo de los tests.
+from src.core.templates import sanitizar_id as _sanitizar_id
 
 
 @pytest.mark.parametrize("valor,esperado", [
