@@ -24,7 +24,7 @@ import requests
 from playwright.sync_api import sync_playwright, Browser, BrowserContext
 
 from src.core.modelo_datos import Producto, DecisionSeleccion, Placa, TemplateMetadata
-from src.core.templates import nombre_base_template
+from src.core.templates import nombre_base_template, sanitizar_id
 from src.estilo.base import MotorEstilo, ErrorEstilo
 from src.seleccion.sync import parsear_metadata_template
 
@@ -282,9 +282,10 @@ class PlaywrightHtmlEstilo(MotorEstilo):
         variables = self._construir_variables(producto, decision)
         html_final = self._reemplazar_variables(html_template, variables)
 
-        # Nombre del archivo: sku + template para no pisar entre placas distintas
-        sku_sanitizado = _sanitizar_id(producto.sku)
-        template_sanitizado = _sanitizar_id(decision.template)
+        # Nombre del archivo: sku + template para no pisar entre placas distintas.
+        # MISMO sanitizador que usa cloudinary para el public_id (deben coincidir).
+        sku_sanitizado = sanitizar_id(producto.sku)
+        template_sanitizado = sanitizar_id(decision.template)
         path_png = self.cfg.output_dir / f"{sku_sanitizado}__{template_sanitizado}.png"
 
         self._renderizar_html_a_png(
@@ -299,7 +300,3 @@ class PlaywrightHtmlEstilo(MotorEstilo):
             height=metadata.height,
             aspect_ratio=metadata.aspect_ratio,
         )
-
-
-def _sanitizar_id(valor: str) -> str:
-    return re.sub(r"[^A-Za-z0-9_\-]", "_", valor.strip())
