@@ -12,6 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # Salvaguarda: este pipeline pisa producción (Cloudinary + Sheets con
+      # public_id determinístico). Solo debe correr desde main. El schedule
+      # ya corre sobre main; esto bloquea dispatch manual desde una rama feature.
+      - name: Verificar branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "❌ Este workflow solo puede correr desde main. Rama actual: ${{ github.ref }}"
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v4
 
