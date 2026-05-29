@@ -55,12 +55,17 @@ def producto_a_fila_individual(
     url_imagen: str,
     moneda: str,
     calcular_availability_por_stock: bool,
+    brand_fallback: str = "",
 ) -> list:
     """Fila para pestaña INDIVIDUAL (1 por template).
 
     Identificador = SKU directo (sin sufijo). Estas pestañas existen para
     visualización/debug. No tienen duplicados (cada pestaña individual tiene
     1 fila por SKU como máximo).
+
+    brand_fallback: marca del cliente (cliente.brand_name) que se usa cuando
+    Tiendanube no trae marca en el producto. Meta rechaza productos sin
+    brand/gtin/mpn, así que el brand no puede quedar vacío.
     """
     enriq = producto.enriquecimiento or {}
     title = enriq.get("titulo_corto") or producto.nombre
@@ -79,7 +84,7 @@ def producto_a_fila_individual(
         formatear_precio(producto.precio_efectivo, moneda),
         producto.url_producto,
         url_imagen,
-        producto.marca or "Agency Nusa",
+        producto.marca or brand_fallback,
     ]
 
 
@@ -95,6 +100,7 @@ def producto_a_fila_maestra(
     url_imagen: str,
     moneda: str,
     calcular_availability_por_stock: bool,
+    brand_fallback: str = "",
 ) -> list:
     """Fila para pestaña MAESTRA (Meta_Feed / TikTok_Feed).
 
@@ -125,7 +131,7 @@ def producto_a_fila_maestra(
         formatear_precio(producto.precio_efectivo, moneda),
         producto.url_producto,
         url_imagen,
-        producto.marca or "Agency Nusa",
+        producto.marca or brand_fallback,
     ]
 
 
@@ -140,6 +146,7 @@ def escribir_pestaña_feed(
     placas_por_sku_template: dict[tuple[str, str], PlacaSubida],
     moneda: str,
     calcular_availability_por_stock: bool,
+    brand_fallback: str = "",
 ) -> int:
     """Escribe UNA pestaña INDIVIDUAL del feed (modo replace).
 
@@ -159,6 +166,7 @@ def escribir_pestaña_feed(
             continue
         filas.append(producto_a_fila_individual(
             producto, placa.url_publica, moneda, calcular_availability_por_stock,
+            brand_fallback=brand_fallback,
         ))
 
     if sin_placa:
@@ -191,6 +199,7 @@ def escribir_pestaña_maestra(
     placas_por_sku_template: dict[tuple[str, str], PlacaSubida],
     moneda: str,
     calcular_availability_por_stock: bool,
+    brand_fallback: str = "",
 ) -> int:
     """Escribe la pestaña MAESTRA consolidada (Meta_Feed o TikTok_Feed).
 
@@ -212,6 +221,7 @@ def escribir_pestaña_maestra(
         filas.append(producto_a_fila_maestra(
             producto, decision.template, placa.url_publica,
             moneda, calcular_availability_por_stock,
+            brand_fallback=brand_fallback,
         ))
 
     if sin_placa:

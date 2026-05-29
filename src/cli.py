@@ -147,7 +147,7 @@ def construir_storage(cfg_storage: dict):
     ))
 
 
-def construir_destino(destino_config: dict):
+def construir_destino(destino_config: dict, brand_fallback: str = ""):
     tipo = destino_config.get("tipo")
     inner = destino_config.get("config", {})
     if tipo == "meta_catalog":
@@ -158,6 +158,7 @@ def construir_destino(destino_config: dict):
                 "calcular_availability_por_stock", True
             ),
             aspect_ratios_aceptados=inner.get("aspect_ratios_aceptados", []),
+            brand_fallback=brand_fallback,
         ))
     if tipo == "tiktok_catalog":
         return TikTokCatalogDestino(ConfigTikTokCatalog(
@@ -167,6 +168,7 @@ def construir_destino(destino_config: dict):
                 "calcular_availability_por_stock", True
             ),
             aspect_ratios_aceptados=inner.get("aspect_ratios_aceptados", []),
+            brand_fallback=brand_fallback,
         ))
     log.error("Destino no soportado: %s", tipo)
     sys.exit(50)
@@ -609,9 +611,13 @@ def correr_pipeline(
         resultado.fin = datetime.now()
         return resultado, metricas
 
+    # Marca del cliente: fallback del campo 'brand' del feed cuando Tiendanube
+    # no trae marca. Meta exige brand/gtin/mpn, así que no puede quedar vacío.
+    brand_fallback = pipeline.get("cliente", {}).get("brand_name", "")
+
     feeds_publicados = 0
     for destino_config in destinos_cfg:
-        destino = construir_destino(destino_config)
+        destino = construir_destino(destino_config, brand_fallback=brand_fallback)
         log.info("[Bloque 5.2] Destino: %s", destino.nombre())
         try:
             resultados = destino.publicar(
