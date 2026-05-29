@@ -147,7 +147,9 @@ def construir_storage(cfg_storage: dict):
     ))
 
 
-def construir_destino(destino_config: dict, brand_fallback: str = ""):
+def construir_destino(
+    destino_config: dict, brand_fallback: str = "", internal_label: str = "nusa_placa",
+):
     tipo = destino_config.get("tipo")
     inner = destino_config.get("config", {})
     if tipo == "meta_catalog":
@@ -159,6 +161,7 @@ def construir_destino(destino_config: dict, brand_fallback: str = ""):
             ),
             aspect_ratios_aceptados=inner.get("aspect_ratios_aceptados", []),
             brand_fallback=brand_fallback,
+            internal_label=internal_label,
         ))
     if tipo == "tiktok_catalog":
         return TikTokCatalogDestino(ConfigTikTokCatalog(
@@ -169,6 +172,7 @@ def construir_destino(destino_config: dict, brand_fallback: str = ""):
             ),
             aspect_ratios_aceptados=inner.get("aspect_ratios_aceptados", []),
             brand_fallback=brand_fallback,
+            internal_label=internal_label,
         ))
     log.error("Destino no soportado: %s", tipo)
     sys.exit(50)
@@ -619,10 +623,15 @@ def correr_pipeline(
     # Marca del cliente: fallback del campo 'brand' del feed cuando Tiendanube
     # no trae marca. Meta exige brand/gtin/mpn, así que no puede quedar vacío.
     brand_fallback = pipeline.get("cliente", {}).get("brand_name", "")
+    # Etiqueta fija para distinguir el origen 'placa' del feed nativo de TN
+    # en el mismo catálogo. Configurable a nivel distribucion; default nusa_placa.
+    internal_label = cfg_dist.get("internal_label", "nusa_placa")
 
     feeds_publicados = 0
     for destino_config in destinos_cfg:
-        destino = construir_destino(destino_config, brand_fallback=brand_fallback)
+        destino = construir_destino(
+            destino_config, brand_fallback=brand_fallback, internal_label=internal_label,
+        )
         log.info("[Bloque 5.2] Destino: %s", destino.nombre())
         try:
             resultados = destino.publicar(

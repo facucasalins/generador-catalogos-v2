@@ -58,6 +58,7 @@ HEADERS_TIKTOK_MAESTRA = [
     "link",
     "image_link",
     "brand",
+    "internal_label",
 ]
 
 PREFIJO_PLATAFORMA = "TikTok_"
@@ -74,6 +75,9 @@ class ConfigTikTokCatalog:
     # Marca del cliente (cliente.brand_name). Fallback del campo 'brand' del
     # feed cuando Tiendanube no trae marca en el producto.
     brand_fallback: str = ""
+    # Etiqueta fija para filtrar el feed (distingue origen 'placa' del feed
+    # nativo de Tiendanube en el mismo catálogo). Configurable por cliente.
+    internal_label: str = "nusa_placa"
 
 
 class TikTokCatalogDestino(DestinoFeed):
@@ -128,6 +132,7 @@ class TikTokCatalogDestino(DestinoFeed):
                 moneda=self.cfg.moneda,
                 calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
                 brand_fallback=self.cfg.brand_fallback,
+                internal_label=self.cfg.internal_label,
             )
             resultados[PESTAÑA_MAESTRA] = n_maestra
 

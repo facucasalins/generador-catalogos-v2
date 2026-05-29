@@ -158,7 +158,7 @@ def test_brand_maestra_respeta_marca_de_tiendanube():
     fila = producto_a_fila_maestra(
         p, "Meta_default_4x5", "u", "ARS", True, brand_fallback="SHARK",
     )
-    assert fila[-1] == "MarcaReal"
+    assert fila[HEADERS_META_MAESTRA.index("brand")] == "MarcaReal"
 
 
 def test_brand_maestra_cae_a_brand_fallback_si_no_hay_marca():
@@ -166,7 +166,7 @@ def test_brand_maestra_cae_a_brand_fallback_si_no_hay_marca():
     fila = producto_a_fila_maestra(
         p, "Meta_default_4x5", "u", "ARS", True, brand_fallback="SHARK",
     )
-    assert fila[-1] == "SHARK"
+    assert fila[HEADERS_META_MAESTRA.index("brand")] == "SHARK"
 
 
 def test_brand_nunca_es_agency_nusa():
@@ -176,6 +176,56 @@ def test_brand_nunca_es_agency_nusa():
     fila_mae = producto_a_fila_maestra(p, "Meta_default_4x5", "u", "ARS", True, brand_fallback="X")
     assert "Agency Nusa" not in fila_ind
     assert "Agency Nusa" not in fila_mae
+
+
+# ===================== item_group_id (id numérico TN) + internal_label =====================
+
+def _idx(header, col):
+    return header.index(col)
+
+
+def test_item_group_id_usa_tn_product_id():
+    # item_group_id = id numérico de TN (str), no el sku.
+    p = _producto("remera-negra")
+    p.enriquecimiento = {"tn_product_id": 231328222}
+    fila = producto_a_fila_maestra(p, "Meta_default_4x5", "u", "ARS", True)
+    assert fila[HEADERS_META_MAESTRA.index("item_group_id")] == "231328222"
+    # el id de fila sigue siendo {sku}__{template}, intacto
+    assert fila[0] == "remera-negra__Meta_default_4x5"
+
+
+def test_item_group_id_fallback_a_sku_sin_tn_product_id():
+    # Si falta tn_product_id, cae al sku (sin romper el feed).
+    p = _producto("remera-negra")  # sin enriquecimiento → sin tn_product_id
+    fila = producto_a_fila_maestra(p, "Meta_default_4x5", "u", "ARS", True)
+    assert fila[HEADERS_META_MAESTRA.index("item_group_id")] == "remera-negra"
+
+
+def test_internal_label_se_escribe_en_maestra():
+    p = _producto("A")
+    p.enriquecimiento = {"tn_product_id": 999}
+    fila = producto_a_fila_maestra(
+        p, "Meta_default_4x5", "u", "ARS", True, internal_label="nusa_placa",
+    )
+    assert fila[HEADERS_META_MAESTRA.index("internal_label")] == "nusa_placa"
+    assert fila[-1] == "nusa_placa"  # internal_label es la última columna
+
+
+def test_maestra_largo_coincide_con_headers_meta_y_tiktok():
+    p = _producto("A")
+    p.enriquecimiento = {"tn_product_id": 1}
+    fila = producto_a_fila_maestra(
+        p, "Meta_default_4x5", "u", "ARS", True,
+        brand_fallback="X", internal_label="nusa_placa",
+    )
+    # El row builder es compartido por Meta y TikTok: su largo debe coincidir
+    # con ambos headers maestros (mismo nº de columnas).
+    assert len(fila) == len(HEADERS_META_MAESTRA) == len(HEADERS_TIKTOK_MAESTRA)
+
+
+def test_headers_maestra_incluyen_internal_label():
+    assert HEADERS_META_MAESTRA[-1] == "internal_label"
+    assert HEADERS_TIKTOK_MAESTRA[-1] == "internal_label"
 
 
 @pytest.fixture
