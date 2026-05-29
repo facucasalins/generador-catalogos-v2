@@ -103,6 +103,7 @@ def formatear_resumen_exito(
     enriq_fallidos: int = 0,
     skus_huerfanos_borrados: list[str] | None = None,
     skus_huerfanos_fallidos: list[str] | None = None,
+    errores: list[tuple[str, str]] | None = None,
 ) -> str:
     """Arma el mensaje de éxito para Telegram (formato Markdown).
 
@@ -174,6 +175,17 @@ def formatear_resumen_exito(
             lineas.append(f"  • ⚠️ *{len(huerfanos_falla)}* no se pudieron borrar")
             for sku in huerfanos_falla[:3]:
                 lineas.append(f"    - `{sku}`")
+
+    # Errores de ítem (placas salteadas que NO entraron al feed)
+    errores = errores or []
+    if errores:
+        lineas.append("")
+        lineas.append(f"⚠️ *{len(errores)}* placas con error (salteadas, NO entran al feed):")
+        max_err = 10
+        for sku, motivo in errores[:max_err]:
+            lineas.append(f"  - `{sku}`: {motivo}")
+        if len(errores) > max_err:
+            lineas.append(f"  _...y {len(errores) - max_err} más_")
 
     lineas.append("")
     lineas.append(f"⏱️ {duracion}")
