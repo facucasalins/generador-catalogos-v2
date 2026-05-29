@@ -3,8 +3,9 @@ name: MoraShop v2 - Pipeline completo
 on:
   workflow_dispatch:
   schedule:
-    # 06:00 ART = 09:00 UTC
-    - cron: '0 9 * * *'
+    # 06:07 ART = 09:07 UTC. Minuto no-redondo a propósito: los cron en :00
+    # sufren más retraso/skips en GitHub Actions por congestión.
+    - cron: '7 9 * * *'
 
 jobs:
   pipeline:

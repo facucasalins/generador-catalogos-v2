@@ -3,8 +3,9 @@ name: ANTONIA - Pipeline completo
 on:
   workflow_dispatch:
   schedule:
-    # 07:00 ART = 10:00 UTC (mismo horario que Shark)
-    - cron: '0 10 * * *'
+    # 07:13 ART = 10:13 UTC. Minuto no-redondo; escalonado con los demás
+    # clientes para no pisar cuotas de APIs.
+    - cron: '13 10 * * *'
 
 jobs:
   pipeline:
