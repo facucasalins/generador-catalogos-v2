@@ -3,40 +3,56 @@ nombre: juanita_cuotas_4x5
 aspect_ratio: 4:5
 width: 1080
 height: 1350
-descripcion: Placa Juanita Shoes 4:5 - cuotas protagonista, panel degradé abajo
+descripcion: Placa Juanita Shoes 4:5 (cuotas) - foto full-bleed, elementos encima, oval cuota
 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{width:1080px;height:1350px;font-family:'Inter',sans-serif;position:relative;overflow:hidden;background:#F5EFE6;color:#1A1A1A;-webkit-font-smoothing:antialiased}
+  body{width:1080px;height:1350px;font-family:'Inter',sans-serif;position:relative;overflow:hidden;background:#EDE7DD;color:#1A1A1A;-webkit-font-smoothing:antialiased}
+
+  /* Imagen del producto: fondo full-bleed. Todo lo demas va ENCIMA (z-index > 1) */
   .product-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
-  .scrim-top{position:absolute;top:0;left:0;right:0;height:240px;background:linear-gradient(180deg,rgba(245,239,230,.75)0%,rgba(245,239,230,0)100%);z-index:2;pointer-events:none}
-  .brand{position:absolute;top:40px;left:56px;z-index:10}
-  .brand .logo{height:170px;width:auto;display:block}
-  .info-panel{position:absolute;bottom:0;left:0;right:0;height:470px;padding:96px 70px 50px;z-index:10;text-align:center;background:linear-gradient(180deg,rgba(245,239,230,0)0%,rgba(245,239,230,.55)34%,rgba(245,239,230,.95)62%,#F5EFE6 100%)}
-  .benefits{font-size:25px;font-weight:800;color:#1A1A1A;letter-spacing:.16em;text-transform:uppercase;margin-bottom:22px}
-  .benefits .dot{color:#A67B5B;margin:0 14px;font-weight:700}
-  .cuotas-head{font-size:22px;font-weight:800;color:#1A1A1A;letter-spacing:.16em;text-transform:uppercase}
-  .cuota-monto{font-size:124px;font-weight:800;color:#1A1A1A;line-height:1;letter-spacing:-.03em;margin-top:6px}
-  .total-line{font-size:26px;font-weight:500;color:#1A1A1A;margin-top:28px}
-  .total-line b{font-weight:700}
-  .total-list{font-size:22px;font-weight:400;color:#8f8f8f;text-decoration:line-through;margin-top:8px}
+
+  /* Logo arriba centrado */
+  .brand{position:absolute;top:34px;left:50%;transform:translateX(-50%);z-index:10}
+  .brand .logo{height:110px;width:auto;display:block}
+
+  /* Pill envio arriba izquierda */
+  .envio{position:absolute;top:200px;left:64px;z-index:10;background:#fff;border-radius:999px;padding:20px 52px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.10)}
+  .envio .t1{font-size:42px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+  .envio .t2{font-size:28px;font-weight:500;color:#3a3a3a;margin-top:4px}
+
+  /* Bloque info abajo (encima de la imagen) */
+  .info{position:absolute;left:0;right:0;bottom:46px;z-index:10;text-align:center}
+  .product-name{font-size:44px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;color:#1A1A1A;margin-bottom:10px}
+  .price-list{font-size:38px;font-weight:500;color:#4a4a4a;text-decoration:line-through;text-decoration-color:#d11a1a;text-decoration-thickness:3px;margin-bottom:14px}
+  .cuotas-label{font-size:34px;font-weight:500;color:#1A1A1A;margin-bottom:6px}
+
+  .price-pill{width:760px;height:232px;margin:0 auto;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(0,0,0,.12)}
+  .pill-price{font-size:150px;font-weight:800;color:#111;line-height:1;letter-spacing:-.02em}
 </style>
 </head>
 <body>
   <img class="product-image" src="{imagen_b64}" alt="producto">
-  <div class="scrim-top"></div>
+
   <div class="brand"><img class="logo" src="{logo_b64}" alt="Juanita Shoes"></div>
-  <div class="info-panel">
-    <div class="benefits">20% OFF <span class="dot">·</span> Envío gratis</div>
-    <div class="cuotas-head">{cuotas_num} cuotas sin interés de</div>
-    <div class="cuota-monto">{cuota_formateada}</div>
-    <div class="total-line">Total <b>{precio_efectivo_formateado}</b> con transferencia</div>
-    <div class="total-list">{precio_original_formateado}</div>
+
+  <div class="envio">
+    <div class="t1">Envío gratis</div>
+    <div class="t2">a todo el país</div>
+  </div>
+
+  <div class="info">
+    <div class="product-name">{nombre}</div>
+    <div class="price-list">{precio_original_formateado}</div>
+    <div class="cuotas-label">{cuotas_num} cuotas de</div>
+    <div class="price-pill">
+      <div class="pill-price">{cuota_formateada}</div>
+    </div>
   </div>
 </body>
 </html>
