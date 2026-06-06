@@ -1,0 +1,61 @@
+<!-- META
+nombre: juanita_4x5
+aspect_ratio: 4:5
+width: 1080
+height: 1350
+descripcion: Placa Juanita Shoes 4:5 (transferencia) - premium. Foto full-bleed, banda frosted inferior baja (precio arriba, nombre abajo), divisora bronce. Todo encima de la imagen.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{width:1080px;height:1350px;font-family:'Inter',sans-serif;position:relative;overflow:hidden;background:#ECE6DC;color:#2A2724;-webkit-font-smoothing:antialiased}
+
+  /* Imagen del producto: fondo full-bleed. Todo lo demas va ENCIMA */
+  .product-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+
+  /* Logo arriba centrado */
+  .brand{position:absolute;top:40px;left:50%;transform:translateX(-50%);z-index:10}
+  .brand .logo{height:216px;width:auto;display:block}
+
+  /* Pill envio: outline fino transparente (chico y sutil) */
+  .envio{position:absolute;top:180px;left:70px;z-index:10;border:1.5px solid rgba(42,39,36,.38);border-radius:999px;padding:13px 34px;text-align:center;color:#2A2724}
+  .envio .e1{font-size:26px;font-weight:500;letter-spacing:.18em}
+  .envio .e2{font-size:22px;font-weight:400;letter-spacing:.04em;opacity:.82;margin-top:2px}
+
+  /* Banda frosted inferior (semitransparente + blur sobre la foto) */
+  .band{position:absolute;left:0;right:0;bottom:0;height:352px;z-index:10;
+    background:rgba(244,238,229,.05);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .divider{width:124px;height:2px;background:#A6824E;margin-bottom:30px}
+  .lbl{font-size:30px;font-weight:500;letter-spacing:.30em;color:#8A6E4C;text-transform:uppercase}
+  .prow{display:flex;align-items:baseline;justify-content:center;gap:38px;margin-top:16px}
+  .strike{font-size:40px;font-weight:400;color:#9C917F;text-decoration:line-through}
+  .price{font-size:108px;font-weight:500;letter-spacing:-.01em;color:#2A2724;line-height:1}
+  .name{font-family:'Cormorant Garamond',serif;font-size:62px;font-weight:600;letter-spacing:.13em;color:#2A2724;text-transform:uppercase;text-shadow:0 2px 5px rgba(120,108,92,.18);padding:0 50px;line-height:1.05;margin-top:34px}
+</style>
+</head>
+<body>
+  <img class="product-image" src="{imagen_b64}" alt="producto">
+
+  <div class="brand"><img class="logo" src="{logo_b64}" alt="Juanita Shoes"></div>
+
+  <div class="envio">
+    <div class="e1">ENVÍO GRATIS</div>
+    <div class="e2">a todo el país</div>
+  </div>
+
+  <div class="band">
+    <div class="divider"></div>
+    <div class="lbl">precio con transferencia</div>
+    <div class="prow">
+      <span class="strike">{precio_original_formateado}</span>
+      <span class="price">{precio_hotsale_formateado}</span>
+    </div>
+    <div class="name">{nombre}</div>
+  </div>
+</body>
+</html>
