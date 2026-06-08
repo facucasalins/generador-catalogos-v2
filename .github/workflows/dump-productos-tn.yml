@@ -22,7 +22,7 @@ jobs:
         env:
           MORASHOP_TIENDANUBE_STORE_ID: "2268228"
           SHEET_TAB: "Productos_TN"
-          MORASHOP_TIENDANUBE_TOKEN: ${{ secrets.TN_TOKEN }}
+          MORASHOP_TIENDANUBE_TOKEN: ${{ secrets.MORASHOP_TIENDANUBE_TOKEN }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         run: python scripts/dump_productos_tn.py
