@@ -20,9 +20,9 @@ jobs:
 
       - name: Extraer productos -> Google Sheet
         env:
-          TN_STORE_ID: "2268228"
+          MORASHOP_TIENDANUBE_STORE_ID: "2268228"
           SHEET_TAB: "Productos_TN"
-          TN_TOKEN: ${{ secrets.TN_TOKEN }}
+          MORASHOP_TIENDANUBE_TOKEN: ${{ secrets.TN_TOKEN }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         run: python scripts/dump_productos_tn.py
