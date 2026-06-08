@@ -22,8 +22,8 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ----------------------------- Config -----------------------------
-STORE_ID = os.environ.get("TN_STORE_ID", "2268228")
-TOKEN = os.environ["TN_TOKEN"]
+STORE_ID = os.environ.get("MORASHOP_TIENDANUBE_STORE_ID", "2268228")
+TOKEN = os.environ["MORASHOP_TIENDANUBE_TOKEN"]
 SHEET_ID = os.environ["SHEET_ID"]
 SHEET_TAB = os.environ.get("SHEET_TAB", "Productos_TN")
 PER_PAGE = int(os.environ.get("TN_PER_PAGE", "200"))
