@@ -19,3 +19,8 @@ requests==2.32.3
 # - google-generativeai (Bloque 3: Enriquecimiento con Gemini)
 playwright==1.49.0
 cloudinary==1.41.0
+
+#Vladimir TN 
+requests==2.32.3
+gspread==6.1.4
+google-auth==2.35.0
