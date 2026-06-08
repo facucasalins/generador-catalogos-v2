@@ -1,0 +1,28 @@
+name: Dump Productos Tiendanube
+
+on:
+  workflow_dispatch:        # boton para correrlo a mano
+  schedule:
+    - cron: "0 10 * * *"    # 10:00 UTC = 07:00 ART, diario (editar a gusto)
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Extraer productos -> Google Sheet
+        env:
+          TN_STORE_ID: "2268228"
+          SHEET_TAB: "Productos_TN"
+          TN_TOKEN: ${{ secrets.TN_TOKEN }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: python scripts/dump_productos_tn.py
