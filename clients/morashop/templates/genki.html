@@ -1,4 +1,4 @@
-<!-- DESC: Placa "genki" Mora — estetica energia (naranja/azul/dorado), sin IP. 4:5 Meta -->
+<!-- DESC: Placa "genki" Mora — cuerpo naranja (energia) + identidad Morashop (navy/rojo/crema). 4:5 Meta -->
 <!-- PRICING: Mora usa precio_hotsale_formateado (promo si hay, sino lista). NO cambiar a otra var. -->
 <!DOCTYPE html>
 <html lang="es">
@@ -10,9 +10,10 @@
     :root {
         --gi-orange: #EA7A2A;
         --gi-orange-deep: #D8631A;
-        --belt-blue: #1F3DA0;
-        --belt-blue-light: #2E5BD6;
-        --ki-gold: #F5C13D;
+        --navy: #11254B;
+        --navy-deep: #0A1F3D;
+        --mora-red: #E63946;
+        --cream: #F2E8D0;
         --ink: #121212;
         --bone: #FFF7EA;
     }
@@ -26,7 +27,7 @@
         position: relative;
         overflow: hidden;
         background:
-            radial-gradient(120% 80% at 50% 0%, rgba(245,193,61,0.35) 0%, rgba(245,193,61,0) 55%),
+            radial-gradient(120% 80% at 50% 0%, rgba(245,193,61,0.30) 0%, rgba(245,193,61,0) 55%),
             linear-gradient(160deg, var(--gi-orange) 0%, var(--gi-orange-deep) 100%);
     }
 
@@ -39,7 +40,7 @@
         font-weight: 900;
         font-size: 640px;
         line-height: 0.78;
-        color: rgba(18,18,18,0.12);
+        color: rgba(10,31,61,0.10);
         letter-spacing: -20px;
         writing-mode: vertical-rl;
         user-select: none;
@@ -70,7 +71,7 @@
         filter: drop-shadow(0 4px 14px rgba(0,0,0,0.28));
     }
 
-    /* Panel claro del producto, con aura de ki + speed lines detras */
+    /* Panel blanco del producto, marco navy + sombra */
     .product-zone {
         position: absolute;
         top: 248px;
@@ -79,7 +80,7 @@
         height: 712px;
         border-radius: 28px;
         background: #FFFFFF;
-        box-shadow: 0 0 0 3px var(--ki-gold), 0 24px 60px rgba(0,0,0,0.32);
+        box-shadow: 0 0 0 4px var(--navy), 0 24px 60px rgba(0,0,0,0.34);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -95,15 +96,14 @@
         object-fit: contain;
     }
 
-    /* Banda de precios — azul cinturon, con doble franja arriba */
+    /* Banda de precios — navy Morashop, con doble franja roja arriba */
     .price-band {
         position: absolute;
         top: 992px;
         left: 0; right: 0;
         height: 258px;
-        background: var(--belt-blue);
-        border-top: 10px solid var(--ki-gold);
-        box-shadow: 0 -16px 11px -10px rgba(0,0,0,0.001), inset 0 14px 0 -4px var(--belt-blue-light);
+        background: var(--navy);
+        border-top: 10px solid var(--mora-red);
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -111,20 +111,19 @@
         color: #fff;
         z-index: 5;
     }
-    /* segunda franja del cinturon */
     .price-band::before {
         content: "";
         position: absolute;
         top: 16px; left: 0; right: 0;
         height: 6px;
-        background: rgba(255,255,255,0.18);
+        background: rgba(255,255,255,0.16);
     }
 
     .price-left { display: flex; flex-direction: column; align-items: flex-start; }
     .desde {
         font-family: 'Archivo Black', sans-serif;
         font-size: 30px; letter-spacing: 3px;
-        color: var(--ki-gold);
+        color: var(--mora-red);
         margin-bottom: 2px;
     }
     .precio-tachado {
@@ -136,13 +135,13 @@
         font-family: 'Archivo Black', sans-serif;
         font-size: 132px; line-height: 0.92; letter-spacing: -3px;
         color: #fff;
-        text-shadow: 0 4px 0 rgba(0,0,0,0.18);
+        text-shadow: 0 4px 0 rgba(0,0,0,0.20);
     }
 
     .price-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
     .sin-interes {
-        background: var(--ki-gold);
-        color: var(--ink);
+        background: var(--mora-red);
+        color: var(--cream);
         font-family: 'Archivo Black', sans-serif;
         font-size: 15px; letter-spacing: 1.5px;
         padding: 6px 14px; border-radius: 4px;
@@ -154,12 +153,12 @@
     }
     .cuotas-monto { font-size: 28px; margin-top: 2px; }
 
-    /* Banner inferior — negro, legal + marca */
+    /* Banner inferior — navy oscuro Morashop, legal + marca */
     .bottom-banner {
         position: absolute;
         bottom: 0; left: 0; right: 0;
         height: 100px;
-        background: var(--ink);
+        background: var(--navy-deep);
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -173,9 +172,10 @@
     .banner-brand {
         font-family: 'Archivo Black', sans-serif;
         font-size: 34px; letter-spacing: 2px;
+        color: var(--cream);
         display: flex; align-items: center; gap: 10px;
     }
-    .banner-brand .kame { color: var(--ki-gold); font-size: 26px; }
+    .banner-brand .x-mark { color: var(--mora-red); font-size: 32px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -206,12 +206,11 @@
             <div class="banner-legal">Precio final abonando en Efectivo.</div>
             <div class="banner-legal-small" data-ph="evento_legal">{evento_legal}</div>
         </div>
-        <div class="banner-brand"><span class="kame">◆</span><span data-ph="brand_name">{brand_name}</span></div>
+        <div class="banner-brand"><span class="x-mark">×</span><span data-ph="brand_name">{brand_name}</span></div>
     </div>
 
 <script>
-/* Fallback demo: SOLO actua si el pipeline no reemplazo los placeholders.
-   Permite ver la placa renderizada sin correr Playwright. En produccion no hace nada. */
+/* Fallback demo: SOLO actua si el pipeline no reemplazo los placeholders. En produccion no hace nada. */
 (function () {
     var isPH = function (s) { return /^\s*\{[a-z0-9_]+\}\s*$/i.test(s || ''); };
     var demo = {
@@ -219,7 +218,7 @@
         precio_hotsale_formateado: '$32.130',
         cuotas_num: '6',
         cuota_formateada: '$5.355',
-        evento_legal: 'Válido durante Mora Genki Week.',
+        evento_legal: 'Válido durante Mora Hot.',
         brand_name: 'MORASHOP'
     };
     document.querySelectorAll('[data-ph]').forEach(function (el) {
@@ -239,7 +238,7 @@
     );
     var LOGO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="376" height="92" viewBox="0 0 376 92">' +
-        '<text x="188" y="64" font-family="Archivo Black, sans-serif" font-size="58" fill="#fff" text-anchor="middle" letter-spacing="2">MORASHOP</text>' +
+        '<text x="188" y="64" font-family="Archivo Black, sans-serif" font-size="58" fill="#F2E8D0" text-anchor="middle" letter-spacing="2">MORASHOP</text>' +
         '</svg>'
     );
     document.querySelectorAll('img[data-img]').forEach(function (img) {
@@ -247,7 +246,6 @@
         if (src.charAt(0) === '{') img.src = img.getAttribute('data-img') === 'logo' ? LOGO : PROD;
     });
 
-    /* Guardrail: si el tachado quedo igual al principal, ocultarlo (mismo criterio que Juanita) */
     var t = document.querySelector('.precio-tachado');
     var p = document.querySelector('.precio-principal');
     if (t && p && t.textContent.trim() === p.textContent.trim()) t.style.visibility = 'hidden';
