@@ -1,0 +1,246 @@
+<!-- DESC: Placa "seleccion" Mora — paleta seleccion (celeste/blanco/navy/dorado), rayas + 3 estrellas, sin IP. 4:5 Meta -->
+<!-- PRICING: Mora usa precio_hotsale_formateado (promo si hay, sino lista). NO cambiar a otra var. -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=Archivo+Black&display=swap');
+
+    :root {
+        --celeste: #75AADB;
+        --navy: #0E1B45;
+        --navy-light: #1B2E66;
+        --gold: #E6B33E;
+        --gold-deep: #C9982B;
+        --ink: #101010;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        width: 1080px;
+        height: 1350px;
+        font-family: 'Archivo', sans-serif;
+        position: relative;
+        overflow: hidden;
+        /* Rayas verticales celeste/blanco tipo camiseta */
+        background: repeating-linear-gradient(90deg,
+            var(--celeste) 0 86px,
+            #ffffff 86px 172px);
+    }
+    /* leve sombreado vertical para dar profundidad sin tapar las rayas */
+    .sheen {
+        position: absolute; inset: 0; z-index: 0;
+        background: linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(14,27,69,0.06) 100%);
+    }
+
+    /* 3 estrellas doradas (tricampeon, sin escudo ni texto) */
+    .stars {
+        position: absolute;
+        top: 46px; left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 20px;
+        z-index: 6;
+    }
+    .stars svg { filter: drop-shadow(0 3px 5px rgba(14,27,69,0.35)); }
+
+    /* Logo centrado, debajo de las estrellas */
+    .logo {
+        position: absolute;
+        top: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 176px;
+        height: auto;
+        z-index: 6;
+        filter: drop-shadow(0 4px 12px rgba(14,27,69,0.30));
+    }
+
+    /* Panel blanco del producto — marco dorado + sombra para separarlo de las rayas */
+    .product-zone {
+        position: absolute;
+        top: 256px;
+        left: 78px;
+        right: 78px;
+        height: 700px;
+        border-radius: 28px;
+        background: #FFFFFF;
+        box-shadow: 0 0 0 4px var(--gold), 0 0 0 9px var(--navy), 0 26px 60px rgba(14,27,69,0.40);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 44px;
+        z-index: 3;
+        overflow: hidden;
+    }
+    .product-image {
+        position: relative;
+        z-index: 1;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    /* Banda de precios — azul marino, con doble franja dorada arriba */
+    .price-band {
+        position: absolute;
+        top: 992px;
+        left: 0; right: 0;
+        height: 258px;
+        background: var(--navy);
+        border-top: 10px solid var(--gold);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 64px;
+        color: #fff;
+        z-index: 5;
+    }
+    .price-band::before {
+        content: "";
+        position: absolute;
+        top: 16px; left: 0; right: 0;
+        height: 6px;
+        background: rgba(255,255,255,0.16);
+    }
+
+    .price-left { display: flex; flex-direction: column; align-items: flex-start; }
+    .desde {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 30px; letter-spacing: 3px;
+        color: var(--gold);
+        margin-bottom: 2px;
+    }
+    .precio-tachado {
+        font-size: 36px; font-weight: 700;
+        text-decoration: line-through;
+        opacity: 0.78; margin-bottom: 2px;
+    }
+    .precio-principal {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 132px; line-height: 0.92; letter-spacing: -3px;
+        color: #fff;
+        text-shadow: 0 4px 0 rgba(0,0,0,0.20);
+    }
+
+    .price-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .sin-interes {
+        background: var(--gold);
+        color: var(--navy);
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 15px; letter-spacing: 1.5px;
+        padding: 6px 14px; border-radius: 4px;
+        transform: rotate(5deg);
+    }
+    .cuotas-num {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 58px; line-height: 1;
+    }
+    .cuotas-monto { font-size: 28px; margin-top: 2px; }
+
+    /* Banner inferior — navy oscuro, legal + marca */
+    .bottom-banner {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 100px;
+        background: #0A1330;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 56px;
+        color: #fff;
+        z-index: 5;
+    }
+    .banner-left { display: flex; flex-direction: column; }
+    .banner-legal { font-size: 18px; font-weight: 700; letter-spacing: 0.4px; line-height: 1.2; }
+    .banner-legal-small { font-size: 14px; font-weight: 400; margin-top: 2px; opacity: 0.85; }
+    .banner-brand {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 34px; letter-spacing: 2px;
+        display: flex; align-items: center; gap: 10px;
+    }
+    .banner-brand .diamond { color: var(--gold); font-size: 26px; }
+</style>
+</head>
+<body>
+    <div class="sheen"></div>
+
+    <div class="stars">
+        <svg viewBox="0 0 100 95" width="60" height="57"><path d="M50 4 L61.8 37.6 L97 38 L68.6 59.4 L79.5 92.7 L50 71.6 L20.5 92.7 L31.4 59.4 L3 38 L38.2 37.6 Z" fill="#E6B33E" stroke="#C9982B" stroke-width="2"/></svg>
+        <svg viewBox="0 0 100 95" width="60" height="57"><path d="M50 4 L61.8 37.6 L97 38 L68.6 59.4 L79.5 92.7 L50 71.6 L20.5 92.7 L31.4 59.4 L3 38 L38.2 37.6 Z" fill="#E6B33E" stroke="#C9982B" stroke-width="2"/></svg>
+        <svg viewBox="0 0 100 95" width="60" height="57"><path d="M50 4 L61.8 37.6 L97 38 L68.6 59.4 L79.5 92.7 L50 71.6 L20.5 92.7 L31.4 59.4 L3 38 L38.2 37.6 Z" fill="#E6B33E" stroke="#C9982B" stroke-width="2"/></svg>
+    </div>
+
+    <img class="logo" data-img="logo" src="{logo_b64}" alt="logo">
+
+    <div class="product-zone">
+        <img class="product-image" data-img="prod" src="{imagen_b64}" alt="producto">
+    </div>
+
+    <div class="price-band">
+        <div class="price-left">
+            <div class="desde">DESDE</div>
+            <div class="precio-tachado" data-ph="precio_original_formateado">{precio_original_formateado}</div>
+            <div class="precio-principal" data-ph="precio_hotsale_formateado">{precio_hotsale_formateado}</div>
+        </div>
+        <div class="price-right">
+            <div class="sin-interes">SIN INTERÉS</div>
+            <div class="cuotas-num"><span data-ph="cuotas_num">{cuotas_num}</span> CUOTAS</div>
+            <div class="cuotas-monto">de <span data-ph="cuota_formateada">{cuota_formateada}</span></div>
+        </div>
+    </div>
+
+    <div class="bottom-banner">
+        <div class="banner-left">
+            <div class="banner-legal">Precio final abonando en Efectivo.</div>
+            <div class="banner-legal-small" data-ph="evento_legal">{evento_legal}</div>
+        </div>
+        <div class="banner-brand"><span class="diamond">◆</span><span data-ph="brand_name">{brand_name}</span></div>
+    </div>
+
+<script>
+/* Fallback demo: SOLO actua si el pipeline no reemplazo los placeholders. En produccion no hace nada. */
+(function () {
+    var isPH = function (s) { return /^\s*\{[a-z0-9_]+\}\s*$/i.test(s || ''); };
+    var demo = {
+        precio_original_formateado: '$45.900',
+        precio_hotsale_formateado: '$32.130',
+        cuotas_num: '6',
+        cuota_formateada: '$5.355',
+        evento_legal: 'Válido durante Mora Hot.',
+        brand_name: 'MORASHOP'
+    };
+    document.querySelectorAll('[data-ph]').forEach(function (el) {
+        var k = el.getAttribute('data-ph');
+        if (isPH(el.textContent) && demo[k] != null) el.textContent = demo[k];
+    });
+
+    var PROD = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="620" height="620" viewBox="0 0 620 620">' +
+        '<rect width="620" height="620" fill="#ffffff"/>' +
+        '<rect x="205" y="150" width="210" height="70" rx="12" fill="#7DBB27"/>' +
+        '<rect x="188" y="208" width="244" height="286" rx="22" fill="#fbfbfb" stroke="#e8e8e8" stroke-width="3"/>' +
+        '<text x="310" y="318" font-family="Archivo Black, sans-serif" font-size="46" fill="#7DBB27" text-anchor="middle">CREA</text>' +
+        '<text x="310" y="368" font-family="Archivo Black, sans-serif" font-size="36" fill="#1c1c1c" text-anchor="middle">MONO 1KG</text>' +
+        '<text x="310" y="432" font-family="Archivo, sans-serif" font-size="18" fill="#999" text-anchor="middle">DEMO · 200 SERV</text>' +
+        '</svg>'
+    );
+    var LOGO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="376" height="92" viewBox="0 0 376 92">' +
+        '<text x="188" y="64" font-family="Archivo Black, sans-serif" font-size="58" fill="#0E1B45" text-anchor="middle" letter-spacing="2">MORASHOP</text>' +
+        '</svg>'
+    );
+    document.querySelectorAll('img[data-img]').forEach(function (img) {
+        var src = (img.getAttribute('src') || '').trim();
+        if (src.charAt(0) === '{') img.src = img.getAttribute('data-img') === 'logo' ? LOGO : PROD;
+    });
+
+    var t = document.querySelector('.precio-tachado');
+    var p = document.querySelector('.precio-principal');
+    if (t && p && t.textContent.trim() === p.textContent.trim()) t.style.visibility = 'hidden';
+})();
+</script>
+</body>
+</html>
