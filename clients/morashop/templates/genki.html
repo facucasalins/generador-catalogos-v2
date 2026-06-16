@@ -1,0 +1,271 @@
+<!-- DESC: Placa "genki" Mora — estetica energia (naranja/azul/dorado), sin IP. 4:5 Meta -->
+<!-- PRICING: Mora usa precio_hotsale_formateado (promo si hay, sino lista). NO cambiar a otra var. -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=Archivo+Black&family=Noto+Sans+JP:wght@700;900&display=swap');
+
+    :root {
+        --gi-orange: #EA7A2A;
+        --gi-orange-deep: #D8631A;
+        --belt-blue: #1F3DA0;
+        --belt-blue-light: #2E5BD6;
+        --ki-gold: #F5C13D;
+        --ink: #121212;
+        --bone: #FFF7EA;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        width: 1080px;
+        height: 1350px;
+        font-family: 'Archivo', sans-serif;
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(120% 80% at 50% 0%, rgba(245,193,61,0.35) 0%, rgba(245,193,61,0) 55%),
+            linear-gradient(160deg, var(--gi-orange) 0%, var(--gi-orange-deep) 100%);
+    }
+
+    /* Kanji 元気 (vitalidad/energia) como marca de agua de fondo */
+    .kanji-bg {
+        position: absolute;
+        top: 150px;
+        right: -40px;
+        font-family: 'Noto Sans JP', sans-serif;
+        font-weight: 900;
+        font-size: 640px;
+        line-height: 0.78;
+        color: rgba(18,18,18,0.12);
+        letter-spacing: -20px;
+        writing-mode: vertical-rl;
+        user-select: none;
+        z-index: 0;
+    }
+
+    /* Speed lines sutiles emanando de las esquinas superiores */
+    .speed-corners {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background:
+            repeating-conic-gradient(from 200deg at 0% 0%, rgba(255,255,255,0.10) 0deg 1.2deg, transparent 1.2deg 9deg);
+        -webkit-mask-image: radial-gradient(120% 120% at 0% 0%, #000 0%, transparent 45%);
+                mask-image: radial-gradient(120% 120% at 0% 0%, #000 0%, transparent 45%);
+        opacity: 0.7;
+    }
+
+    /* Logo centrado arriba */
+    .logo {
+        position: absolute;
+        top: 52px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 188px;
+        height: auto;
+        z-index: 6;
+        filter: drop-shadow(0 4px 14px rgba(0,0,0,0.28));
+    }
+
+    /* Panel claro del producto, con aura de ki + speed lines detras */
+    .product-zone {
+        position: absolute;
+        top: 248px;
+        left: 78px;
+        right: 78px;
+        height: 712px;
+        border-radius: 28px;
+        background:
+            repeating-conic-gradient(from 0deg at 50% 46%, rgba(245,193,61,0.18) 0deg 1.6deg, transparent 1.6deg 9deg),
+            radial-gradient(circle at 50% 46%, #FFFFFF 0%, var(--bone) 58%, #FBE9CC 100%);
+        box-shadow: 0 22px 60px rgba(0,0,0,0.30), inset 0 0 0 6px rgba(255,255,255,0.65);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 44px;
+        z-index: 3;
+        overflow: hidden;
+    }
+    /* halo dorado concentrado detras del producto */
+    .product-zone::before {
+        content: "";
+        position: absolute;
+        width: 560px; height: 560px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(245,193,61,0.55) 0%, rgba(245,193,61,0) 62%);
+        z-index: 0;
+    }
+    .product-image {
+        position: relative;
+        z-index: 1;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 14px 22px rgba(0,0,0,0.22));
+    }
+
+    /* Banda de precios — azul cinturon, con doble franja arriba */
+    .price-band {
+        position: absolute;
+        top: 992px;
+        left: 0; right: 0;
+        height: 258px;
+        background: var(--belt-blue);
+        border-top: 10px solid var(--ki-gold);
+        box-shadow: 0 -16px 11px -10px rgba(0,0,0,0.001), inset 0 14px 0 -4px var(--belt-blue-light);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 64px;
+        color: #fff;
+        z-index: 5;
+    }
+    /* segunda franja del cinturon */
+    .price-band::before {
+        content: "";
+        position: absolute;
+        top: 16px; left: 0; right: 0;
+        height: 6px;
+        background: rgba(255,255,255,0.18);
+    }
+
+    .price-left { display: flex; flex-direction: column; align-items: flex-start; }
+    .desde {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 30px; letter-spacing: 3px;
+        color: var(--ki-gold);
+        margin-bottom: 2px;
+    }
+    .precio-tachado {
+        font-size: 36px; font-weight: 700;
+        text-decoration: line-through;
+        opacity: 0.78; margin-bottom: 2px;
+    }
+    .precio-principal {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 132px; line-height: 0.92; letter-spacing: -3px;
+        color: #fff;
+        text-shadow: 0 4px 0 rgba(0,0,0,0.18);
+    }
+
+    .price-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .sin-interes {
+        background: var(--ki-gold);
+        color: var(--ink);
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 15px; letter-spacing: 1.5px;
+        padding: 6px 14px; border-radius: 4px;
+        transform: rotate(5deg);
+    }
+    .cuotas-num {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 58px; line-height: 1;
+    }
+    .cuotas-monto { font-size: 28px; margin-top: 2px; }
+
+    /* Banner inferior — negro, legal + marca */
+    .bottom-banner {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 100px;
+        background: var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 56px;
+        color: #fff;
+        z-index: 5;
+    }
+    .banner-left { display: flex; flex-direction: column; }
+    .banner-legal { font-size: 18px; font-weight: 700; letter-spacing: 0.4px; line-height: 1.2; }
+    .banner-legal-small { font-size: 14px; font-weight: 400; margin-top: 2px; opacity: 0.85; }
+    .banner-brand {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 34px; letter-spacing: 2px;
+        display: flex; align-items: center; gap: 10px;
+    }
+    .banner-brand .kame { color: var(--ki-gold); font-size: 26px; }
+</style>
+</head>
+<body>
+    <div class="speed-corners"></div>
+    <div class="kanji-bg">元気</div>
+
+    <img class="logo" data-img="logo" src="{logo_b64}" alt="logo">
+
+    <div class="product-zone">
+        <img class="product-image" data-img="prod" src="{imagen_b64}" alt="producto">
+    </div>
+
+    <div class="price-band">
+        <div class="price-left">
+            <div class="desde">DESDE</div>
+            <div class="precio-tachado" data-ph="precio_original_formateado">{precio_original_formateado}</div>
+            <div class="precio-principal" data-ph="precio_hotsale_formateado">{precio_hotsale_formateado}</div>
+        </div>
+        <div class="price-right">
+            <div class="sin-interes">SIN INTERÉS</div>
+            <div class="cuotas-num"><span data-ph="cuotas_num">{cuotas_num}</span> CUOTAS</div>
+            <div class="cuotas-monto">de <span data-ph="cuota_formateada">{cuota_formateada}</span></div>
+        </div>
+    </div>
+
+    <div class="bottom-banner">
+        <div class="banner-left">
+            <div class="banner-legal">Precio final abonando en Efectivo.</div>
+            <div class="banner-legal-small" data-ph="evento_legal">{evento_legal}</div>
+        </div>
+        <div class="banner-brand"><span class="kame">◆</span><span data-ph="brand_name">{brand_name}</span></div>
+    </div>
+
+<script>
+/* Fallback demo: SOLO actua si el pipeline no reemplazo los placeholders.
+   Permite ver la placa renderizada sin correr Playwright. En produccion no hace nada. */
+(function () {
+    var isPH = function (s) { return /^\s*\{[a-z0-9_]+\}\s*$/i.test(s || ''); };
+    var demo = {
+        precio_original_formateado: '$45.900',
+        precio_hotsale_formateado: '$32.130',
+        cuotas_num: '6',
+        cuota_formateada: '$5.355',
+        evento_legal: 'Válido durante Mora Genki Week.',
+        brand_name: 'MORASHOP'
+    };
+    document.querySelectorAll('[data-ph]').forEach(function (el) {
+        var k = el.getAttribute('data-ph');
+        if (isPH(el.textContent) && demo[k] != null) el.textContent = demo[k];
+    });
+
+    var PROD = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="360" height="560" viewBox="0 0 360 560">' +
+        '<rect x="96" y="40" width="168" height="58" rx="10" fill="#1c1c1c"/>' +
+        '<rect x="60" y="92" width="240" height="430" rx="30" fill="#262626"/>' +
+        '<rect x="60" y="92" width="240" height="430" rx="30" fill="url(#g)" opacity="0.25"/>' +
+        '<rect x="78" y="210" width="204" height="210" rx="14" fill="#EA7A2A"/>' +
+        '<text x="180" y="300" font-family="Archivo, sans-serif" font-size="42" font-weight="900" fill="#fff" text-anchor="middle">PRO</text>' +
+        '<text x="180" y="352" font-family="Archivo, sans-serif" font-size="30" font-weight="700" fill="#fff" text-anchor="middle">SUPLEMENTO</text>' +
+        '<text x="180" y="395" font-family="Archivo, sans-serif" font-size="22" fill="#fff" text-anchor="middle">DEMO 1KG</text>' +
+        '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient></defs>' +
+        '</svg>'
+    );
+    var LOGO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="376" height="92" viewBox="0 0 376 92">' +
+        '<text x="188" y="64" font-family="Archivo Black, sans-serif" font-size="58" fill="#fff" text-anchor="middle" letter-spacing="2">MORASHOP</text>' +
+        '</svg>'
+    );
+    document.querySelectorAll('img[data-img]').forEach(function (img) {
+        var src = (img.getAttribute('src') || '').trim();
+        if (src.charAt(0) === '{') img.src = img.getAttribute('data-img') === 'logo' ? LOGO : PROD;
+    });
+
+    /* Guardrail: si el tachado quedo igual al principal, ocultarlo (mismo criterio que Juanita) */
+    var t = document.querySelector('.precio-tachado');
+    var p = document.querySelector('.precio-principal');
+    if (t && p && t.textContent.trim() === p.textContent.trim()) t.style.visibility = 'hidden';
+})();
+</script>
+</body>
+</html>
