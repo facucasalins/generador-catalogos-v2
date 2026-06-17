@@ -180,8 +180,8 @@
     <div class="price-band">
         <div class="price-left">
             <div class="desde">DESDE</div>
-            <div class="precio-tachado" data-ph="precio_original_formateado">{precio_original_formateado}</div>
-            <div class="precio-principal" data-ph="precio_hotsale_formateado">{precio_hotsale_formateado}</div>
+            <div class="precio-tachado" data-ph="precio_hotsale_formateado">{precio_hotsale_formateado}</div>
+            <div class="precio-principal" data-ph="precio_efectivo_formateado">{precio_efectivo_formateado}</div>
         </div>
         <div class="price-right">
             <div class="sin-interes">SIN INTERÉS</div>
@@ -203,10 +203,10 @@
 (function () {
     var isPH = function (s) { return /^\s*\{[a-z0-9_]+\}\s*$/i.test(s || ''); };
     var demo = {
-        precio_original_formateado: '$45.900',
-        precio_hotsale_formateado: '$32.130',
+        precio_hotsale_formateado: '$45.900',
+        precio_efectivo_formateado: '$39.015',
         cuotas_num: '6',
-        cuota_formateada: '$5.355',
+        cuota_formateada: '$7.650',
         evento_legal: 'Válido durante Mora Hot.',
         brand_name: 'MORASHOP'
     };
