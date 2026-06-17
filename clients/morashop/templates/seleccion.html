@@ -1,4 +1,4 @@
-<!-- DESC: Placa "seleccion" Mora — paleta seleccion (celeste/blanco/navy/dorado), rayas + 3 estrellas, sin IP. 4:5 Meta -->
+<!-- DESC: Placa "seleccion" Mora — paleta celeste/blanco/navy/dorado, rayas + 3 estrellas, sin IP. 4:5 Meta -->
 <!-- PRICING: Mora usa precio_hotsale_formateado (promo si hay, sino lista). NO cambiar a otra var. -->
 <!DOCTYPE html>
 <html lang="es">
@@ -29,7 +29,6 @@
             var(--celeste) 0 86px,
             #ffffff 86px 172px);
     }
-    /* leve sombreado vertical para dar profundidad sin tapar las rayas */
     .sheen {
         position: absolute; inset: 0; z-index: 0;
         background: linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(14,27,69,0.06) 100%);
@@ -46,7 +45,6 @@
     }
     .stars svg { filter: drop-shadow(0 3px 5px rgba(14,27,69,0.35)); }
 
-    /* Logo centrado, debajo de las estrellas */
     .logo {
         position: absolute;
         top: 120px;
@@ -58,7 +56,7 @@
         filter: drop-shadow(0 4px 12px rgba(14,27,69,0.30));
     }
 
-    /* Panel blanco del producto — marco dorado + sombra para separarlo de las rayas */
+    /* Panel blanco del producto — marco dorado + navy + sombra */
     .product-zone {
         position: absolute;
         top: 256px;
@@ -83,52 +81,52 @@
         object-fit: contain;
     }
 
-    /* Banda de precios — azul marino, con doble franja dorada arriba */
+    /* Banda de precios — blanca con franja celeste + letras navy oscuras */
     .price-band {
         position: absolute;
         top: 992px;
         left: 0; right: 0;
         height: 258px;
-        background: var(--navy);
-        border-top: 10px solid var(--gold);
+        background: #FFFFFF;
+        border-top: 12px solid var(--celeste);
+        box-shadow: 0 -6px 22px rgba(14,27,69,0.16);
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: 0 64px;
-        color: #fff;
+        color: var(--navy);
         z-index: 5;
     }
     .price-band::before {
         content: "";
         position: absolute;
-        top: 16px; left: 0; right: 0;
-        height: 6px;
-        background: rgba(255,255,255,0.16);
+        top: 18px; left: 0; right: 0;
+        height: 5px;
+        background: rgba(14,27,69,0.10);
     }
 
     .price-left { display: flex; flex-direction: column; align-items: flex-start; }
     .desde {
         font-family: 'Archivo Black', sans-serif;
         font-size: 30px; letter-spacing: 3px;
-        color: var(--gold);
+        color: var(--navy);
         margin-bottom: 2px;
     }
     .precio-tachado {
         font-size: 36px; font-weight: 700;
         text-decoration: line-through;
-        opacity: 0.78; margin-bottom: 2px;
+        opacity: 0.5; margin-bottom: 2px;
     }
     .precio-principal {
         font-family: 'Archivo Black', sans-serif;
         font-size: 132px; line-height: 0.92; letter-spacing: -3px;
-        color: #fff;
-        text-shadow: 0 4px 0 rgba(0,0,0,0.20);
+        color: var(--navy);
     }
 
     .price-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
     .sin-interes {
-        background: var(--gold);
-        color: var(--navy);
+        background: var(--navy);
+        color: #fff;
         font-family: 'Archivo Black', sans-serif;
         font-size: 15px; letter-spacing: 1.5px;
         padding: 6px 14px; border-radius: 4px;
