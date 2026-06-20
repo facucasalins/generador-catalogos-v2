@@ -152,6 +152,7 @@ descripcion: Placa default Mora 4:5
         font-size: 130px;
         line-height: 1;
         letter-spacing: -2px;
+        white-space: nowrap;
     }
 
     .price-right {
@@ -265,5 +266,32 @@ descripcion: Placa default Mora 4:5
         </div>
         <div class="banner-morashop"><span class="red">×</span> {brand_name}</div>
     </div>
+
+    <!-- Auto-shrink del precio principal: en precios largos (ej. >$1.000.000)
+         el monto a 130px se desbordaba y pisaba el bloque de cuotas. Acá lo
+         achicamos hasta que entre en el ancho reservado para el precio,
+         dejando intacto el bloque de cuotas a la derecha. -->
+    <script>
+    (function () {
+        function ajustarPrecio() {
+            var el = document.querySelector('.precio-principal');
+            if (!el) return;
+            var ANCHO_MAX = 640;   // px reservados para el monto (deja lugar a las cuotas)
+            var SIZE_MAX = 130;    // tamaño normal
+            var SIZE_MIN = 70;     // piso para no quedar ilegible
+            var size = SIZE_MAX;
+            el.style.fontSize = size + 'px';
+            while (el.scrollWidth > ANCHO_MAX && size > SIZE_MIN) {
+                size -= 2;
+                el.style.fontSize = size + 'px';
+            }
+        }
+        ajustarPrecio();
+        // Re-ajustar una vez cargada la fuente (el ancho real depende de Archivo Black).
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(ajustarPrecio);
+        }
+    })();
+    </script>
 </body>
 </html>
