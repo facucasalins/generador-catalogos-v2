@@ -75,16 +75,16 @@ descripcion: Placa default Mora 4:5
     /* Zona blanca del producto */
     .product-zone {
         position: absolute;
-        top: 230px;
+        top: 210px;
         left: 80px;
         right: 80px;
-        height: 700px;
+        height: 690px;
         background: #ffffff;
         border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 30px;
+        padding: 24px;
         box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
     }
 
@@ -92,6 +92,26 @@ descripcion: Placa default Mora 4:5
         max-width: 104%;
         max-height: 100%;
         object-fit: contain;
+    }
+
+
+    /* Título del producto — una sola línea */
+    .product-name {
+        position: absolute;
+        top: 912px;
+        left: 60px;
+        right: 60px;
+        height: 48px;
+        color: #ffffff;
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 36px;
+        line-height: 48px;
+        letter-spacing: -0.5px;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        z-index: 5;
     }
 
     /* Banda de precio - dorado */
@@ -233,6 +253,8 @@ descripcion: Placa default Mora 4:5
     <div class="product-zone">
         <img class="product-image" src="{imagen_b64}" alt="producto">
     </div>
+
+    <div class="product-name">{nombre}</div>
 
     <div class="price-band">
         <div class="price-left">

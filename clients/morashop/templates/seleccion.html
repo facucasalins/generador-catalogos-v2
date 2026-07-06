@@ -62,14 +62,14 @@
         top: 256px;
         left: 78px;
         right: 78px;
-        height: 700px;
+        height: 662px;
         border-radius: 28px;
         background: #FFFFFF;
         box-shadow: 0 0 0 4px var(--gold), 0 0 0 9px var(--navy), 0 26px 60px rgba(14,27,69,0.40);
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 44px;
+        padding: 36px;
         z-index: 3;
         overflow: hidden;
     }
@@ -79,6 +79,27 @@
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
+    }
+
+
+    /* Título del producto — una sola línea */
+    .product-name {
+        position: absolute;
+        top: 930px;
+        left: 60px;
+        right: 60px;
+        height: 48px;
+        color: var(--navy);
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 36px;
+        line-height: 48px;
+        letter-spacing: -0.5px;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        z-index: 5;
+        text-shadow: 0 0 10px rgba(255,255,255,0.95), 0 0 18px rgba(255,255,255,0.85);
     }
 
     /* Banda de precios — blanca con franja celeste + letras navy oscuras */
@@ -176,6 +197,8 @@
     <div class="product-zone">
         <img class="product-image" data-img="prod" src="{imagen_b64}" alt="producto">
     </div>
+
+    <div class="product-name">{nombre}</div>
 
     <div class="price-band">
         <div class="price-left">
