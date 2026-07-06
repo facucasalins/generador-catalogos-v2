@@ -75,16 +75,16 @@ descripcion: Placa default Mora 9:16
     /* Zona blanca del producto - achicada para que el precio entre en zona segura TikTok */
     .product-zone {
         position: absolute;
-        top: 320px;
+        top: 300px;
         left: 80px;
         right: 80px;
-        height: 760px;
+        height: 730px;
         background: #ffffff;
         border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 40px;
+        padding: 30px;
         box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
     }
 
@@ -92,6 +92,26 @@ descripcion: Placa default Mora 9:16
         max-width: 104%;
         max-height: 100%;
         object-fit: contain;
+    }
+
+
+    /* Título del producto — una sola línea */
+    .product-name {
+        position: absolute;
+        top: 1042px;
+        left: 60px;
+        right: 60px;
+        height: 48px;
+        color: #ffffff;
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 36px;
+        line-height: 48px;
+        letter-spacing: -0.5px;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        z-index: 5;
     }
 
     /* Banda de precio - dorada, subida de 1540 a 1100 para zona segura TikTok */
@@ -233,6 +253,8 @@ descripcion: Placa default Mora 9:16
     <div class="product-zone">
         <img class="product-image" src="{imagen_b64}" alt="producto">
     </div>
+
+    <div class="product-name">{titulo_placa}</div>
 
     <div class="price-band">
         <div class="price-left">
