@@ -205,6 +205,13 @@ class PlaywrightHtmlEstilo(MotorEstilo):
         variables = {
             "sku": producto.sku,
             "nombre": producto.nombre,
+            # Título visual para la placa. Cadena de fallback: nunca queda
+            # vacío ni como {titulo_placa} literal en el HTML.
+            "titulo_placa": (
+                (producto.enriquecimiento or {}).get("titulo_placa")
+                or (producto.enriquecimiento or {}).get("titulo_corto")
+                or producto.nombre
+            ),
             "marca": producto.marca,
             "categoria": producto.categoria,
             "imagen_b64": imagen_b64,
