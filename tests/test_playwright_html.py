@@ -427,3 +427,74 @@ def test_combo_efectivo_y_cuotas_caso_mora_completo(
     assert vars_["precio_hotsale_formateado"] == "$82.294"
     assert vars_["precio_efectivo_formateado"] == "$69.950"
     assert vars_["cuota_formateada"] == "$27.431"
+
+
+# ============ titulo_placa (variable de template) ============
+
+@patch("src.estilo.playwright_html.requests.get")
+def test_variable_titulo_placa_desde_enriquecimiento(
+    mock_get, templates_dir, tmp_path, decision_basica
+):
+    """Con enriquecimiento presente, titulo_placa sale del enriquecimiento."""
+    mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
+    mock_resp.raise_for_status = MagicMock()
+    mock_get.return_value = mock_resp
+
+    cfg = ConfigPlaywrightHtml(
+        templates_dir=templates_dir,
+        output_dir=tmp_path / "out",
+        variables_globales={"logo_url": "https://example.com/l.png"},
+    )
+    motor = PlaywrightHtmlEstilo(cfg)
+
+    p = Producto(
+        sku="X", nombre="Suplemento Star Nutrition Creatine Monohydrate 500g",
+        precio_lista=10000.0, imagen_url="https://example.com/x.jpg",
+    )
+    p.enriquecimiento = {
+        "titulo_corto": "Creatina ultramicronizada 500g sin sabor",
+        "titulo_placa": "Star Nutrition Creatina 500g",
+    }
+    vars_ = motor._construir_variables(p, decision_basica)
+    assert vars_["titulo_placa"] == "Star Nutrition Creatina 500g"
+
+
+@patch("src.estilo.playwright_html.requests.get")
+def test_variable_titulo_placa_fallback_titulo_corto(
+    mock_get, templates_dir, tmp_path, decision_basica
+):
+    """Sin titulo_placa en el enriquecimiento, cae a titulo_corto."""
+    mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
+    mock_resp.raise_for_status = MagicMock()
+    mock_get.return_value = mock_resp
+
+    cfg = ConfigPlaywrightHtml(
+        templates_dir=templates_dir,
+        output_dir=tmp_path / "out",
+        variables_globales={"logo_url": "https://example.com/l.png"},
+    )
+    motor = PlaywrightHtmlEstilo(cfg)
+    p = Producto(sku="X", nombre="Nombre crudo TN", precio_lista=10000.0,
+                 imagen_url="https://example.com/x.jpg")
+    p.enriquecimiento = {"titulo_corto": "Titulo corto SEO"}
+    vars_ = motor._construir_variables(p, decision_basica)
+    assert vars_["titulo_placa"] == "Titulo corto SEO"
+
+
+@patch("src.estilo.playwright_html.requests.get")
+def test_variable_titulo_placa_fallback_nombre(
+    mock_get, templates_dir, tmp_path, producto_basico, decision_basica
+):
+    """Sin enriquecimiento, titulo_placa cae al nombre crudo (retrocompat)."""
+    mock_resp = MagicMock(content=b"x", headers={"Content-Type": "image/jpeg"})
+    mock_resp.raise_for_status = MagicMock()
+    mock_get.return_value = mock_resp
+
+    cfg = ConfigPlaywrightHtml(
+        templates_dir=templates_dir,
+        output_dir=tmp_path / "out",
+        variables_globales={"logo_url": "https://example.com/l.png"},
+    )
+    motor = PlaywrightHtmlEstilo(cfg)
+    vars_ = motor._construir_variables(producto_basico, decision_basica)
+    assert vars_["titulo_placa"] == producto_basico.nombre

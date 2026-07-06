@@ -337,7 +337,7 @@ def test_cache_lee_entradas_validas(mock_client_class):
     mock_client.leer_todas_las_filas.return_value = [
         HEADERS_ENRIQUECIMIENTO,
         ["SKU-1", "abc123", "gemini:flash", "2026-05-24T10:00:00",
-         "Mi título", "Mi descripción",
+         "Mi título", "Mi título placa", "Mi descripción",
          '["tip1", "tip2", "tip3"]', "FALSE", ""],
     ]
     mock_client_class.return_value = mock_client
@@ -387,4 +387,91 @@ def test_cache_escribe_replace(mock_client_class):
 
     assert headers == HEADERS_ENRIQUECIMIENTO
     assert filas[0][0] == "SKU-1"
-    assert filas[0][6] == '["a", "b", "c"]'  # tips_json
+    assert filas[0][7] == '["a", "b", "c"]'  # tips_json (corrió 1 por titulo_placa)
+
+
+# ============ titulo_placa (título visual para placas) ============
+
+@patch("src.enriquecimiento.gemini.urllib.request.urlopen")
+def test_gemini_titulo_placa_presente(mock_urlopen):
+    """Si Gemini devuelve titulo_placa, se usa y se recorta a su límite."""
+    respuesta_gemini = {
+        "candidates": [{
+            "content": {
+                "parts": [{
+                    "text": json.dumps({
+                        "titulo_corto": "Creatina monohidrato ultramicronizada 500g",
+                        "titulo_placa": "Star Nutrition Creatina 500g · 100 serv.",
+                        "descripcion_corta": "Creatina pura.",
+                        "tips": ["5g por servicio", "100 servicios", "Sin gluten"],
+                    }),
+                }],
+            },
+        }],
+    }
+    mock_resp = MagicMock()
+    mock_resp.read.return_value = json.dumps(respuesta_gemini).encode("utf-8")
+    mock_urlopen.return_value.__enter__.return_value = mock_resp
+
+    g = GeminiEnriquecimiento(ConfigGemini(api_key="x"))
+    enr = g.enriquecer(_producto(nombre="Suplemento Star Nutrition Creatine 500g"))
+    assert enr.titulo_placa == "Star Nutrition Creatina 500g · 100 serv."
+
+
+@patch("src.enriquecimiento.gemini.urllib.request.urlopen")
+def test_gemini_titulo_placa_ausente_fallback_a_titulo_corto(mock_urlopen):
+    """Si Gemini NO devuelve titulo_placa, fallback al titulo_corto (no falla)."""
+    respuesta_gemini = {
+        "candidates": [{
+            "content": {
+                "parts": [{
+                    "text": json.dumps({
+                        "titulo_corto": "Horno 30L bajo consumo",
+                        "descripcion_corta": "Horno eléctrico.",
+                        "tips": ["Bajo consumo", "30 litros", "Timer"],
+                    }),
+                }],
+            },
+        }],
+    }
+    mock_resp = MagicMock()
+    mock_resp.read.return_value = json.dumps(respuesta_gemini).encode("utf-8")
+    mock_urlopen.return_value.__enter__.return_value = mock_resp
+
+    g = GeminiEnriquecimiento(ConfigGemini(api_key="x"))
+    enr = g.enriquecer(_producto(nombre="Horno eléctrico"))
+    assert enr.titulo_placa == "Horno 30L bajo consumo"
+
+
+@patch("src.enriquecimiento.gemini.urllib.request.urlopen")
+def test_gemini_titulo_placa_se_recorta(mock_urlopen):
+    """titulo_placa más largo que max_chars_titulo_placa se recorta."""
+    respuesta_gemini = {
+        "candidates": [{
+            "content": {
+                "parts": [{
+                    "text": json.dumps({
+                        "titulo_corto": "ok titulo",
+                        "titulo_placa": "Marca Producto Con Nombre Extremadamente Largo Que No Entra 500g",
+                        "descripcion_corta": "ok",
+                        "tips": ["a b", "c d", "e f"],
+                    }),
+                }],
+            },
+        }],
+    }
+    mock_resp = MagicMock()
+    mock_resp.read.return_value = json.dumps(respuesta_gemini).encode("utf-8")
+    mock_urlopen.return_value.__enter__.return_value = mock_resp
+
+    g = GeminiEnriquecimiento(ConfigGemini(api_key="x", max_chars_titulo_placa=40))
+    enr = g.enriquecer(_producto())
+    assert len(enr.titulo_placa) <= 40
+
+
+def test_prompt_incluye_titulo_placa():
+    cfg = _cfg()
+    cfg.max_chars_titulo_placa = 40
+    prompt = _construir_prompt(_producto(), cfg)
+    assert "titulo_placa" in prompt
+    assert "40 caracteres" in prompt
