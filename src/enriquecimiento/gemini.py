@@ -36,6 +36,7 @@ class ConfigGemini:
     api_key: str
     modelo: str = "gemini-2.0-flash"
     max_chars_titulo: int = 60
+    max_chars_titulo_placa: int = 40
     max_chars_descripcion: int = 200
     cantidad_tips: int = 3
     max_chars_tip: int = 40
@@ -131,11 +132,26 @@ Mal 1: "¡Las mejores zapatillas para vos! ¡Calidad premium al siguiente nivel!
 Mal 2: tips=["Excelente calidad", "Lo vas a amar", "Aprovechá la oferta"]
   → Vacíos, genéricos, mencionan oferta (info comercial).
 
+REGLAS PARA "titulo_placa" (campo nuevo):
+
+Es un título que va IMPRESO en una placa gráfica, AL LADO de la foto del
+producto. El que mira ya VE qué producto es. El título debe aportar lo que
+la foto NO muestra bien: marca + tipo + atributo distintivo (peso, servings,
+sabor, capacidad, talle, potencia).
+- Máximo {cfg.max_chars_titulo_placa} caracteres. Sin punto final. Podés usar "·" como separador.
+- PROHIBIDO: palabras de relleno redundantes con la foto ("Suplemento",
+  "En Polvo", "Producto", "Artículo").
+- Ejemplos buenos: "Star Nutrition Creatina 500g · 100 serv.",
+  "ENA Creapure 200g", "Pava Yelmo 1.7L Digital".
+- Ejemplo malo: "Suplemento Star Nutrition Ultramicronized Crea" (redundante,
+  largo, no dice el peso).
+
 FORMATO DE RESPUESTA:
 
 Devolvé SOLO un JSON con esta estructura. Sin markdown, sin ``` , sin texto extra:
 {{
   "titulo_corto": "máximo {cfg.max_chars_titulo} caracteres",
+  "titulo_placa": "máximo {cfg.max_chars_titulo_placa} caracteres",
   "descripcion_corta": "máximo {cfg.max_chars_descripcion} caracteres",
   "tips": [
     "tip 1 (máx {cfg.max_chars_tip} chars)",
@@ -317,12 +333,21 @@ class GeminiEnriquecimiento(FuenteEnriquecimiento):
         data = _llamar_gemini(self.cfg, prompt)
         titulo, descripcion, tips = _validar_y_recortar(data, producto, self.cfg)
 
+        # titulo_placa: opcional en la respuesta. Si Gemini no lo devuelve,
+        # fallback al titulo_corto (nunca falla el SKU por esto).
+        titulo_placa = data.get("titulo_placa", "")
+        if isinstance(titulo_placa, str) and titulo_placa.strip():
+            titulo_placa = _recortar(titulo_placa.strip(), self.cfg.max_chars_titulo_placa)
+        else:
+            titulo_placa = titulo
+
         return Enriquecimiento(
             sku=producto.sku,
             hash_input="",  # lo setea sheet_cache después
             proveedor=self.nombre(),
             generado_en=datetime.now(),
             titulo_corto=titulo,
+            titulo_placa=titulo_placa,
             descripcion_corta=descripcion,
             tips=tips,
             slogan="",  # no lo generamos por ahora

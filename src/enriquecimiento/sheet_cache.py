@@ -31,6 +31,7 @@ HEADERS_ENRIQUECIMIENTO = [
     "proveedor",
     "generado_en",
     "titulo_corto",
+    "titulo_placa",
     "descripcion_corta",
     "tips_json",  # tips como JSON string (lista de strings)
     "fallback_aplicado",
@@ -50,6 +51,7 @@ class EntradaCacheEnriquecimiento:
     tips: list[str]
     fallback_aplicado: bool
     error: str
+    titulo_placa: str = ""  # con default: filas viejas del cache no lo tienen
 
     def a_enriquecimiento(self) -> Enriquecimiento:
         """Convierte la entrada cacheada de vuelta a un objeto Enriquecimiento."""
@@ -65,6 +67,7 @@ class EntradaCacheEnriquecimiento:
             generado_en=generado,
             tips=self.tips,
             titulo_corto=self.titulo_corto,
+            titulo_placa=self.titulo_placa,
             descripcion_corta=self.descripcion_corta,
             slogan="",
             categoria_inferida="",
@@ -92,7 +95,7 @@ def calcular_hash_input(producto: Producto, proveedor: str) -> str:
         producto.marca or "",
         producto.categoria or "",
         proveedor,
-        "v3",  # versión del prompt; bumpealo manualmente si cambias prompt
+        "v4",  # v4: se agregó titulo_placa al prompt (fuerza regenerar cache)
     ]
     blob = "||".join(partes).encode("utf-8")
     return hashlib.sha256(blob).hexdigest()[:16]
@@ -146,6 +149,7 @@ class CacheEnriquecimiento:
                 proveedor=fila[idx.get("proveedor", -1)] if 0 <= idx.get("proveedor", -1) < len(fila) else "",
                 generado_en=fila[idx.get("generado_en", -1)] if 0 <= idx.get("generado_en", -1) < len(fila) else "",
                 titulo_corto=fila[idx["titulo_corto"]] if idx["titulo_corto"] < len(fila) else "",
+                titulo_placa=fila[idx.get("titulo_placa", -1)] if 0 <= idx.get("titulo_placa", -1) < len(fila) else "",
                 descripcion_corta=fila[idx.get("descripcion_corta", -1)] if 0 <= idx.get("descripcion_corta", -1) < len(fila) else "",
                 tips=tips,
                 fallback_aplicado=_a_bool(fila[idx.get("fallback_aplicado", -1)]) if 0 <= idx.get("fallback_aplicado", -1) < len(fila) else False,
@@ -164,6 +168,7 @@ class CacheEnriquecimiento:
                 e.proveedor,
                 e.generado_en,
                 e.titulo_corto,
+                e.titulo_placa,
                 e.descripcion_corta,
                 json.dumps(e.tips, ensure_ascii=False),
                 "TRUE" if e.fallback_aplicado else "FALSE",
@@ -191,6 +196,7 @@ def enriquecimiento_a_entrada_cache(
         proveedor=enr.proveedor,
         generado_en=enr.generado_en.isoformat(timespec="seconds"),
         titulo_corto=enr.titulo_corto,
+        titulo_placa=enr.titulo_placa,
         descripcion_corta=enr.descripcion_corta,
         tips=enr.tips,
         fallback_aplicado=enr.fallback_aplicado,
