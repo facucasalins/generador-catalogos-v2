@@ -31,6 +31,7 @@ enriquecimiento:
     api_key_secret: GEMINI_API_KEY
     modelo: gemini-2.5-flash
     max_chars_titulo: 60
+    max_chars_titulo_placa: 40
     max_chars_descripcion: 200
     cantidad_tips: 3
     max_chars_tip: 40
