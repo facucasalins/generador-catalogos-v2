@@ -341,6 +341,7 @@ def correr_pipeline(
             api_key=str(api_key),
             modelo=inner.get("modelo", "gemini-2.0-flash"),
             max_chars_titulo=inner.get("max_chars_titulo", 60),
+            max_chars_titulo_placa=inner.get("max_chars_titulo_placa", 40),
             max_chars_descripcion=inner.get("max_chars_descripcion", 200),
             cantidad_tips=inner.get("cantidad_tips", 3),
             max_chars_tip=inner.get("max_chars_tip", 40),
@@ -386,6 +387,7 @@ def correr_pipeline(
             producto.enriquecimiento = {
                 **(producto.enriquecimiento or {}),
                 "titulo_corto": enr.titulo_corto,
+                "titulo_placa": enr.titulo_placa,
                 "descripcion_corta": enr.descripcion_corta,
                 "tips": enr.tips,
                 "proveedor": enr.proveedor,
