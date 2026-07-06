@@ -24,6 +24,13 @@ from src.distribucion.destinos.base import ErrorDestino
 log = logging.getLogger(__name__)
 
 
+# Cantidad por defecto para ítems 'in stock' sin stock numérico conocido.
+# El feed de placas es de display; el stock real (checkout) lo maneja el feed
+# nativo de Tiendanube. El número solo debe ser >=1 para que Meta no oculte
+# el producto por "Missing quantity".
+CANTIDAD_FALLBACK_IN_STOCK = 100
+
+
 # ===================== HELPERS GENERALES =====================
 
 def calcular_availability(producto: Producto, calcular_por_stock: bool) -> str:
@@ -102,6 +109,7 @@ def producto_a_fila_maestra(
     calcular_availability_por_stock: bool,
     brand_fallback: str = "",
     internal_label: str = "",
+    incluir_cantidad: bool = False,
 ) -> list:
     """Fila para pestaña MAESTRA (Meta_Feed / TikTok_Feed).
 
@@ -117,6 +125,12 @@ def producto_a_fila_maestra(
     Funciona para Meta (columna 'id') y TikTok (columna 'sku_id'): la
     función devuelve los VALORES, los nombres de columnas los define
     cada destino en sus HEADERS.
+
+    incluir_cantidad: cuando es True, agrega el valor de
+    'quantity_to_sell_on_facebook' (solo lo usa Meta). El valor sale del stock
+    real de TN: stock>0 → ese stock; 'in stock' sin stock numérico → piso
+    CANTIDAD_FALLBACK_IN_STOCK; 'out of stock' → 0. La columna se ubica ANTES
+    de internal_label para mantener a internal_label como última columna.
     """
     enriq = producto.enriquecimiento or {}
     title = enriq.get("titulo_corto") or producto.nombre
@@ -140,19 +154,35 @@ def producto_a_fila_maestra(
             producto.sku, producto.sku,
         )
 
-    return [
+    availability = calcular_availability(producto, calcular_availability_por_stock)
+
+    fila = [
         id_consolidado,              # id (Meta) / sku_id (TikTok)
         item_group_id,               # item_group_id = id numérico TN (fallback sku)
         title,
         description,
-        calcular_availability(producto, calcular_availability_por_stock),
+        availability,
         "new",
         formatear_precio(producto.precio_efectivo, moneda),
         producto.url_producto,
         url_imagen,
         producto.marca or brand_fallback,
-        internal_label,
     ]
+
+    # quantity_to_sell_on_facebook (solo Meta). Va antes de internal_label.
+    if incluir_cantidad:
+        if availability == "out of stock":
+            cantidad = 0
+        else:
+            cantidad = (
+                producto.stock
+                if (producto.stock and producto.stock > 0)
+                else CANTIDAD_FALLBACK_IN_STOCK
+            )
+        fila.append(cantidad)
+
+    fila.append(internal_label)
+    return fila
 
 
 # ===================== ESCRITURA =====================
@@ -226,7 +256,13 @@ def escribir_pestaña_maestra(
 
     Esta pestaña contiene TODAS las decisiones de la plataforma. Esta es la
     pestaña que se conecta a Meta Catalog / TikTok Catalog.
+
+    La columna 'quantity_to_sell_on_facebook' se emite solo si está declarada
+    en `headers` (Meta la incluye, TikTok no). Así el mismo row-builder sirve
+    para ambos destinos sin desalinear columnas.
     """
+    incluir_cantidad = "quantity_to_sell_on_facebook" in headers
+
     filas = []
     sin_placa = 0
     sin_producto = 0
@@ -244,6 +280,7 @@ def escribir_pestaña_maestra(
             moneda, calcular_availability_por_stock,
             brand_fallback=brand_fallback,
             internal_label=internal_label,
+            incluir_cantidad=incluir_cantidad,
         ))
 
     if sin_placa:
