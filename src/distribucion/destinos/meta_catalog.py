@@ -50,6 +50,9 @@ HEADERS_META_INDIVIDUAL = [
     "brand",
 ]
 
+# quantity_to_sell_on_facebook: Meta lo exige (>=1) para ítems 'in stock' cuando
+# el catálogo tiene checkout/Shop activo; si falta lo interpreta como 0 y oculta
+# el producto. Va ANTES de internal_label para que internal_label siga última.
 HEADERS_META_MAESTRA = [
     "id",
     "item_group_id",
@@ -61,6 +64,7 @@ HEADERS_META_MAESTRA = [
     "link",
     "image_link",
     "brand",
+    "quantity_to_sell_on_facebook",
     "internal_label",
 ]
 
