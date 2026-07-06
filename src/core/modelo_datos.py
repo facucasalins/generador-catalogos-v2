@@ -113,6 +113,7 @@ class Enriquecimiento:
     # Outputs típicos (todos opcionales):
     tips: list[str] = field(default_factory=list)
     titulo_corto: str = ""
+    titulo_placa: str = ""  # título visual corto para la placa (marca + tipo + peso)
     descripcion_corta: str = ""
     slogan: str = ""
     categoria_inferida: str = ""
