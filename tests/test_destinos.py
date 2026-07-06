@@ -17,6 +17,7 @@ from src.distribucion.destinos.tiktok_catalog import (
 from src.distribucion.destinos._common import (
     calcular_availability, formatear_precio, agrupar_decisiones_por_template,
     producto_a_fila_individual, producto_a_fila_maestra,
+    CANTIDAD_FALLBACK_IN_STOCK,
 )
 
 
@@ -96,7 +97,9 @@ def test_fila_individual_no_lleva_item_group():
 
 def test_fila_maestra_lleva_id_consolidado():
     p = _producto("A")
-    fila = producto_a_fila_maestra(p, "Meta_default_4x5", "https://cdn/x.png", "ARS", True)
+    fila = producto_a_fila_maestra(
+        p, "Meta_default_4x5", "https://cdn/x.png", "ARS", True, incluir_cantidad=True,
+    )
     assert fila[0] == "A__Meta_default_4x5"
     assert fila[1] == "A"
     assert len(fila) == len(HEADERS_META_MAESTRA)
@@ -205,27 +208,73 @@ def test_internal_label_se_escribe_en_maestra():
     p = _producto("A")
     p.enriquecimiento = {"tn_product_id": 999}
     fila = producto_a_fila_maestra(
-        p, "Meta_default_4x5", "u", "ARS", True, internal_label="nusa_placa",
+        p, "Meta_default_4x5", "u", "ARS", True,
+        internal_label="nusa_placa", incluir_cantidad=True,
     )
     assert fila[HEADERS_META_MAESTRA.index("internal_label")] == "nusa_placa"
-    assert fila[-1] == "nusa_placa"  # internal_label es la última columna
+    assert fila[-1] == "nusa_placa"  # internal_label sigue siendo la última columna
 
 
-def test_maestra_largo_coincide_con_headers_meta_y_tiktok():
+def test_maestra_largo_coincide_con_headers():
+    # El row builder es compartido por Meta y TikTok. Meta incluye la columna
+    # quantity_to_sell_on_facebook (incluir_cantidad=True); TikTok no. Cada
+    # fila debe coincidir en largo con los headers de SU destino.
     p = _producto("A")
     p.enriquecimiento = {"tn_product_id": 1}
-    fila = producto_a_fila_maestra(
+    fila_meta = producto_a_fila_maestra(
         p, "Meta_default_4x5", "u", "ARS", True,
-        brand_fallback="X", internal_label="nusa_placa",
+        brand_fallback="X", internal_label="nusa_placa", incluir_cantidad=True,
     )
-    # El row builder es compartido por Meta y TikTok: su largo debe coincidir
-    # con ambos headers maestros (mismo nº de columnas).
-    assert len(fila) == len(HEADERS_META_MAESTRA) == len(HEADERS_TIKTOK_MAESTRA)
+    fila_tt = producto_a_fila_maestra(
+        p, "TikTok_default_9x16", "u", "ARS", True,
+        brand_fallback="X", internal_label="nusa_placa", incluir_cantidad=False,
+    )
+    assert len(fila_meta) == len(HEADERS_META_MAESTRA)
+    assert len(fila_tt) == len(HEADERS_TIKTOK_MAESTRA)
 
 
 def test_headers_maestra_incluyen_internal_label():
     assert HEADERS_META_MAESTRA[-1] == "internal_label"
     assert HEADERS_TIKTOK_MAESTRA[-1] == "internal_label"
+
+
+# ===================== quantity_to_sell_on_facebook (solo Meta) =====================
+
+def test_headers_meta_maestra_incluye_quantity_y_tiktok_no():
+    assert "quantity_to_sell_on_facebook" in HEADERS_META_MAESTRA
+    assert "quantity_to_sell_on_facebook" not in HEADERS_TIKTOK_MAESTRA
+    # queda justo antes de internal_label (última columna)
+    assert HEADERS_META_MAESTRA[-2] == "quantity_to_sell_on_facebook"
+
+
+def test_quantity_meta_in_stock_out_of_stock_y_fallback():
+    idx = HEADERS_META_MAESTRA.index("quantity_to_sell_on_facebook")
+    # in stock con stock real → usa el stock
+    f = producto_a_fila_maestra(
+        _producto("A", stock=7), "Meta_default_4x5", "u", "ARS", True, incluir_cantidad=True,
+    )
+    assert f[idx] == 7
+    # in stock sin stock numérico → piso CANTIDAD_FALLBACK_IN_STOCK
+    f = producto_a_fila_maestra(
+        _producto("B", stock=None), "Meta_default_4x5", "u", "ARS", True, incluir_cantidad=True,
+    )
+    assert f[idx] == CANTIDAD_FALLBACK_IN_STOCK
+    # out of stock → 0 (los ítems "Agotado" siguen correctos)
+    f = producto_a_fila_maestra(
+        _producto("C", stock=0), "Meta_default_4x5", "u", "ARS", True, incluir_cantidad=True,
+    )
+    assert f[HEADERS_META_MAESTRA.index("availability")] == "out of stock"
+    assert f[idx] == 0
+
+
+def test_quantity_no_se_emite_sin_incluir_cantidad():
+    # Sin incluir_cantidad (caso TikTok), la fila no lleva la columna extra.
+    f = producto_a_fila_maestra(
+        _producto("A", stock=5), "TikTok_default_9x16", "u", "ARS", True,
+        internal_label="nusa_placa", incluir_cantidad=False,
+    )
+    assert len(f) == len(HEADERS_TIKTOK_MAESTRA)
+    assert f[-1] == "nusa_placa"
 
 
 @pytest.fixture
