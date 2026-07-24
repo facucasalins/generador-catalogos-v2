@@ -195,16 +195,23 @@ def cargar_logo_html() -> str:
     Si no encuentra el archivo, cae al wordmark de texto para que el render
     nunca falle (y avisa por consola).
     """
-    for path in LOGO_CANDIDATOS:
+    candidatos = list(LOGO_CANDIDATOS)
+    # último recurso: cualquier archivo con "logo" en el nombre dentro del cliente
+    base = ROOT / "clients" / "morashop"
+    if base.exists():
+        for ext in ("png", "jpg", "jpeg", "webp"):
+            candidatos.extend(sorted(base.rglob(f"*logo*.{ext}")))
+
+    for path in candidatos:
         if path.exists():
             mime = mimetypes.guess_type(path.name)[0] or "image/png"
             b64 = base64.b64encode(path.read_bytes()).decode("ascii")
             print(f"  logo: {path.relative_to(ROOT)} ({path.stat().st_size // 1024} KB)")
             return f'<img class="logo" src="data:{mime};base64,{b64}" alt="MoraShop">'
 
-    print("  ⚠ logo no encontrado, uso wordmark de texto. Buscado en:")
-    for path in LOGO_CANDIDATOS:
-        print(f"      {path.relative_to(ROOT)}")
+    print("  ⚠ logo no encontrado, uso wordmark de texto.")
+    print("     Subí el archivo a: clients/morashop/assets/logo.png")
+    print("     (o cualquier archivo con 'logo' en el nombre dentro de clients/morashop/)")
     return '<div class="marca">MORASHOP</div>'
 
 
