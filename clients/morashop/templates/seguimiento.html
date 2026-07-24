@@ -1,0 +1,224 @@
+<!-- META
+nombre: seguimiento
+aspect_ratio: 1.91:1
+width: 1200
+height: 628
+descripcion: Placa de recorrido de pedido para header de templates de WhatsApp (MoraShop)
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=Archivo+Black&display=swap');
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        width: 1200px;
+        height: 628px;
+        background: #e8dec5;
+        font-family: 'Archivo', sans-serif;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* ---------- Decoraciones (mismo lenguaje visual que las placas de producto) ---------- */
+    .deco-x {
+        position: absolute;
+        top: 26px;
+        left: 38px;
+        color: #e63946;
+        font-size: 26px;
+        letter-spacing: 10px;
+        font-weight: 700;
+    }
+
+    .deco-circle {
+        position: absolute;
+        top: 24px;
+        right: 38px;
+        width: 52px;
+        height: 52px;
+        border: 3px dotted #0a2042;
+        border-radius: 50%;
+    }
+
+    .deco-zigzag {
+        position: absolute;
+        bottom: 34px;
+        right: 46px;
+        color: #e63946;
+        font-size: 22px;
+        letter-spacing: 3px;
+    }
+
+    /* ---------- Encabezado ---------- */
+    /* Logo: se inyecta como data-URI base64 (nunca falla al renderizar).
+       Si no se encuentra el archivo, el script deja el wordmark de texto. */
+    .logo {
+        position: absolute;
+        top: 26px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 210px;
+        height: auto;
+        z-index: 10;
+    }
+
+    .marca {
+        position: absolute;
+        top: 44px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: 'Archivo Black', 'Archivo', sans-serif;
+        font-size: 30px;
+        letter-spacing: 0.18em;
+        color: #0a2042;
+    }
+
+    .titulo {
+        position: absolute;
+        top: 138px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 37px;
+        font-weight: 700;
+        color: #0a2042;
+        letter-spacing: -0.01em;
+    }
+
+    .subtitulo-wrap {
+        position: absolute;
+        top: 192px;
+        left: 0;
+        right: 0;
+        text-align: center;
+    }
+
+    .subtitulo {
+        display: inline-block;
+        background: #0a2042;
+        color: #e8dec5;
+        font-size: 18px;
+        font-weight: 600;
+        padding: 7px 22px;
+        border-radius: 999px;
+        letter-spacing: 0.03em;
+    }
+
+    /* ---------- Recorrido ---------- */
+    .track {
+        position: absolute;
+        left: 80px;
+        right: 80px;
+        top: 300px;
+    }
+
+    .rail {
+        position: relative;
+        height: 4px;
+        background: #cfc3a3;
+        border-radius: 2px;
+        /* margen lateral = medio ancho de columna, para que la línea nazca y muera en los círculos */
+        margin: 0 var(--rail-inset);
+    }
+
+    .rail-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 4px;
+        background: #0a2042;
+        border-radius: 2px;
+        width: var(--rail-progress);
+    }
+
+    .pasos {
+        display: flex;
+        justify-content: space-between;
+        margin-top: -30px;
+    }
+
+    .paso {
+        text-align: center;
+    }
+
+    .bullet {
+        border-radius: 50%;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* completado: navy sólido */
+    .paso.done .bullet {
+        width: 56px;
+        height: 56px;
+        background: #0a2042;
+    }
+
+    /* actual: rojo de marca con halo */
+    .paso.active .bullet {
+        width: 66px;
+        height: 66px;
+        margin-top: -5px;
+        background: #e63946;
+        box-shadow: 0 0 0 8px rgba(230, 57, 70, 0.18);
+    }
+
+    /* pendiente: círculo punteado (mismo recurso que .deco-circle) */
+    .paso.pending .bullet {
+        width: 56px;
+        height: 56px;
+        background: transparent;
+        border: 3px dotted #a99e82;
+    }
+
+    .label {
+        margin-top: 14px;
+        font-size: 19px;
+        line-height: 1.25;
+    }
+
+    .paso.done .label    { color: #0a2042; font-weight: 700; }
+    .paso.active .label  { color: #e63946; font-weight: 700; margin-top: 11px; }
+    .paso.pending .label { color: #8a7f66; font-weight: 600; }
+
+    .nota {
+        position: absolute;
+        bottom: 40px;
+        left: 80px;
+        font-size: 17px;
+        color: #6f6753;
+        font-weight: 600;
+    }
+</style>
+</head>
+<body>
+    <div class="deco-x">✕✕✕</div>
+    <div class="deco-circle"></div>
+    <div class="deco-zigzag">〰〰〰</div>
+
+    {logo_html}
+    <div class="titulo">{titulo}</div>
+    <div class="subtitulo-wrap"><span class="subtitulo">{subtitulo}</span></div>
+
+    <div class="track" style="--rail-inset: {rail_inset}; --rail-progress: {rail_progress};">
+        <div class="rail"><div class="rail-fill"></div></div>
+        <div class="pasos">
+            {pasos_html}
+        </div>
+    </div>
+
+    <div class="nota">{nota}</div>
+</body>
+</html>
