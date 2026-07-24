@@ -1,0 +1,66 @@
+name: MORASHOP - Placas de seguimiento
+
+# Solo corre cuando lo disparás a mano. No tiene cron: no es parte del
+# pipeline diario de catálogos, es un script one-off de diseño.
+on:
+  workflow_dispatch:
+    inputs:
+      subir:
+        description: '¿Subir a Cloudinary? (false = solo preview en Artifacts)'
+        required: true
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+        default: 'false'
+      solo:
+        description: 'Generar una sola placa (nombre exacto). Vacío = las 12'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  placas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright cloudinary
+          playwright install --with-deps chromium
+
+      - name: Generar placas
+        env:
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.subir }}" != "true" ]; then
+            ARGS="$ARGS --no-upload"
+          fi
+          if [ -n "${{ inputs.solo }}" ]; then
+            ARGS="$ARGS --solo ${{ inputs.solo }}"
+          fi
+          echo "Ejecutando: python scripts/generar_placas_seguimiento.py $ARGS"
+          python scripts/generar_placas_seguimiento.py $ARGS
+
+      - name: Subir PNG como artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: placas-seguimiento
+          path: /tmp/placas_seguimiento/*.png
+          retention-days: 14
+          if-no-files-found: warn
