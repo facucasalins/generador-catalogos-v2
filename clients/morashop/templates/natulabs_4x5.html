@@ -104,47 +104,27 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
     [data-sku*="K2D3" i] .num::after      { content: "05"; }
 
     /* ============================================================
-       CABECERA
+       CABECERA — franja reservada solo para el logo
        ============================================================ */
     .logo {
         position: absolute;
-        top: 36px;
+        top: 30px;
         left: 50%;
         transform: translateX(-50%);
-        width: 168px;
-        height: auto;
+        height: 118px;
+        width: auto;
         z-index: 10;
     }
-
-    .strip {
-        position: absolute;
-        top: 130px;
-        left: 0;
-        right: 0;
-        height: 52px;
-        background: var(--tinta);
-        color: #B9CFA3;
-        font-size: 17px;
-        font-weight: 500;
-        letter-spacing: 5px;
-        text-transform: uppercase;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        white-space: nowrap;
-    }
-
-    .strip .dot { color: #7FA653; margin: 0 18px; }
 
     /* ============================================================
        CARD DE PRODUCTO
        ============================================================ */
     .card {
         position: absolute;
-        top: 206px;
+        top: 168px;
         left: 60px;
         width: 960px;
-        height: 740px;
+        height: 790px;
         background: var(--papel);
         border: 2px solid var(--accent);
         border-radius: 34px;
@@ -181,10 +161,10 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
 
     .shot {
         position: absolute;
-        top: 104px;
-        left: 60px;
-        right: 60px;
-        height: 320px;
+        top: 92px;
+        left: 56px;
+        right: 56px;
+        height: 392px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -192,20 +172,25 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
 
     .shot img {
         max-width: 100%;
-        max-height: 320px;
+        max-height: 392px;
         object-fit: contain;
     }
 
-    .pname {
+    /* Bloque de texto anclado al pie de la card, en flujo normal.
+       Si el titulo ocupa 2 lineas crece hacia arriba en vez de
+       empujar el contenido fuera de la card. */
+    .info {
         position: absolute;
-        top: 444px;
         left: 56px;
         right: 56px;
-        height: 116px;
+        bottom: 34px;
+    }
+
+    .pname {
         font-family: 'Fraunces', Georgia, serif;
         font-weight: 600;
-        font-size: 46px;
-        line-height: 58px;
+        font-size: 44px;
+        line-height: 56px;
         letter-spacing: -0.5px;
         color: var(--tinta);
         font-variation-settings: 'SOFT' 30, 'WONK' 0, 'opsz' 120;
@@ -216,14 +201,11 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
     }
 
     .psub {
-        position: absolute;
-        top: 570px;
-        left: 56px;
-        right: 56px;
+        margin-top: 12px;
         font-family: 'Fraunces', Georgia, serif;
         font-style: italic;
-        font-size: 30px;
-        line-height: 1.2;
+        font-size: 29px;
+        line-height: 36px;
         color: var(--accent);
         font-variation-settings: 'SOFT' 50, 'WONK' 1, 'opsz' 60;
         white-space: nowrap;
@@ -233,30 +215,23 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
     .psub::after { content: "Suplemento dietario natural"; }
 
     .rule {
-        position: absolute;
-        top: 624px;
-        left: 56px;
-        right: 56px;
+        margin-top: 22px;
         height: 1px;
         background: rgba(34, 51, 31, 0.16);
     }
 
     .spec-label {
-        position: absolute;
-        top: 650px;
-        left: 56px;
+        margin-top: 20px;
         font-size: 15px;
         font-weight: 500;
         letter-spacing: 3px;
+        line-height: 18px;
         text-transform: uppercase;
         color: rgba(34, 51, 31, 0.55);
     }
 
     .spec-val {
-        position: absolute;
-        top: 676px;
-        left: 56px;
-        right: 56px;
+        margin-top: 6px;
         font-family: 'Fraunces', Georgia, serif;
         font-style: italic;
         font-size: 32px;
@@ -394,13 +369,6 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
 
     <img class="logo" src="{logo_b64}" alt="logo">
 
-    <div class="strip">
-        Industria Argentina <span class="dot">&#10022;</span>
-        Apto Vegano <span class="dot">&#10022;</span>
-        Sin Gluten <span class="dot">&#10022;</span>
-        RNE 02-042.000
-    </div>
-
     <div class="card">
         <div class="pill"></div>
         <div class="num"></div>
@@ -409,12 +377,13 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
             <img src="{imagen_b64}" alt="producto">
         </div>
 
-        <div class="pname">{titulo_placa}</div>
-        <div class="psub"></div>
-
-        <div class="rule"></div>
-        <div class="spec-label">Contenido</div>
-        <div class="spec-val"></div>
+        <div class="info">
+            <div class="pname">{titulo_placa}</div>
+            <div class="psub"></div>
+            <div class="rule"></div>
+            <div class="spec-label">Contenido</div>
+            <div class="spec-val"></div>
+        </div>
     </div>
 
     <div class="price-band">
