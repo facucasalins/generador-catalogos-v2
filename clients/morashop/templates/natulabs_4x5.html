@@ -3,7 +3,7 @@ nombre: natulabs_4x5
 aspect_ratio: 4:5
 width: 1080
 height: 1350
-descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
+descripcion: Placa NatuLabs 4:5 - crema + verde, contenido y acento por SKU
 -->
 
 <!DOCTYPE html>
@@ -43,11 +43,14 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
        MAPA POR SKU
        ------------------------------------------------------------
        Match por substring case-insensitive sobre {sku}.
-       Cada bloque define: color de acento, fondo del pill, texto del
-       pill, beneficio, contenido y numeracion.
+       Cada bloque define color de acento, contenido y numeracion.
+
+       NO se declaran beneficios ni categorias funcionales
+       (sueño, defensas, huesos): son claims de salud y quedan
+       fuera de la placa por politica de Meta.
 
        Para sumar un producto NatuLabs nuevo: copiar un bloque y
-       cambiar la clave del selector. Nada mas.
+       cambiar la clave del selector.
 
        ORDEN IMPORTA: K2D3 va ultimo para ganarle a VIT si un SKU
        futuro llegara a contener ambos (ej. "VIT K2D3").
@@ -58,8 +61,6 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
         --accent:  #6D4AA8;
         --pill-bg: #E7DFF7;
     }
-    [data-sku*="CIT" i] .pill::after     { content: "ENERGÍA / DÍA"; }
-    [data-sku*="CIT" i] .psub::after     { content: "Energía y descanso muscular"; }
     [data-sku*="CIT" i] .spec-val::after { content: "60 cápsulas · 800 mg"; }
     [data-sku*="CIT" i] .num::after      { content: "01"; }
 
@@ -68,8 +69,6 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
         --accent:  #2F5AA0;
         --pill-bg: #DCE7F8;
     }
-    [data-sku*="GLICI" i] .pill::after     { content: "SUEÑO / CALMA"; }
-    [data-sku*="GLICI" i] .psub::after     { content: "Sueño profundo y sistema nervioso"; }
     [data-sku*="GLICI" i] .spec-val::after { content: "60 cápsulas · 1000 mg"; }
     [data-sku*="GLICI" i] .num::after      { content: "02"; }
 
@@ -78,8 +77,6 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
         --accent:  #2C7A57;
         --pill-bg: #D5EADD;
     }
-    [data-sku*="VIT" i] .pill::after     { content: "DEFENSAS"; }
-    [data-sku*="VIT" i] .psub::after     { content: "Defensas y antioxidante"; }
     [data-sku*="VIT" i] .spec-val::after { content: "30 cápsulas · 1000 mg"; }
     [data-sku*="VIT" i] .num::after      { content: "03"; }
 
@@ -88,8 +85,6 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
         --accent:  #33477A;
         --pill-bg: #DDE3F4;
     }
-    [data-sku*="RESVERATROL" i] .pill::after     { content: "LONGEVIDAD"; }
-    [data-sku*="RESVERATROL" i] .psub::after     { content: "Longevidad celular y antioxidante"; }
     [data-sku*="RESVERATROL" i] .spec-val::after { content: "30 cápsulas · 3 en 1"; }
     [data-sku*="RESVERATROL" i] .num::after      { content: "04"; }
 
@@ -98,8 +93,6 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
         --accent:  #C0703A;
         --pill-bg: #F7E3CD;
     }
-    [data-sku*="K2D3" i] .pill::after     { content: "HUESOS"; }
-    [data-sku*="K2D3" i] .psub::after     { content: "Huesos, dientes y absorción del calcio"; }
     [data-sku*="K2D3" i] .spec-val::after { content: "30 cápsulas · 90 µg"; }
     [data-sku*="K2D3" i] .num::after      { content: "05"; }
 
@@ -133,7 +126,7 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
 
     .pill {
         position: absolute;
-        top: 32px;
+        top: 30px;
         left: 40px;
         background: var(--pill-bg);
         color: var(--accent);
@@ -145,11 +138,11 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
         text-transform: uppercase;
         line-height: 1;
     }
-    .pill::after { content: "SUPLEMENTO DIETARIO"; }
+    .pill::after { content: "NATULABS"; }
 
     .num {
         position: absolute;
-        top: 36px;
+        top: 34px;
         right: 46px;
         font-family: 'Fraunces', Georgia, serif;
         font-style: italic;
@@ -161,10 +154,10 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
 
     .shot {
         position: absolute;
-        top: 92px;
+        top: 84px;
         left: 56px;
         right: 56px;
-        height: 392px;
+        height: 450px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -172,7 +165,7 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
 
     .shot img {
         max-width: 100%;
-        max-height: 392px;
+        max-height: 450px;
         object-fit: contain;
     }
 
@@ -200,28 +193,14 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
         overflow: hidden;
     }
 
-    .psub {
-        margin-top: 12px;
-        font-family: 'Fraunces', Georgia, serif;
-        font-style: italic;
-        font-size: 29px;
-        line-height: 36px;
-        color: var(--accent);
-        font-variation-settings: 'SOFT' 50, 'WONK' 1, 'opsz' 60;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .psub::after { content: "Suplemento dietario natural"; }
-
     .rule {
-        margin-top: 22px;
+        margin-top: 20px;
         height: 1px;
         background: rgba(34, 51, 31, 0.16);
     }
 
     .spec-label {
-        margin-top: 20px;
+        margin-top: 18px;
         font-size: 15px;
         font-weight: 500;
         letter-spacing: 3px;
@@ -379,7 +358,6 @@ descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
 
         <div class="info">
             <div class="pname">{titulo_placa}</div>
-            <div class="psub"></div>
             <div class="rule"></div>
             <div class="spec-label">Contenido</div>
             <div class="spec-val"></div>
