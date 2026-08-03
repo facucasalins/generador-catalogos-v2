@@ -1,0 +1,443 @@
+<!-- META
+nombre: natulabs_4x5
+aspect_ratio: 4:5
+width: 1080
+height: 1350
+descripcion: Placa NatuLabs 4:5 - crema + verde, categoria y beneficio por SKU
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300..700&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,400..900,0..100,0..1;1,9..144,400..900,0..100,0..1&display=swap');
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    /* ============================================================
+       PALETA BASE (fallback si el SKU no matchea ninguna regla)
+       ============================================================ */
+    body {
+        --tinta:    #22331F;   /* verde oscuro NatuLabs */
+        --crema:    #F1EFE2;   /* fondo */
+        --papel:    #FCFBF6;   /* card */
+        --accent:   #3E5C3A;
+        --pill-bg:  #E2E7D6;
+
+        width: 1080px;
+        height: 1350px;
+        background: var(--crema);
+        font-family: 'DM Sans', sans-serif;
+        color: var(--tinta);
+        position: relative;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================================
+       MAPA POR SKU
+       ------------------------------------------------------------
+       Match por substring case-insensitive sobre {sku}.
+       Cada bloque define: color de acento, fondo del pill, texto del
+       pill, beneficio, contenido y numeracion.
+
+       Para sumar un producto NatuLabs nuevo: copiar un bloque y
+       cambiar la clave del selector. Nada mas.
+
+       ORDEN IMPORTA: K2D3 va ultimo para ganarle a VIT si un SKU
+       futuro llegara a contener ambos (ej. "VIT K2D3").
+       ============================================================ */
+
+    /* --- 01 · Citrato de Magnesio -------------------------------- */
+    [data-sku*="CIT" i] {
+        --accent:  #6D4AA8;
+        --pill-bg: #E7DFF7;
+    }
+    [data-sku*="CIT" i] .pill::after     { content: "ENERGÍA / DÍA"; }
+    [data-sku*="CIT" i] .psub::after     { content: "Energía y descanso muscular"; }
+    [data-sku*="CIT" i] .spec-val::after { content: "60 cápsulas · 800 mg"; }
+    [data-sku*="CIT" i] .num::after      { content: "01"; }
+
+    /* --- 02 · Glicinato de Magnesio ------------------------------ */
+    [data-sku*="GLICI" i] {
+        --accent:  #2F5AA0;
+        --pill-bg: #DCE7F8;
+    }
+    [data-sku*="GLICI" i] .pill::after     { content: "SUEÑO / CALMA"; }
+    [data-sku*="GLICI" i] .psub::after     { content: "Sueño profundo y sistema nervioso"; }
+    [data-sku*="GLICI" i] .spec-val::after { content: "60 cápsulas · 1000 mg"; }
+    [data-sku*="GLICI" i] .num::after      { content: "02"; }
+
+    /* --- 03 · Vitamina C ----------------------------------------- */
+    [data-sku*="VIT" i] {
+        --accent:  #2C7A57;
+        --pill-bg: #D5EADD;
+    }
+    [data-sku*="VIT" i] .pill::after     { content: "DEFENSAS"; }
+    [data-sku*="VIT" i] .psub::after     { content: "Defensas y antioxidante"; }
+    [data-sku*="VIT" i] .spec-val::after { content: "30 cápsulas · 1000 mg"; }
+    [data-sku*="VIT" i] .num::after      { content: "03"; }
+
+    /* --- 04 · Resveratrol ---------------------------------------- */
+    [data-sku*="RESVERATROL" i] {
+        --accent:  #33477A;
+        --pill-bg: #DDE3F4;
+    }
+    [data-sku*="RESVERATROL" i] .pill::after     { content: "LONGEVIDAD"; }
+    [data-sku*="RESVERATROL" i] .psub::after     { content: "Longevidad celular y antioxidante"; }
+    [data-sku*="RESVERATROL" i] .spec-val::after { content: "30 cápsulas · 3 en 1"; }
+    [data-sku*="RESVERATROL" i] .num::after      { content: "04"; }
+
+    /* --- 05 · Vitamina K2 + D3 ----------------------------------- */
+    [data-sku*="K2D3" i] {
+        --accent:  #C0703A;
+        --pill-bg: #F7E3CD;
+    }
+    [data-sku*="K2D3" i] .pill::after     { content: "HUESOS"; }
+    [data-sku*="K2D3" i] .psub::after     { content: "Huesos, dientes y absorción del calcio"; }
+    [data-sku*="K2D3" i] .spec-val::after { content: "30 cápsulas · 90 µg"; }
+    [data-sku*="K2D3" i] .num::after      { content: "05"; }
+
+    /* ============================================================
+       CABECERA
+       ============================================================ */
+    .logo {
+        position: absolute;
+        top: 36px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 168px;
+        height: auto;
+        z-index: 10;
+    }
+
+    .strip {
+        position: absolute;
+        top: 130px;
+        left: 0;
+        right: 0;
+        height: 52px;
+        background: var(--tinta);
+        color: #B9CFA3;
+        font-size: 17px;
+        font-weight: 500;
+        letter-spacing: 5px;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    .strip .dot { color: #7FA653; margin: 0 18px; }
+
+    /* ============================================================
+       CARD DE PRODUCTO
+       ============================================================ */
+    .card {
+        position: absolute;
+        top: 206px;
+        left: 60px;
+        width: 960px;
+        height: 740px;
+        background: var(--papel);
+        border: 2px solid var(--accent);
+        border-radius: 34px;
+        overflow: hidden;
+    }
+
+    .pill {
+        position: absolute;
+        top: 32px;
+        left: 40px;
+        background: var(--pill-bg);
+        color: var(--accent);
+        border-radius: 999px;
+        padding: 13px 28px;
+        font-size: 19px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        line-height: 1;
+    }
+    .pill::after { content: "SUPLEMENTO DIETARIO"; }
+
+    .num {
+        position: absolute;
+        top: 36px;
+        right: 46px;
+        font-family: 'Fraunces', Georgia, serif;
+        font-style: italic;
+        font-size: 36px;
+        color: var(--accent);
+        opacity: 0.5;
+        font-variation-settings: 'SOFT' 40, 'WONK' 1, 'opsz' 60;
+    }
+
+    .shot {
+        position: absolute;
+        top: 104px;
+        left: 60px;
+        right: 60px;
+        height: 320px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .shot img {
+        max-width: 100%;
+        max-height: 320px;
+        object-fit: contain;
+    }
+
+    .pname {
+        position: absolute;
+        top: 444px;
+        left: 56px;
+        right: 56px;
+        height: 116px;
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 600;
+        font-size: 46px;
+        line-height: 58px;
+        letter-spacing: -0.5px;
+        color: var(--tinta);
+        font-variation-settings: 'SOFT' 30, 'WONK' 0, 'opsz' 120;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .psub {
+        position: absolute;
+        top: 570px;
+        left: 56px;
+        right: 56px;
+        font-family: 'Fraunces', Georgia, serif;
+        font-style: italic;
+        font-size: 30px;
+        line-height: 1.2;
+        color: var(--accent);
+        font-variation-settings: 'SOFT' 50, 'WONK' 1, 'opsz' 60;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .psub::after { content: "Suplemento dietario natural"; }
+
+    .rule {
+        position: absolute;
+        top: 624px;
+        left: 56px;
+        right: 56px;
+        height: 1px;
+        background: rgba(34, 51, 31, 0.16);
+    }
+
+    .spec-label {
+        position: absolute;
+        top: 650px;
+        left: 56px;
+        font-size: 15px;
+        font-weight: 500;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: rgba(34, 51, 31, 0.55);
+    }
+
+    .spec-val {
+        position: absolute;
+        top: 676px;
+        left: 56px;
+        right: 56px;
+        font-family: 'Fraunces', Georgia, serif;
+        font-style: italic;
+        font-size: 32px;
+        line-height: 40px;
+        color: var(--tinta);
+        font-variation-settings: 'SOFT' 40, 'WONK' 1, 'opsz' 60;
+    }
+    .spec-val::after { content: "Industria Argentina"; }
+
+    /* ============================================================
+       BANDA DE PRECIO
+       ============================================================ */
+    .price-band {
+        position: absolute;
+        top: 970px;
+        left: 0;
+        right: 0;
+        height: 280px;
+        background: var(--tinta);
+        color: var(--crema);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 64px;
+    }
+
+    .price-left {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .desde {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 4px;
+        color: #B9CFA3;
+        margin-bottom: 6px;
+    }
+
+    .precio-tachado {
+        font-size: 36px;
+        font-weight: 500;
+        text-decoration: line-through;
+        opacity: 0.65;
+        margin-bottom: 2px;
+    }
+
+    .precio-principal {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 600;
+        font-size: 122px;
+        line-height: 1;
+        letter-spacing: -3px;
+        font-variation-settings: 'SOFT' 30, 'WONK' 0, 'opsz' 144;
+    }
+
+    .price-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .sin-interes {
+        background: var(--crema);
+        color: var(--tinta);
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        padding: 6px 16px;
+        border-radius: 4px;
+        transform: rotate(5deg);
+        margin-bottom: 12px;
+    }
+
+    .cuotas-num {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 600;
+        font-size: 54px;
+        line-height: 1;
+        letter-spacing: -1px;
+        font-variation-settings: 'SOFT' 30, 'WONK' 0, 'opsz' 100;
+    }
+
+    .cuotas-monto {
+        font-size: 26px;
+        font-weight: 400;
+        margin-top: 6px;
+        opacity: 0.85;
+    }
+
+    /* ============================================================
+       BANNER INFERIOR
+       ============================================================ */
+    .bottom-banner {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 100px;
+        background: #E7E4D3;
+        color: var(--tinta);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 64px;
+    }
+
+    .banner-legal {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        line-height: 1.2;
+    }
+
+    .banner-legal-small {
+        font-size: 14px;
+        font-weight: 400;
+        margin-top: 3px;
+        opacity: 0.7;
+    }
+
+    .banner-brand {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 700;
+        font-size: 34px;
+        letter-spacing: 2px;
+        font-variation-settings: 'SOFT' 20, 'WONK' 0, 'opsz' 100;
+    }
+
+    .banner-brand .mark { color: #7FA653; }
+</style>
+</head>
+<body data-sku="{sku}">
+
+    <img class="logo" src="{logo_b64}" alt="logo">
+
+    <div class="strip">
+        Industria Argentina <span class="dot">&#10022;</span>
+        Apto Vegano <span class="dot">&#10022;</span>
+        Sin Gluten <span class="dot">&#10022;</span>
+        RNE 02-042.000
+    </div>
+
+    <div class="card">
+        <div class="pill"></div>
+        <div class="num"></div>
+
+        <div class="shot">
+            <img src="{imagen_b64}" alt="producto">
+        </div>
+
+        <div class="pname">{titulo_placa}</div>
+        <div class="psub"></div>
+
+        <div class="rule"></div>
+        <div class="spec-label">Contenido</div>
+        <div class="spec-val"></div>
+    </div>
+
+    <div class="price-band">
+        <div class="price-left">
+            <div class="desde">DESDE</div>
+            <div class="precio-tachado">{precio_hotsale_formateado}</div>
+            <div class="precio-principal">{precio_efectivo_formateado}</div>
+        </div>
+
+        <div class="price-right">
+            <div class="sin-interes">SIN INTERÉS</div>
+            <div class="cuotas-num">{cuotas_num} CUOTAS</div>
+            <div class="cuotas-monto">de {cuota_formateada}</div>
+        </div>
+    </div>
+
+    <div class="bottom-banner">
+        <div>
+            <div class="banner-legal">Precio final abonando en Efectivo.</div>
+            <div class="banner-legal-small">{evento_legal}</div>
+        </div>
+        <div class="banner-brand"><span class="mark">&#10022;</span> {brand_name}</div>
+    </div>
+
+</body>
+</html>
