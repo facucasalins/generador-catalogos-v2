@@ -141,8 +141,14 @@ class TikTokCatalogDestino(DestinoFeed):
                 self.cfg.sheet_id, PESTAÑA_MAESTRA, POSICION_MAESTRA,
             )
         except ErrorDestino as e:
+            # FAIL-CLOSED. Mismo motivo que en meta_catalog.py: si la maestra
+            # falla y seguimos, vuelve fuera de 'resultados' y la limpieza de
+            # huérfanas la borra. Abortamos el destino para preservar el feed.
             log.error("TikTok: falló pestaña maestra '%s': %s", PESTAÑA_MAESTRA, e)
-            errores.append(f"{PESTAÑA_MAESTRA}: {e}")
+            raise ErrorDestino(
+                f"TikTok: falló la escritura de '{PESTAÑA_MAESTRA}': {e}. "
+                f"Se aborta el destino para no borrar el feed vigente."
+            ) from e
 
         # ============ 2. ESCRIBIR PESTAÑAS INDIVIDUALES ============
         grupos = agrupar_decisiones_por_template(decisiones_tt)
@@ -201,6 +207,15 @@ class TikTokCatalogDestino(DestinoFeed):
             if not nombre.startswith(PREFIJO_PLATAFORMA):
                 continue
             if nombre in pestañas_activas:
+                continue
+            if nombre == PESTAÑA_MAESTRA:
+                # La maestra NUNCA se borra automáticamente: es el origen de
+                # datos conectado a TikTok Catalog.
+                log.warning(
+                    "TikTok: '%s' no se escribió en este run pero NO se borra "
+                    "(es el origen de datos del catálogo).",
+                    PESTAÑA_MAESTRA,
+                )
                 continue
             try:
                 sheet.del_worksheet(ws)

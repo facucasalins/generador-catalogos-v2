@@ -153,8 +153,18 @@ class MetaCatalogDestino(DestinoFeed):
                 self.cfg.sheet_id, PESTAÑA_MAESTRA, POSICION_MAESTRA,
             )
         except ErrorDestino as e:
+            # FAIL-CLOSED. La maestra es la pestaña que consume Meta Catalog.
+            # Si su escritura falla y seguimos, 'resultados' vuelve SIN
+            # PESTAÑA_MAESTRA y eliminar_pestañas_huerfanas() la interpreta
+            # como huérfana y la BORRA del sheet. Un 429/500 transitorio de la
+            # API de Sheets bastaba para dejar el catálogo de Meta en cero.
+            # Abortamos el destino: cli.py captura ErrorDestino y saltea la
+            # limpieza, así el feed vigente queda intacto hasta el próximo run.
             log.error("Meta: falló pestaña maestra '%s': %s", PESTAÑA_MAESTRA, e)
-            errores.append(f"{PESTAÑA_MAESTRA}: {e}")
+            raise ErrorDestino(
+                f"Meta: falló la escritura de '{PESTAÑA_MAESTRA}': {e}. "
+                f"Se aborta el destino para no borrar el feed vigente."
+            ) from e
 
         # ============ 2. ESCRIBIR PESTAÑAS INDIVIDUALES ============
         grupos = agrupar_decisiones_por_template(decisiones_meta)
@@ -221,6 +231,18 @@ class MetaCatalogDestino(DestinoFeed):
             if not nombre.startswith(PREFIJO_PLATAFORMA):
                 continue
             if nombre in pestañas_activas:
+                continue
+            if nombre == PESTAÑA_MAESTRA:
+                # La maestra NUNCA se borra automáticamente: es el origen de
+                # datos conectado a Meta Catalog. Borrarla deja el catálogo en
+                # cero y baja las campañas de Advantage+. Si de verdad hay que
+                # sacarla (dejar de publicar en Meta), se borra a mano.
+                log.warning(
+                    "Meta: '%s' no se escribió en este run pero NO se borra "
+                    "(es el origen de datos del catálogo). Revisá si Selección "
+                    "quedó sin templates Meta_* marcados.",
+                    PESTAÑA_MAESTRA,
+                )
                 continue
             try:
                 sheet.del_worksheet(ws)
