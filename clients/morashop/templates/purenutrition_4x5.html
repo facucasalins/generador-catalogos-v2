@@ -3,7 +3,7 @@ nombre: purenutrition_4x5
 aspect_ratio: 4:5
 width: 1080
 height: 1350
-descripcion: Placa Pure Nutrition 4:5 - navy + blanco, sellos IFOS/GOED, contenido por SKU
+descripcion: Placa Pure Nutrition 4:5 - navy + blanco, sellos y contenido por SKU
 -->
 
 <!DOCTYPE html>
@@ -40,60 +40,103 @@ descripcion: Placa Pure Nutrition 4:5 - navy + blanco, sellos IFOS/GOED, conteni
     }
 
     /* ============================================================
+       ESTADO POR DEFECTO — FAIL-CLOSED
+       ------------------------------------------------------------
+       Sellos y bloque "Contenido" arrancan OCULTOS. Solo los prende
+       la regla del SKU que matchea. Un producto nuevo que todavia no
+       este en el mapa sale con foto, titulo y precio, sin datos
+       inventados debajo. Antes el fallback mostraba "Industria
+       Argentina" bajo la etiqueta CONTENIDO, que no tenia sentido.
+       ============================================================ */
+    .sello-omega,
+    .sello-mag,
+    .sello-ar,
+    .rule,
+    .spec-label,
+    .spec-val { display: none; }
+
+    /* ============================================================
        MAPA POR SKU
        ------------------------------------------------------------
        Match por substring case-insensitive sobre {sku}.
-       Define acento, contenido y numeracion por producto.
+       Datos tomados de purenutrition.com.ar (17/09/2026).
 
        NO se declaran beneficios ni usos funcionales: son claims de
        salud y quedan fuera de la placa por politica de Meta. Lo que
        diga la etiqueta del frasco en la foto es otra cosa.
 
+       IFOS y GOED certifican aceite de pescado: van SOLO en los
+       Omega 3 (y en el combo, que lleva uno). Ponerlos en un
+       magnesio seria atribuirle una certificacion que no tiene.
+
        ORDEN IMPORTA (substring, gana la ultima regla que matchea):
        - BISGLICI va DESPUES de GLICI, porque "BISGLICINATO"
-         contiene "GLICINATO". Si se invierte, el bisglicinato
-         toma los datos del glicinato.
+         contiene "GLICINATO".
+       - COMBO va ULTIMO: su SKU probablemente contenga "ULTRA" y
+         "BISGLICI", asi que tiene que pisar a las dos.
 
-       >>> CLAVES A CONFIRMAR: estan inferidas de los nombres de la
-       web, no de los SKU reales de Tiendanube. Revisar contra la
-       lista real antes de dar por bueno el template.
+       >>> CLAVES A CONFIRMAR: inferidas de los nombres de la web,
+       no de los SKU reales de Tiendanube.
        ============================================================ */
 
     /* --- 01 · Omega 3 Ultra -------------------------------------- */
-    [data-sku*="ULTRA" i] {
-        --accent: #4AA8D8;
-    }
-    [data-sku*="ULTRA" i] .spec-val::after { content: "60 cápsulas blandas · 1000 EPA / 500 DHA"; }
+    [data-sku*="ULTRA" i] { --accent: #4AA8D8; }
+    [data-sku*="ULTRA" i] .sello-omega,
+    [data-sku*="ULTRA" i] .sello-ar,
+    [data-sku*="ULTRA" i] .rule,
+    [data-sku*="ULTRA" i] .spec-label,
+    [data-sku*="ULTRA" i] .spec-val       { display: block; }
+    [data-sku*="ULTRA" i] .spec-val::after { content: "60 cápsulas blandas · 1000 mg EPA + 500 mg DHA"; }
     [data-sku*="ULTRA" i] .num::after      { content: "01"; }
 
     /* --- 02 · Omega 3 Forte -------------------------------------- */
-    [data-sku*="FORTE" i] {
-        --accent: #4AA8D8;
-    }
-    [data-sku*="FORTE" i] .spec-val::after { content: "60 cápsulas blandas · 800 EPA / 400 DHA"; }
+    [data-sku*="FORTE" i] { --accent: #4AA8D8; }
+    [data-sku*="FORTE" i] .sello-omega,
+    [data-sku*="FORTE" i] .sello-ar,
+    [data-sku*="FORTE" i] .rule,
+    [data-sku*="FORTE" i] .spec-label,
+    [data-sku*="FORTE" i] .spec-val       { display: block; }
+    [data-sku*="FORTE" i] .spec-val::after { content: "60 cápsulas blandas · 800 mg EPA + 400 mg DHA"; }
     [data-sku*="FORTE" i] .num::after      { content: "02"; }
 
-    /* --- 03 · Glicinato de Magnesio ------------------------------ */
-    [data-sku*="GLICI" i] {
-        --accent: #9AA7C4;
-    }
+    /* --- 04 · Glicinato de Magnesio 1000 mg ---------------------- */
+    /*     Va ANTES de BISGLICI. No mover.                          */
+    [data-sku*="GLICI" i] { --accent: #9AA7C4; }
+    [data-sku*="GLICI" i] .sello-mag,
+    [data-sku*="GLICI" i] .sello-ar,
+    [data-sku*="GLICI" i] .rule,
+    [data-sku*="GLICI" i] .spec-label,
+    [data-sku*="GLICI" i] .spec-val       { display: block; }
     [data-sku*="GLICI" i] .spec-val::after { content: "60 cápsulas · 1000 mg"; }
-    [data-sku*="GLICI" i] .num::after      { content: "03"; }
+    [data-sku*="GLICI" i] .num::after      { content: "04"; }
 
-    /* --- 04 · Bisglicinato de Magnesio Quelado ------------------- */
-    /*     Va DESPUES de GLICI a proposito. No mover.               */
-    [data-sku*="BISGLICI" i] {
-        --accent: #9AA7C4;
-    }
+    /* --- 03 · Bisglicinato de Magnesio Quelado 500 mg ------------ */
+    /*     Va DESPUES de GLICI. No mover.                           */
+    [data-sku*="BISGLICI" i] { --accent: #9AA7C4; }
     [data-sku*="BISGLICI" i] .spec-val::after { content: "60 cápsulas · 500 mg"; }
-    [data-sku*="BISGLICI" i] .num::after      { content: "04"; }
+    [data-sku*="BISGLICI" i] .num::after      { content: "03"; }
 
-    /* --- 05 · Citrato de Magnesio -------------------------------- */
-    [data-sku*="CITRATO" i] {
-        --accent: #9AA7C4;
-    }
+    /* --- 05 · Citrato de Magnesio 1000 mg ------------------------ */
+    [data-sku*="CITRATO" i] { --accent: #9AA7C4; }
+    [data-sku*="CITRATO" i] .sello-mag,
+    [data-sku*="CITRATO" i] .sello-ar,
+    [data-sku*="CITRATO" i] .rule,
+    [data-sku*="CITRATO" i] .spec-label,
+    [data-sku*="CITRATO" i] .spec-val       { display: block; }
     [data-sku*="CITRATO" i] .spec-val::after { content: "60 cápsulas · 1000 mg"; }
     [data-sku*="CITRATO" i] .num::after      { content: "05"; }
+
+    /* --- 06 · Combo Omega 3 Ultra + Bisglicinato ----------------- */
+    /*     Va ULTIMO. No mover.                                     */
+    [data-sku*="COMBO" i] { --accent: #4AA8D8; }
+    [data-sku*="COMBO" i] .sello-omega,
+    [data-sku*="COMBO" i] .sello-mag,
+    [data-sku*="COMBO" i] .sello-ar,
+    [data-sku*="COMBO" i] .rule,
+    [data-sku*="COMBO" i] .spec-label,
+    [data-sku*="COMBO" i] .spec-val       { display: block; }
+    [data-sku*="COMBO" i] .spec-val::after { content: "2 frascos · 60 cápsulas c/u"; }
+    [data-sku*="COMBO" i] .num::after      { content: "06"; }
 
     /* ============================================================
        CABECERA — logo + sellos
@@ -116,19 +159,20 @@ descripcion: Placa Pure Nutrition 4:5 - navy + blanco, sellos IFOS/GOED, conteni
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 16px;
+        gap: 14px;
     }
 
     .sello {
         border: 1.5px solid rgba(255, 255, 255, 0.35);
         border-radius: 999px;
-        padding: 10px 24px;
+        padding: 10px 22px;
         font-size: 17px;
         font-weight: 600;
         letter-spacing: 2.5px;
         text-transform: uppercase;
         color: rgba(255, 255, 255, 0.92);
         line-height: 1;
+        white-space: nowrap;
     }
 
     /* ============================================================
@@ -245,11 +289,10 @@ descripcion: Placa Pure Nutrition 4:5 - navy + blanco, sellos IFOS/GOED, conteni
         margin-top: 6px;
         font-family: 'Archivo', sans-serif;
         font-weight: 500;
-        font-size: 30px;
+        font-size: 29px;
         line-height: 38px;
         color: var(--navy);
     }
-    .spec-val::after { content: "Industria Argentina"; }
 
     /* ============================================================
        BANDA DE PRECIO
@@ -349,17 +392,10 @@ descripcion: Placa Pure Nutrition 4:5 - navy + blanco, sellos IFOS/GOED, conteni
     }
 
     .banner-legal {
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 700;
         letter-spacing: 0.3px;
         line-height: 1.2;
-    }
-
-    .banner-legal-small {
-        font-size: 14px;
-        font-weight: 400;
-        margin-top: 3px;
-        opacity: 0.7;
     }
 
     .banner-brand {
@@ -375,9 +411,10 @@ descripcion: Placa Pure Nutrition 4:5 - navy + blanco, sellos IFOS/GOED, conteni
     <img class="logo" src="{logo_b64}" alt="logo">
 
     <div class="sellos">
-        <div class="sello">IFOS</div>
-        <div class="sello">GOED</div>
-        <div class="sello">Industria Argentina</div>
+        <div class="sello sello-omega">IFOS</div>
+        <div class="sello sello-omega">GOED</div>
+        <div class="sello sello-mag">Libre de Gluten</div>
+        <div class="sello sello-ar">Industria Argentina</div>
     </div>
 
     <div class="card">
@@ -411,10 +448,7 @@ descripcion: Placa Pure Nutrition 4:5 - navy + blanco, sellos IFOS/GOED, conteni
     </div>
 
     <div class="bottom-banner">
-        <div>
-            <div class="banner-legal">Precio final abonando en Efectivo.</div>
-            <div class="banner-legal-small">{evento_legal}</div>
-        </div>
+        <div class="banner-legal">Precio final abonando en Efectivo.</div>
         <div class="banner-brand">{brand_name}</div>
     </div>
 
