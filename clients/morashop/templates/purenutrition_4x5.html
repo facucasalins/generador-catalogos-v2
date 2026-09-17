@@ -1,0 +1,422 @@
+<!-- META
+nombre: purenutrition_4x5
+aspect_ratio: 4:5
+width: 1080
+height: 1350
+descripcion: Placa Pure Nutrition 4:5 - navy + blanco, sellos IFOS/GOED, contenido por SKU
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    /* ============================================================
+       PALETA BASE (fallback si el SKU no matchea ninguna regla)
+       ============================================================ */
+    body {
+        --navy:       #101C4E;   /* fondo */
+        --navy-deep:  #0A1234;   /* banda de precio */
+        --blanco:     #FFFFFF;   /* card */
+        --gris:       #E8ECF3;   /* banner inferior */
+        --accent:     #9AA7C4;   /* plata azulada (magnesios) */
+
+        width: 1080px;
+        height: 1350px;
+        background: var(--navy);
+        font-family: 'Inter', sans-serif;
+        color: var(--blanco);
+        position: relative;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================================
+       MAPA POR SKU
+       ------------------------------------------------------------
+       Match por substring case-insensitive sobre {sku}.
+       Define acento, contenido y numeracion por producto.
+
+       NO se declaran beneficios ni usos funcionales: son claims de
+       salud y quedan fuera de la placa por politica de Meta. Lo que
+       diga la etiqueta del frasco en la foto es otra cosa.
+
+       ORDEN IMPORTA (substring, gana la ultima regla que matchea):
+       - BISGLICI va DESPUES de GLICI, porque "BISGLICINATO"
+         contiene "GLICINATO". Si se invierte, el bisglicinato
+         toma los datos del glicinato.
+
+       >>> CLAVES A CONFIRMAR: estan inferidas de los nombres de la
+       web, no de los SKU reales de Tiendanube. Revisar contra la
+       lista real antes de dar por bueno el template.
+       ============================================================ */
+
+    /* --- 01 · Omega 3 Ultra -------------------------------------- */
+    [data-sku*="ULTRA" i] {
+        --accent: #4AA8D8;
+    }
+    [data-sku*="ULTRA" i] .spec-val::after { content: "60 cápsulas blandas · 1000 EPA / 500 DHA"; }
+    [data-sku*="ULTRA" i] .num::after      { content: "01"; }
+
+    /* --- 02 · Omega 3 Forte -------------------------------------- */
+    [data-sku*="FORTE" i] {
+        --accent: #4AA8D8;
+    }
+    [data-sku*="FORTE" i] .spec-val::after { content: "60 cápsulas blandas · 800 EPA / 400 DHA"; }
+    [data-sku*="FORTE" i] .num::after      { content: "02"; }
+
+    /* --- 03 · Glicinato de Magnesio ------------------------------ */
+    [data-sku*="GLICI" i] {
+        --accent: #9AA7C4;
+    }
+    [data-sku*="GLICI" i] .spec-val::after { content: "60 cápsulas · 1000 mg"; }
+    [data-sku*="GLICI" i] .num::after      { content: "03"; }
+
+    /* --- 04 · Bisglicinato de Magnesio Quelado ------------------- */
+    /*     Va DESPUES de GLICI a proposito. No mover.               */
+    [data-sku*="BISGLICI" i] {
+        --accent: #9AA7C4;
+    }
+    [data-sku*="BISGLICI" i] .spec-val::after { content: "60 cápsulas · 500 mg"; }
+    [data-sku*="BISGLICI" i] .num::after      { content: "04"; }
+
+    /* --- 05 · Citrato de Magnesio -------------------------------- */
+    [data-sku*="CITRATO" i] {
+        --accent: #9AA7C4;
+    }
+    [data-sku*="CITRATO" i] .spec-val::after { content: "60 cápsulas · 1000 mg"; }
+    [data-sku*="CITRATO" i] .num::after      { content: "05"; }
+
+    /* ============================================================
+       CABECERA — logo + sellos
+       ============================================================ */
+    .logo {
+        position: absolute;
+        top: 26px;
+        left: 50%;
+        transform: translateX(-50%);
+        height: 112px;
+        width: auto;
+        z-index: 10;
+    }
+
+    .sellos {
+        position: absolute;
+        top: 152px;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+    }
+
+    .sello {
+        border: 1.5px solid rgba(255, 255, 255, 0.35);
+        border-radius: 999px;
+        padding: 10px 24px;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: 2.5px;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.92);
+        line-height: 1;
+    }
+
+    /* ============================================================
+       CARD DE PRODUCTO
+       ============================================================ */
+    .card {
+        position: absolute;
+        top: 216px;
+        left: 60px;
+        width: 960px;
+        height: 738px;
+        background: var(--blanco);
+        border-radius: 28px;
+        overflow: hidden;
+    }
+
+    /* Filete de color arriba de la card: el unico lugar donde entra
+       el acento por familia de producto. */
+    .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 8px;
+        background: var(--accent);
+    }
+
+    .pill {
+        position: absolute;
+        top: 34px;
+        left: 40px;
+        background: var(--navy);
+        color: var(--blanco);
+        border-radius: 999px;
+        padding: 12px 26px;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        line-height: 1;
+    }
+    .pill::after { content: "PURENUTRITION"; }
+
+    .num {
+        position: absolute;
+        top: 36px;
+        right: 46px;
+        font-family: 'Archivo', sans-serif;
+        font-weight: 700;
+        font-size: 34px;
+        color: var(--navy);
+        opacity: 0.28;
+        letter-spacing: 1px;
+    }
+
+    .shot {
+        position: absolute;
+        top: 80px;
+        left: 56px;
+        right: 56px;
+        height: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .shot img {
+        max-width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+    }
+
+    /* Bloque de texto anclado al pie de la card, en flujo normal.
+       Si el titulo ocupa 2 lineas crece hacia arriba en vez de
+       empujar el contenido fuera de la card. */
+    .info {
+        position: absolute;
+        left: 56px;
+        right: 56px;
+        bottom: 30px;
+    }
+
+    .pname {
+        font-family: 'Archivo', sans-serif;
+        font-weight: 600;
+        font-size: 40px;
+        line-height: 50px;
+        letter-spacing: -0.6px;
+        color: var(--navy);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .rule {
+        margin-top: 20px;
+        height: 1px;
+        background: rgba(16, 28, 78, 0.16);
+    }
+
+    .spec-label {
+        margin-top: 18px;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 3px;
+        line-height: 18px;
+        text-transform: uppercase;
+        color: rgba(16, 28, 78, 0.5);
+    }
+
+    .spec-val {
+        margin-top: 6px;
+        font-family: 'Archivo', sans-serif;
+        font-weight: 500;
+        font-size: 30px;
+        line-height: 38px;
+        color: var(--navy);
+    }
+    .spec-val::after { content: "Industria Argentina"; }
+
+    /* ============================================================
+       BANDA DE PRECIO
+       ============================================================ */
+    .price-band {
+        position: absolute;
+        top: 970px;
+        left: 0;
+        right: 0;
+        height: 280px;
+        background: var(--navy-deep);
+        color: var(--blanco);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 64px;
+    }
+
+    .price-left {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .desde {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 4px;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+
+    .precio-tachado {
+        font-size: 36px;
+        font-weight: 400;
+        text-decoration: line-through;
+        opacity: 0.6;
+        margin-bottom: 2px;
+    }
+
+    .precio-principal {
+        font-family: 'Archivo', sans-serif;
+        font-weight: 800;
+        font-size: 118px;
+        line-height: 1;
+        letter-spacing: -3px;
+    }
+
+    .price-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .sin-interes {
+        background: var(--blanco);
+        color: var(--navy-deep);
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        padding: 6px 16px;
+        border-radius: 4px;
+        transform: rotate(5deg);
+        margin-bottom: 12px;
+    }
+
+    .cuotas-num {
+        font-family: 'Archivo', sans-serif;
+        font-weight: 700;
+        font-size: 52px;
+        line-height: 1;
+        letter-spacing: -1px;
+    }
+
+    .cuotas-monto {
+        font-size: 26px;
+        font-weight: 400;
+        margin-top: 6px;
+        opacity: 0.85;
+    }
+
+    /* ============================================================
+       BANNER INFERIOR
+       ============================================================ */
+    .bottom-banner {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 100px;
+        background: var(--gris);
+        color: var(--navy);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 64px;
+    }
+
+    .banner-legal {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        line-height: 1.2;
+    }
+
+    .banner-legal-small {
+        font-size: 14px;
+        font-weight: 400;
+        margin-top: 3px;
+        opacity: 0.7;
+    }
+
+    .banner-brand {
+        font-family: 'Archivo', sans-serif;
+        font-weight: 800;
+        font-size: 32px;
+        letter-spacing: 2px;
+    }
+</style>
+</head>
+<body data-sku="{sku}">
+
+    <img class="logo" src="{logo_b64}" alt="logo">
+
+    <div class="sellos">
+        <div class="sello">IFOS</div>
+        <div class="sello">GOED</div>
+        <div class="sello">Industria Argentina</div>
+    </div>
+
+    <div class="card">
+        <div class="pill"></div>
+        <div class="num"></div>
+
+        <div class="shot">
+            <img src="{imagen_b64}" alt="producto">
+        </div>
+
+        <div class="info">
+            <div class="pname">{titulo_placa}</div>
+            <div class="rule"></div>
+            <div class="spec-label">Contenido</div>
+            <div class="spec-val"></div>
+        </div>
+    </div>
+
+    <div class="price-band">
+        <div class="price-left">
+            <div class="desde">DESDE</div>
+            <div class="precio-tachado">{precio_hotsale_formateado}</div>
+            <div class="precio-principal">{precio_efectivo_formateado}</div>
+        </div>
+
+        <div class="price-right">
+            <div class="sin-interes">SIN INTERÉS</div>
+            <div class="cuotas-num">{cuotas_num} CUOTAS</div>
+            <div class="cuotas-monto">de {cuota_formateada}</div>
+        </div>
+    </div>
+
+    <div class="bottom-banner">
+        <div>
+            <div class="banner-legal">Precio final abonando en Efectivo.</div>
+            <div class="banner-legal-small">{evento_legal}</div>
+        </div>
+        <div class="banner-brand">{brand_name}</div>
+    </div>
+
+</body>
+</html>
