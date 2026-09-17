@@ -48,7 +48,7 @@ estilo:
     variables_globales:
       brand_name: MORASHOP
       logo_url: "https://acdn-us.mitiendanube.com/stores/002/268/228/themes/toluca/img-479084497-1715570316-13b884ee9ca022bcfa337bfec6db35451715570316.png?3248503917"
-      evento_legal: "Válido durante Mora Hot."
+      evento_legal: ""
 
 # ============ BLOQUE 5: DISTRIBUCIÓN ============
 distribucion:
