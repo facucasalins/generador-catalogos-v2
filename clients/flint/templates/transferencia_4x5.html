@@ -1,0 +1,158 @@
+<!-- META
+nombre: transferencia_4x5
+aspect_ratio: 4:5
+width: 1080
+height: 1350
+descripcion: Placa transferencia Flint 4:5 - precio con transferencia protagonista sobre bloque rojo, tira crema con precio de lista y cuotas
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Archivo:wght@400;600;700;800&display=swap');
+
+  :root {
+    --ink: #000000;
+    --footer: #1D1D1B;
+    --yellow: #F6B01D;
+    --red: #E84542;
+    --cream: #EFE8CE;
+    --deal: #249C55;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    height: 1350px;
+    position: relative;
+    overflow: hidden;
+    background: var(--cream);
+    font-family: 'Archivo', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .photo {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1080px;
+    height: 860px;
+    object-fit: cover;
+    object-position: center 35%;
+  }
+
+  .logo {
+    position: absolute;
+    top: 40px; left: 44px;
+    width: 210px;
+    height: auto;
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,.18));
+  }
+
+  .band {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 600px;
+    background: var(--red);
+    clip-path: polygon(0 66px, 100% 0, 100% 100%, 0 100%);
+    padding: 100px 56px 0;
+    color: var(--cream);
+  }
+  .band::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 80px;
+    background: var(--footer);
+    clip-path: polygon(0 66px, 100% 0, 100% 14px, 0 80px);
+  }
+
+  /* Texto crema sobre rojo: solo tamaños titular (contraste) */
+  .kicker {
+    display: inline-block;
+    font-family: 'Big Shoulders Display', Impact, sans-serif;
+    font-weight: 900;
+    font-size: 54px;
+    line-height: 1;
+    text-transform: uppercase;
+    background: var(--footer);
+    color: var(--yellow);
+    padding: 10px 20px 8px;
+    transform: rotate(-2deg);
+    margin-bottom: 14px;
+  }
+  .price {
+    font-family: 'Big Shoulders Display', Impact, sans-serif;
+    font-weight: 900;
+    font-size: 186px;
+    line-height: .84;
+    letter-spacing: -2px;
+    text-shadow: 6px 6px 0 var(--footer);
+  }
+  .title {
+    font-family: 'Big Shoulders Display', Impact, sans-serif;
+    font-weight: 800;
+    font-size: 50px;
+    line-height: 1.02;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 18px;
+  }
+
+  /* Tira crema inferior: textos chicos en ink (contraste ok) */
+  .strip {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 116px;
+    background: var(--cream);
+    color: var(--ink);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 56px;
+    font-size: 28px;
+    font-weight: 600;
+    border-top: 6px solid var(--footer);
+  }
+  .strip b { font-weight: 800; }
+  .strip s { opacity: .55; margin-left: 10px; font-size: 24px; text-decoration-thickness: 2px; }
+</style>
+</head>
+<body>
+  <img class="photo" src="{imagen_b64}" alt="producto">
+  <img class="logo" src="{logo_b64}" alt="Flint">
+
+  <div class="band">
+    <div class="kicker" data-efe-wrap><span class="pct-efe">10</span>% OFF pagando por transferencia</div>
+    <!-- PRECIO PROTAGONISTA: precio_efectivo = hotsale x descuento_efectivo_factor (0.90) -->
+    <div class="price" data-efe>{precio_efectivo_formateado}</div>
+    <div class="title">{titulo_placa}</div>
+  </div>
+
+  <div class="strip">
+    <div>Precio <b data-hot>{precio_hotsale_formateado}</b><s data-orig>{precio_original_formateado}</s></div>
+    <div>{cuotas_num} cuotas sin interés de <b>{cuota_formateada}</b></div>
+  </div>
+
+  <script>
+  function num(s) { return parseInt((s || '').replace(/[^0-9]/g, ''), 10) || 0; }
+  function shrink(el, min) {
+    if (!el) return;
+    var s = parseFloat(getComputedStyle(el).fontSize), g = 0;
+    while (el.scrollWidth > el.clientWidth + 1 && s > min && g < 200) { s -= 1; el.style.fontSize = s + 'px'; g++; }
+  }
+  function adjust() {
+    var o = document.querySelector('[data-orig]');
+    var h = document.querySelector('[data-hot]');
+    var e = document.querySelector('[data-efe]');
+    var vo = num(o && o.textContent), vh = num(h && h.textContent), ve = num(e && e.textContent);
+    if (!(vo > vh)) { if (o) o.style.display = 'none'; }
+    var pe = vh > 0 && ve > 0 ? Math.round((1 - ve / vh) * 100) : 0;
+    if (pe >= 1) document.querySelectorAll('.pct-efe').forEach(function (n) { n.textContent = pe; });
+    shrink(document.querySelector('.title'), 38);
+  }
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(adjust); } else { window.addEventListener('load', adjust); }
+  </script>
+</body>
+</html>

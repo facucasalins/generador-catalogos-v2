@@ -1,0 +1,80 @@
+# ====================================================================
+# Pipeline de Flint (suplementos deportivos, flint.com.ar)
+# ====================================================================
+cliente:
+  nombre: flint
+  brand_name: FLINT
+  zona_horaria: America/Argentina/Buenos_Aires
+
+# ============ BLOQUE 1: INVENTARIO ============
+inventario:
+  fuente: tiendanube
+  config:
+    store_id_secret: FLINT_TIENDANUBE_STORE_ID
+    access_token_secret: FLINT_TIENDANUBE_TOKEN
+    # En TN cada sabor ya es un producto aparte (Chocolate / Vanilla, Pre Mango / Frutilla):
+    # 1 fila por producto. SKU = handle.
+    agrupar_por_producto: true
+    sheet_destino:
+      id: "REEMPLAZAR_ID_INVENTARIO"
+      pestaña: Inventario
+
+# ============ BLOQUE 2: SELECCIÓN ============
+seleccion:
+  fuente: sheet_manual
+  config:
+    sheet:
+      id: "REEMPLAZAR_ID_SELECCION"
+      pestaña: Seleccion
+
+# ============ BLOQUE 3: ENRIQUECIMIENTO ============
+# Necesario: las plantillas usan {titulo_placa}.
+enriquecimiento:
+  proveedor: gemini
+  config:
+    api_key_secret: GEMINI_API_KEY
+    modelo: gemini-2.5-flash
+    max_chars_titulo: 60
+    max_chars_descripcion: 200
+    cantidad_tips: 3
+    max_chars_tip: 40
+    tono: "Argentino, cercano, jerga de gimnasio, con toques de spanglish como la marca (ej: 'But For Real', 'Power Pack', 'Ultramicronized'). Voseo. Destacá sabor y formato. Nunca prometas resultados físicos ni beneficios de salud."
+
+# ============ BLOQUE 4: ESTILO ============
+# Cada template declara sus dimensiones en <!-- META --> del HTML.
+estilo:
+  motor: playwright_html
+  config:
+    hotsale_discount_factor: 1.0
+    descuento_efectivo_factor: 0.90      # 10% OFF por transferencia (oct 2026)
+    cuotas_sobre_promocional: true       # 3 cuotas sin interés sobre el precio promo
+    variables_globales:
+      brand_name: FLINT
+      # Logo hi-res transparente versionado en el repo (público)
+      logo_url: "https://raw.githubusercontent.com/facucasalins/generador-catalogos-v2/main/clients/flint/logo.png"
+      evento_legal: ""
+
+# ============ BLOQUE 5: DISTRIBUCIÓN ============
+distribucion:
+  internal_label: "nusa_placa"
+  storage:
+    backend: cloudinary
+    config:
+      cloud_name_secret: CLOUDINARY_CLOUD_NAME
+      api_key_secret: CLOUDINARY_API_KEY
+      api_secret_secret: CLOUDINARY_API_SECRET
+      folder: flint
+
+  destinos:
+    - tipo: meta_catalog
+      config:
+        sheet_id: "REEMPLAZAR_ID_FEED_OUTPUT"
+        moneda: ARS
+        calcular_availability_por_stock: true
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
+    - tipo: tiktok_catalog
+      config:
+        sheet_id: "REEMPLAZAR_ID_FEED_OUTPUT"
+        moneda: ARS
+        calcular_availability_por_stock: true
+        aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
