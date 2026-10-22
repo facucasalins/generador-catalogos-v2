@@ -16,7 +16,7 @@ inventario:
     # 1 fila por producto. SKU = handle.
     agrupar_por_producto: true
     sheet_destino:
-      id: "REEMPLAZAR_ID_INVENTARIO"
+      id: "1IBcRCUdN3gl-joJJ0sVmQ2WhMIMQEpHUNUM_l4_YcIU"
       pestaña: Inventario
 
 # ============ BLOQUE 2: SELECCIÓN ============
@@ -24,7 +24,7 @@ seleccion:
   fuente: sheet_manual
   config:
     sheet:
-      id: "REEMPLAZAR_ID_SELECCION"
+      id: "1q-Veaq7k2ZcP-Qr-kZd8AkcmHBV6lmdNQ84Jf-jIyd4"
       pestaña: Seleccion
 
 # ============ BLOQUE 3: ENRIQUECIMIENTO ============
@@ -68,13 +68,13 @@ distribucion:
   destinos:
     - tipo: meta_catalog
       config:
-        sheet_id: "REEMPLAZAR_ID_FEED_OUTPUT"
+        sheet_id: "1C-Owx-0YJYIoqNUMGC4BRIE3ItjYT9wWcuXJ3PTqnCg"
         moneda: ARS
         calcular_availability_por_stock: true
         aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
     - tipo: tiktok_catalog
       config:
-        sheet_id: "REEMPLAZAR_ID_FEED_OUTPUT"
+        sheet_id: "1C-Owx-0YJYIoqNUMGC4BRIE3ItjYT9wWcuXJ3PTqnCg"
         moneda: ARS
         calcular_availability_por_stock: true
         aspect_ratios_aceptados: ["4:5", "9:16", "1:1"]
