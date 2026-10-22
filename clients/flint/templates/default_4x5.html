@@ -1,0 +1,205 @@
+<!-- META
+nombre: default_4x5
+aspect_ratio: 4:5
+width: 1080
+height: 1350
+descripcion: Placa base Flint 4:5 - packshot arriba, bloque negro inclinado con precio promo, tachado y transferencia
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Archivo:wght@400;600;700;800&display=swap');
+
+  /* Tokens del design system Flint (flint.com.ar, relevado 19/10/2026) */
+  :root {
+    --ink: #000000;
+    --footer: #1D1D1B;
+    --yellow: #F6B01D;
+    --red: #E84542;
+    --cream: #EFE8CE;
+    --deal: #249C55;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    height: 1350px;
+    position: relative;
+    overflow: hidden;
+    background: var(--cream);
+    font-family: 'Archivo', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* FOTO: packshot TN (fondo crema, ratio ~1.22). 1080x888 = sin recorte */
+  .photo {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1080px;
+    height: 888px;
+    object-fit: cover;
+    object-position: center 40%;
+  }
+
+  .logo {
+    position: absolute;
+    top: 40px; left: 44px;
+    width: 210px;
+    height: auto;
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,.18));
+  }
+
+  /* Badge de % OFF promo (se oculta si no hay tachado) */
+  .off-badge {
+    position: absolute;
+    top: 52px; right: 48px;
+    background: var(--red);
+    color: var(--cream);
+    font-family: 'Big Shoulders Display', Impact, sans-serif;
+    font-weight: 900;
+    font-size: 64px;
+    line-height: 1;
+    padding: 14px 26px 12px;
+    border: 6px solid var(--footer);
+    box-shadow: 8px 8px 0 var(--footer);
+    transform: rotate(4deg);
+    text-transform: uppercase;
+  }
+  .off-badge small { font-size: 36px; display: block; letter-spacing: 2px; }
+
+  /* BLOQUE INFERIOR negro cálido con borde superior inclinado */
+  .band {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 540px;
+    background: var(--footer);
+    clip-path: polygon(0 70px, 100% 0, 100% 100%, 0 100%);
+    padding: 108px 56px 0;
+    color: var(--cream);
+  }
+  .band::before {
+    /* filete amarillo sobre el corte */
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 84px;
+    background: var(--yellow);
+    clip-path: polygon(0 70px, 100% 0, 100% 14px, 0 84px);
+  }
+
+  .title {
+    font-family: 'Big Shoulders Display', Impact, sans-serif;
+    font-weight: 800;
+    font-size: 60px;
+    line-height: 1.02;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 18px;
+  }
+
+  .price-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 22px;
+    margin-bottom: 26px;
+  }
+  .price {
+    font-family: 'Big Shoulders Display', Impact, sans-serif;
+    font-weight: 900;
+    font-size: 150px;
+    line-height: .82;
+    color: var(--yellow);
+    letter-spacing: -1px;
+  }
+  .strike {
+    font-size: 38px;
+    font-weight: 600;
+    color: rgba(239,232,206,.62);
+    text-decoration: line-through;
+    text-decoration-thickness: 3px;
+    padding-bottom: 6px;
+  }
+
+  .pills { display: flex; gap: 16px; align-items: stretch; }
+  .pill {
+    display: flex; align-items: center;
+    font-size: 27px;
+    font-weight: 700;
+    padding: 16px 26px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pill b { font-weight: 800; margin-left: 8px; }
+  .pill-deal { background: var(--deal); color: #fff; }
+  .pill-cuotas { border: 3px solid var(--cream); color: var(--cream); }
+
+  .footnote {
+    position: absolute;
+    left: 56px; right: 56px; bottom: 34px;
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(239,232,206,.55);
+    display: flex; justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+  <img class="photo" src="{imagen_b64}" alt="producto">
+  <img class="logo" src="{logo_b64}" alt="Flint">
+
+  <div class="off-badge"><span class="pct-promo">0</span>% OFF</div>
+
+  <div class="band">
+    <div class="title">{titulo_placa}</div>
+
+    <div class="price-row">
+      <!-- PRECIO: hotsale = precio promocional de TN (no usar precio_original acá) -->
+      <div class="price" data-hot>{precio_hotsale_formateado}</div>
+      <div class="strike" data-orig>{precio_original_formateado}</div>
+    </div>
+
+    <div class="pills">
+      <!-- TRANSFERENCIA: precio_efectivo = hotsale x descuento_efectivo_factor (0.90) -->
+      <div class="pill pill-deal" data-efe-wrap><span class="pct-efe">10</span>% OFF transf.<b data-efe>{precio_efectivo_formateado}</b></div>
+      <div class="pill pill-cuotas">{cuotas_num} cuotas s/interés<b>{cuota_formateada}</b></div>
+    </div>
+
+    <div class="footnote"><span>It's not powder, it's power</span><span>flint.com.ar</span></div>
+  </div>
+
+  <script>
+  function num(s) { return parseInt((s || '').replace(/[^0-9]/g, ''), 10) || 0; }
+  function adjust() {
+    var o = document.querySelector('[data-orig]');
+    var h = document.querySelector('[data-hot]');
+    var e = document.querySelector('[data-efe]');
+    var vo = num(o && o.textContent), vh = num(h && h.textContent), ve = num(e && e.textContent);
+    var pp = vo > 0 ? Math.round((1 - vh / vo) * 100) : 0;
+    if (pp < 1) {
+      if (o) o.style.display = 'none';
+      var b = document.querySelector('.off-badge'); if (b) b.style.display = 'none';
+    } else {
+      document.querySelectorAll('.pct-promo').forEach(function (n) { n.textContent = pp; });
+    }
+    var pe = vh > 0 && ve > 0 ? Math.round((1 - ve / vh) * 100) : 0;
+    if (pe < 1) { var w = document.querySelector('[data-efe-wrap]'); if (w) w.style.display = 'none'; }
+    else document.querySelectorAll('.pct-efe').forEach(function (n) { n.textContent = pe; });
+    /* título: achica hasta 40px antes de cortar con ellipsis */
+    var t = document.querySelector('.title');
+    if (t) {
+      var s = parseFloat(getComputedStyle(t).fontSize), g = 0;
+      while (t.scrollWidth > t.clientWidth + 1 && s > 40 && g < 200) { s -= 1; t.style.fontSize = s + 'px'; g++; }
+    }
+  }
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(adjust); } else { window.addEventListener('load', adjust); }
+  </script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!-- META
+nombre: cuotas_4x5
+aspect_ratio: 4:5
+width: 1080
+height: 1350
+descripcion: Placa cuotas Flint 4:5 - cuota protagonista sobre bloque amarillo, total y transferencia abajo
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Archivo:wght@400;600;700;800&display=swap');
+
+  :root {
+    --ink: #000000;
+    --footer: #1D1D1B;
+    --yellow: #F6B01D;
+    --red: #E84542;
+    --cream: #EFE8CE;
+    --deal: #249C55;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    height: 1350px;
+    position: relative;
+    overflow: hidden;
+    background: var(--cream);
+    font-family: 'Archivo', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .photo {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1080px;
+    height: 860px;
+    object-fit: cover;
+    object-position: center 35%;
+  }
+
+  .logo {
+    position: absolute;
+    top: 40px; left: 44px;
+    width: 210px;
+    height: auto;
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,.18));
+  }
+
+  /* Sello "SIN INTERÉS" estilo sticker, como el logo */
+  .stamp {
+    position: absolute;
+    top: 50px; right: 46px;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: var(--red);
+    border: 7px solid var(--footer);
+    box-shadow: 8px 8px 0 var(--footer);
+    color: var(--cream);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'Big Shoulders Display', Impact, sans-serif;
+    font-weight: 900;
+    text-transform: uppercase;
+    line-height: .9;
+    transform: rotate(-8deg);
+    text-align: center;
+  }
+  .stamp .n { font-size: 96px; }
+  .stamp .t { font-size: 27px; letter-spacing: .5px; line-height: .95; }
+
+  .band {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 580px;
+    background: var(--yellow);
+    clip-path: polygon(0 0, 100% 66px, 100% 100%, 0 100%);
+    padding: 92px 56px 0;
+    color: var(--ink);
+  }
+  .band::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 80px;
+    background: var(--footer);
+    clip-path: polygon(0 0, 100% 66px, 100% 80px, 0 14px);
+  }
+
+  .label {
+    font-family: 'Big Shoulders Display', Impact, sans-serif;
+    font-weight: 800;
+    font-size: 46px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .cuota {
+    font-family: 'Big Shoulders Display', Impact, sans-serif;
+    font-weight: 900;
+    font-size: 210px;
+    line-height: .84;
+    letter-spacing: -2px;
+    margin: 30px 0 22px;
+  }
+
+  .title {
+    font-family: 'Big Shoulders Display', Impact, sans-serif;
+    font-weight: 800;
+    font-size: 50px;
+    line-height: 1.02;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-top: 16px;
+    border-top: 4px solid var(--ink);
+    margin-bottom: 20px;
+  }
+
+  .row { display: flex; align-items: center; gap: 22px; }
+  .total { font-size: 30px; font-weight: 600; }
+  .total b { font-weight: 800; }
+  .total s { font-weight: 600; opacity: .62; margin-left: 10px; font-size: 26px; text-decoration-thickness: 2px; }
+  .pill {
+    margin-left: auto;
+    font-size: 27px;
+    font-weight: 700;
+    padding: 15px 24px;
+    border-radius: 999px;
+    background: var(--footer);
+    color: var(--cream);
+    white-space: nowrap;
+  }
+  .pill b { font-weight: 800; color: var(--yellow); margin-left: 6px; }
+</style>
+</head>
+<body>
+  <img class="photo" src="{imagen_b64}" alt="producto">
+  <img class="logo" src="{logo_b64}" alt="Flint">
+
+  <div class="stamp"><span class="n">{cuotas_num}</span><span class="t">cuotas<br>sin interés</span></div>
+
+  <div class="band">
+    <!-- CUOTA: cuota_formateada se calcula sobre hotsale (cuotas_sobre_promocional: true) -->
+    <div class="label">{cuotas_num} cuotas sin interés de</div>
+    <div class="cuota">{cuota_formateada}</div>
+    <div class="title">{titulo_placa}</div>
+    <div class="row">
+      <div class="total">Total <b data-hot>{precio_hotsale_formateado}</b><s data-orig>{precio_original_formateado}</s></div>
+      <!-- TRANSFERENCIA: precio_efectivo = hotsale x 0.90 -->
+      <div class="pill" data-efe-wrap><span class="pct-efe">10</span>% OFF transf.<b data-efe>{precio_efectivo_formateado}</b></div>
+    </div>
+  </div>
+
+  <script>
+  function num(s) { return parseInt((s || '').replace(/[^0-9]/g, ''), 10) || 0; }
+  function shrink(el, min) {
+    if (!el) return;
+    var s = parseFloat(getComputedStyle(el).fontSize), g = 0;
+    while (el.scrollWidth > el.clientWidth + 1 && s > min && g < 200) { s -= 1; el.style.fontSize = s + 'px'; g++; }
+  }
+  function adjust() {
+    var o = document.querySelector('[data-orig]');
+    var h = document.querySelector('[data-hot]');
+    var e = document.querySelector('[data-efe]');
+    var vo = num(o && o.textContent), vh = num(h && h.textContent), ve = num(e && e.textContent);
+    if (!(vo > vh)) { if (o) o.style.display = 'none'; }
+    var pe = vh > 0 && ve > 0 ? Math.round((1 - ve / vh) * 100) : 0;
+    if (pe < 1) { var w = document.querySelector('[data-efe-wrap]'); if (w) w.style.display = 'none'; }
+    else document.querySelectorAll('.pct-efe').forEach(function (n) { n.textContent = pe; });
+    shrink(document.querySelector('.title'), 38);
+  }
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(adjust); } else { window.addEventListener('load', adjust); }
+  </script>
+</body>
+</html>
