@@ -72,22 +72,62 @@ def paso_html(estado: str, icono: str, label: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Definición de las 12 placas
+# Definición de las placas
 #   pasos: lista de (icono, label). El índice activo define el resto.
 #   activo: índice (0-based) del paso actual
+#
+# v2 (22/10/2026): a pedido del depósito, la confirmación ya no muestra
+# "En preparación". Las placas *_conf marcan el paso 1 (pago / pedido
+# confirmado); las *_prep quedan para la etapa nueva "preparacion", que sale
+# cuando en Tiendanube el pedido pasa a En preparación / Por enviar.
+# Entregas en moto: lunes a viernes (antes decía lunes a sábado).
 # ---------------------------------------------------------------------------
+PASOS_MOTO_ONLINE = [("check", "Pago<br>realizado"), ("caja", "En<br>preparación"),
+                     ("moto", "En<br>camino"), ("casa", "Entregado")]
+PASOS_MOTO_EFEC = [("check", "Pedido<br>confirmado"), ("caja", "En<br>preparación"),
+                   ("moto", "En camino<br>💵"), ("casa", "Entregado")]
+PASOS_CORREO = [("check", "Pago<br>realizado"), ("caja", "En<br>preparación"),
+                ("moto", "Despachado"), ("casa", "En tu casa")]
+PASOS_SUCURSAL = [("check", "Pago<br>realizado"), ("caja", "En<br>preparación"),
+                  ("moto", "Camino a<br>sucursal"), ("local", "Listo para<br>retirar")]
+
 PLACAS = {
+    # ---------- CONFIRMACION (v2): paso 1 activo ----------
+    "moto_online_conf": {
+        "subtitulo": "Envío en moto · CABA y GBA",
+        "nota": "Entregas de lunes a viernes, de 14 a 22hs",
+        "pasos": PASOS_MOTO_ONLINE,
+        "activo": 0,
+    },
+    "moto_efec_conf": {
+        "subtitulo": "Envío en moto · CABA y GBA · Efectivo",
+        "nota": "Tené el efectivo listo para la entrega",
+        "pasos": PASOS_MOTO_EFEC,
+        "activo": 0,
+    },
+    "correo_conf": {
+        "subtitulo": "Envío por correo a domicilio",
+        "nota": "Los tiempos de entrega dependen del correo",
+        "pasos": PASOS_CORREO,
+        "activo": 0,
+    },
+    "sucursal_conf": {
+        "subtitulo": "Envío a sucursal de retiro",
+        "nota": "Te avisamos cuando llegue a la sucursal",
+        "pasos": PASOS_SUCURSAL,
+        "activo": 0,
+    },
     # ---------- MOTO (envío propio CABA/GBA) ----------
     "moto_online_prep": {
         "subtitulo": "Envío en moto · CABA y GBA",
-        "nota": "Entregas de lunes a sábado, de 14 a 22hs",
+        "nota": "Entregas de lunes a viernes, de 14 a 22hs",
         "pasos": [("check", "Pago<br>realizado"), ("caja", "En<br>preparación"),
                   ("moto", "En<br>camino"), ("casa", "Entregado")],
         "activo": 1,
     },
     "moto_online_camino": {
         "subtitulo": "Envío en moto · CABA y GBA",
-        "nota": "Entregas de lunes a sábado, de 14 a 22hs",
+        "nota": "Entregas de lunes a viernes, de 14 a 22hs",
         "pasos": [("check", "Pago<br>realizado"), ("caja", "En<br>preparación"),
                   ("moto", "En<br>camino"), ("casa", "Entregado")],
         "activo": 2,
@@ -173,13 +213,16 @@ PLACAS = {
 # Mapeo template de WhatsApp -> placa. Es la tabla que consume el resolver n8n.
 # ---------------------------------------------------------------------------
 MAPEO_TEMPLATES = {
-    "seg_conf_online_moto": "moto_online_prep",
-    "seg_conf_efec_moto": "moto_efec_prep",
-    "seg_conf_online_correo": "correo_prep",
+    # v2: la confirmacion usa las placas *_conf (paso 1). Las *_prep son de la
+    # etapa "preparacion" y el resolver (v2.9) las elige por tipo de envio.
+    "seg_conf_online_moto": "moto_online_conf",
+    "seg_conf_efec_moto": "moto_efec_conf",
+    "seg_conf_online_correo": "correo_conf",
+    "seg_conf_online_sucursal": "sucursal_conf",
     "seg_conf_online_retiro": "retiro_online_prep",
     "seg_conf_efec_retiro": "retiro_efec_prep",
     "seg_pago_pendiente": "pago_pendiente",
-    "seg_pago_acreditado": "moto_online_prep",   # genérico "ya pagaste, preparando"
+    # seg_pago_acreditado y seg_preparacion: placa por tipo de envio (resolver v2.9)
     "seg_camino_moto": "moto_online_camino",
     "seg_camino_moto_efec": "moto_efec_camino",
     "seg_despachado_correo": "correo_despachado",
