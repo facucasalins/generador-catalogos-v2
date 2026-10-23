@@ -81,6 +81,9 @@ def paso_html(estado: str, icono: str, label: str) -> str:
 # confirmado); las *_prep quedan para la etapa nueva "preparacion", que sale
 # cuando en Tiendanube el pedido pasa a En preparación / Por enviar.
 # Entregas en moto: lunes a viernes (antes decía lunes a sábado).
+# v2.1 (23/10): en confirmación y preparación de efectivo la nota dice
+# "Abonás en efectivo al recibirlo" ("Tené el efectivo listo" sugería que llegaba hoy).
+# En camino se mantiene "Tené el efectivo listo": ese día sí llega.
 # ---------------------------------------------------------------------------
 PASOS_MOTO_ONLINE = [("check", "Pago<br>realizado"), ("caja", "En<br>preparación"),
                      ("moto", "En<br>camino"), ("casa", "Entregado")]
@@ -101,7 +104,7 @@ PLACAS = {
     },
     "moto_efec_conf": {
         "subtitulo": "Envío en moto · CABA y GBA · Efectivo",
-        "nota": "Tené el efectivo listo para la entrega",
+        "nota": "Abonás en efectivo al recibirlo",
         "pasos": PASOS_MOTO_EFEC,
         "activo": 0,
     },
@@ -134,7 +137,7 @@ PLACAS = {
     },
     "moto_efec_prep": {
         "subtitulo": "Envío en moto · CABA y GBA · Efectivo",
-        "nota": "Tené el efectivo listo para la entrega",
+        "nota": "Abonás en efectivo al recibirlo",
         "pasos": [("check", "Pedido<br>confirmado"), ("caja", "En<br>preparación"),
                   ("moto", "En camino<br>💵"), ("casa", "Entregado")],
         "activo": 1,
