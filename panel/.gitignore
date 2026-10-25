@@ -1,0 +1,7 @@
+.next/
+out/
+node_modules/
+# Lo genera scripts/sync-clientes.mjs en cada build a partir de ../clients
+generated/
+*.tsbuildinfo
+.vercel

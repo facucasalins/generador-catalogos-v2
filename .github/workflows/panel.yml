@@ -1,0 +1,48 @@
+name: Panel - Validación
+
+# Valida el panel web (panel/) cuando cambia el panel, los templates o la
+# lógica de render del pipeline. Incluye el test de paridad: la preview del
+# panel tiene que calcular las mismas variables que src/estilo/playwright_html.py.
+on:
+  pull_request:
+    branches: [main]
+    paths: ['panel/**', 'clients/**', 'src/estilo/**', 'src/core/**', '.github/workflows/panel.yml']
+  push:
+    branches: [main]
+    paths: ['panel/**', 'clients/**', 'src/estilo/**', 'src/core/**', '.github/workflows/panel.yml']
+  workflow_dispatch:
+
+jobs:
+  panel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: panel
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: panel/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Dependencias del pipeline (para el test de paridad)
+        working-directory: .
+        run: pip install -r requirements.txt
+
+      - run: npm ci
+      - run: npm run sync
+      - run: npm run typecheck
+      - name: Tests (incluye paridad con Python)
+        run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
