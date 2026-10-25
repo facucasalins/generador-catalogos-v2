@@ -32,6 +32,9 @@ from src.core.modelo_datos import (
 from src.core.sheets_client import ConfigSheets, SheetsClient
 from src.inventario.tiendanube import ConfigTiendanube, TiendanubeInventario
 from src.inventario.sheet_sink import escribir_inventario
+from src.inventario.precios_override import (
+    ConfigPreciosOverride, leer_precios_override, aplicar_precios_override,
+)
 from src.seleccion.sync import (
     sync_catalogo, sync_templates, inicializar_pestaña_seleccion,
 )
@@ -265,6 +268,20 @@ def correr_pipeline(
     ))
     escribir_inventario(inv_client, productos)
     log.info("[Bloque 1] OK")
+
+    # Precios de evento (Cyber, Hot Sale...) desde una planilla externa.
+    # Va DESPUÉS de escribir Inventario (que queda espejo fiel de TN) y ANTES
+    # de Selección/Estilo/Feeds, así placa y feed muestran el mismo precio.
+    cfg_override = cfg_inv.get("precios_override")
+    if cfg_override:
+        mapa_precios = leer_precios_override(ConfigPreciosOverride(
+            sheet_id=cfg_override["sheet_id"],
+            pestaña=cfg_override["pestaña"],
+            col_sku=cfg_override.get("col_sku", "URL (handle TN)"),
+            col_precio_lista=cfg_override.get("col_precio_lista", "Precio full"),
+            col_precio_promo=cfg_override.get("col_precio_promo", "Precio Cyber"),
+        ))
+        aplicar_precios_override(productos, mapa_precios)
 
     if solo_inventario:
         resultado.fin = datetime.now()
