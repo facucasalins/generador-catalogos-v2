@@ -19,6 +19,11 @@ inventario:
     sheet_destino:
       id: "1rW242O3H8HK5wGM6UyjhacDsDF0TR7r3Nft5GIMNFwU"
       pestaña: Inventario
+  # Precios de evento (Cyber 2027): pisan precio_lista / precio_promocional de TN
+  # por URL. Para volver a precios de TN, borrar este bloque.
+  precios_override:
+    sheet_id: "1U6NkiAQiiFBLrLNkzz-DcaXgsLltld3iMtwU018TSpM"
+    pestaña: "MAESTRA CYBER"
 
 # ============ BLOQUE 2: SELECCIÓN ============
 seleccion:
