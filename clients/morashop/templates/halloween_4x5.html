@@ -1,0 +1,195 @@
+<!-- META
+nombre: halloween_4x5
+aspect_ratio: 4:5
+width: 1080
+height: 1350
+descripcion: Placa Mora Halloween 4:5 — noche violeta, luna, murcielagos, banda naranja con goteo
+-->
+<!-- PRICING: tachado = precio_hotsale_formateado | principal = precio_efectivo_formateado. NO cambiar. -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=Archivo+Black&display=swap');
+
+    :root {
+        --night: #1A0D33;
+        --night-deep: #0B0614;
+        --purple: #6B2FB3;
+        --pumpkin: #F2741C;
+        --pumpkin-deep: #D85A0B;
+        --moon: #FBEFC4;
+        --ink: #0B0614;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        width: 1080px; height: 1350px;
+        font-family: 'Archivo', sans-serif;
+        position: relative; overflow: hidden;
+        background:
+            radial-gradient(70% 45% at 50% 18%, rgba(107,47,179,0.55) 0%, rgba(107,47,179,0) 70%),
+            linear-gradient(180deg, var(--night) 0%, var(--night-deep) 78%);
+    }
+
+    /* Luna */
+    .moon {
+        position: absolute; top: -80px; right: -70px;
+        width: 300px; height: 300px; border-radius: 50%;
+        background: radial-gradient(circle at 40% 40%, #FFF8DC 0%, var(--moon) 55%, #E9D79A 100%);
+        box-shadow: 0 0 90px 30px rgba(251,239,196,0.20);
+        z-index: 1;
+    }
+    .moon::after {
+        content: ""; position: absolute; inset: 0; border-radius: 50%;
+        background:
+            radial-gradient(circle at 30% 62%, rgba(180,160,100,0.35) 0 22px, transparent 23px),
+            radial-gradient(circle at 58% 78%, rgba(180,160,100,0.30) 0 14px, transparent 15px),
+            radial-gradient(circle at 45% 30%, rgba(180,160,100,0.25) 0 10px, transparent 11px);
+    }
+
+    .web { position: absolute; top: 0; left: 0; z-index: 1; opacity: 0.5; }
+    .bat { position: absolute; z-index: 2; }
+
+    .logo {
+        position: absolute; top: 40px; left: 50%;
+        transform: translateX(-50%);
+        width: 150px; height: auto; z-index: 6;
+        filter: drop-shadow(0 0 18px rgba(242,116,28,0.45));
+    }
+
+    /* Panel del producto */
+    .product-zone {
+        position: absolute; top: 262px; left: 80px; right: 80px; height: 630px;
+        border-radius: 26px; background: #FFFFFF;
+        box-shadow: 0 0 0 5px var(--pumpkin), 0 0 0 11px var(--night-deep), 0 0 60px 6px rgba(242,116,28,0.35);
+        display: flex; align-items: center; justify-content: center;
+        padding: 36px; z-index: 3; overflow: hidden;
+    }
+    .product-image { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+    .tag {
+        position: absolute; top: 234px; left: 50%; transform: translateX(-50%) rotate(-2deg);
+        background: var(--purple); color: #fff;
+        font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: 4px;
+        padding: 10px 26px; border-radius: 8px; z-index: 7;
+        border: 3px solid var(--night-deep);
+        box-shadow: 0 6px 0 var(--night-deep);
+        white-space: nowrap;
+    }
+    .tag .p { color: var(--pumpkin); }
+
+    /* Titulo (una linea, ellipsis) */
+    .titulo {
+        position: absolute; top: 914px; left: 80px; right: 80px; height: 44px;
+        font-family: 'Archivo Black', sans-serif; font-size: 36px; line-height: 44px;
+        color: #fff; text-align: center;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        z-index: 4;
+    }
+
+    /* Banda de precios naranja con goteo */
+    .price-band {
+        position: absolute; top: 978px; left: 0; right: 0; height: 272px;
+        background: linear-gradient(180deg, var(--pumpkin) 0%, var(--pumpkin-deep) 100%);
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 34px 64px 0; color: var(--ink); z-index: 5;
+    }
+    .drips { position: absolute; top: -1px; left: 0; width: 1080px; height: 64px; z-index: 6; }
+
+    .price-left { display: flex; flex-direction: column; align-items: flex-start; }
+    .desde { font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: 3px; color: var(--night); }
+    .precio-tachado { font-size: 36px; font-weight: 700; text-decoration: line-through; opacity: 0.6; margin: 2px 0; }
+    .precio-principal {
+        font-family: 'Archivo Black', sans-serif; font-size: 128px; line-height: 0.92; letter-spacing: -3px;
+        color: var(--ink);
+        text-shadow: 4px 4px 0 rgba(255,255,255,0.25);
+    }
+    .price-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .sin-interes {
+        background: var(--ink); color: var(--pumpkin);
+        font-family: 'Archivo Black', sans-serif; font-size: 15px; letter-spacing: 1.5px;
+        padding: 6px 14px; border-radius: 4px; transform: rotate(5deg);
+    }
+    .cuotas-num { font-family: 'Archivo Black', sans-serif; font-size: 58px; line-height: 1; }
+    .cuotas-monto { font-size: 28px; font-weight: 600; }
+
+    .bottom-banner {
+        position: absolute; bottom: 0; left: 0; right: 0; height: 100px;
+        background: var(--night-deep);
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 56px; color: #fff; z-index: 5;
+    }
+    .banner-left { display: flex; flex-direction: column; }
+    .banner-legal { font-size: 18px; font-weight: 700; letter-spacing: 0.4px; }
+    .banner-legal-small { font-size: 14px; margin-top: 2px; opacity: 0.85; }
+    .banner-brand { font-family: 'Archivo Black', sans-serif; font-size: 34px; letter-spacing: 2px; }
+    .banner-brand .x { color: var(--pumpkin); }
+</style>
+</head>
+<body>
+    <div class="moon"></div>
+
+    <svg class="web" width="300" height="300" viewBox="0 0 300 300">
+        <g stroke="#CDBDF0" stroke-width="2" fill="none">
+            <path d="M0 0 L300 0 M0 0 L280 120 M0 0 L200 220 M0 0 L110 290 M0 0 L0 300"/>
+            <path d="M60 0 Q56 24 54 23 Q46 40 40 47 Q28 55 20 57 Q8 60 0 60"/>
+            <path d="M130 0 Q124 50 118 51 Q102 86 88 100 Q62 118 44 122 Q18 128 0 130"/>
+            <path d="M210 0 Q200 80 190 82 Q166 138 142 160 Q100 190 70 196 Q30 204 0 210"/>
+        </g>
+    </svg>
+
+    <svg class="bat" style="top:70px;left:250px;width:84px;transform:rotate(-12deg)" viewBox="0 0 28 14"><path d="M0 9 Q4 1 9 6 Q11 2 12.5 5 L14 3 L15.5 5 Q17 2 19 6 Q24 1 28 9 Q23 7 19.5 11 Q16.5 8 14 12 Q11.5 8 8.5 11 Q5 7 0 9Z" fill="#000" stroke="#4A2A80" stroke-width="0.4"/></svg>
+    <svg class="bat" style="top:170px;left:140px;width:52px;transform:rotate(10deg)" viewBox="0 0 28 14"><path d="M0 9 Q4 1 9 6 Q11 2 12.5 5 L14 3 L15.5 5 Q17 2 19 6 Q24 1 28 9 Q23 7 19.5 11 Q16.5 8 14 12 Q11.5 8 8.5 11 Q5 7 0 9Z" fill="#000" stroke="#4A2A80" stroke-width="0.4"/></svg>
+    <svg class="bat" style="top:150px;right:250px;width:66px;transform:rotate(8deg)" viewBox="0 0 28 14"><path d="M0 9 Q4 1 9 6 Q11 2 12.5 5 L14 3 L15.5 5 Q17 2 19 6 Q24 1 28 9 Q23 7 19.5 11 Q16.5 8 14 12 Q11.5 8 8.5 11 Q5 7 0 9Z" fill="#000" stroke="#4A2A80" stroke-width="0.4"/></svg>
+
+    <img class="logo" src="{logo_b64}" alt="logo">
+
+    <div class="tag">ESPECIAL <span class="p">HALLOWEEN</span></div>
+
+    <div class="product-zone">
+        <img class="product-image" src="{imagen_b64}" alt="producto">
+    </div>
+
+    <div class="titulo">{titulo_placa}</div>
+
+    <div class="price-band">
+        <svg class="drips" viewBox="0 0 1080 64" preserveAspectRatio="none">
+            <path fill="#0B0614" d="M0 0 H1080 V10
+                C1060 10 1056 34 1046 34 C1036 34 1034 10 1012 10
+                C990 10 984 52 968 52 C952 52 950 10 920 10
+                C900 10 896 26 888 26 C880 26 876 10 850 10
+                C826 10 820 44 806 44 C792 44 790 10 760 10
+                C740 10 736 30 726 30 C716 30 712 10 690 10
+                C664 10 658 56 640 56 C622 56 620 10 590 10
+                C570 10 566 24 558 24 C550 24 546 10 520 10
+                C496 10 490 42 476 42 C462 42 460 10 430 10
+                C410 10 404 30 394 30 C384 30 380 10 356 10
+                C330 10 324 54 306 54 C288 54 286 10 256 10
+                C236 10 232 26 224 26 C216 26 212 10 186 10
+                C162 10 156 40 142 40 C128 40 126 10 96 10
+                C76 10 72 28 62 28 C52 28 48 10 26 10 C14 10 10 18 0 18 Z"/>
+        </svg>
+        <div class="price-left">
+            <div class="desde">DESDE</div>
+            <div class="precio-tachado">{precio_hotsale_formateado}</div>
+            <div class="precio-principal">{precio_efectivo_formateado}</div>
+        </div>
+        <div class="price-right">
+            <div class="sin-interes">SIN INTERÉS</div>
+            <div class="cuotas-num"><span>{cuotas_num}</span> CUOTAS</div>
+            <div class="cuotas-monto">de <span>{cuota_formateada}</span></div>
+        </div>
+    </div>
+
+    <div class="bottom-banner">
+        <div class="banner-left">
+            <div class="banner-legal">Precio final abonando en Efectivo.</div>
+            <div class="banner-legal-small">Válido durante Mora Halloween.</div>
+        </div>
+        <div class="banner-brand"><span class="x">×</span> <span>{brand_name}</span></div>
+    </div>
+
+</body>
+</html>
