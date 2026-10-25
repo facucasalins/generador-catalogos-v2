@@ -51,7 +51,7 @@ table { border-collapse: collapse; width: 100%; }
 :focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 
 /* ---------- Estructura ---------- */
-.marco { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+.marco { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
 .riel {
   background: var(--superficie);
   border-right: 1px solid var(--linea);
@@ -73,10 +73,11 @@ table { border-collapse: collapse; width: 100%; }
 .riel-pie { margin-top: auto; padding: 0 8px; font-size: var(--texto-xs); color: var(--tinta-suave); display: flex; flex-direction: column; gap: 6px; }
 .riel-pie button { all: unset; cursor: pointer; color: var(--tinta); text-decoration: underline; }
 
-.contenido { padding: 28px 36px 64px; max-width: 1400px; width: 100%; }
+.contenido { padding: 28px 36px 64px; max-width: 1400px; width: 100%; min-width: 0; }
+.selector { max-width: 100%; }
 
 @media (max-width: 860px) {
-  .marco { grid-template-columns: 1fr; }
+  .marco { grid-template-columns: minmax(0, 1fr); }
   .riel { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px 16px; gap: 12px; }
   .riel-grupo { flex-direction: row; flex-wrap: wrap; }
   .riel-titulo, .riel-pie { display: none; }

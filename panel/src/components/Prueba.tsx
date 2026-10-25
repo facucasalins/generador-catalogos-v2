@@ -45,7 +45,6 @@ export function HtmlEscalado({ html, ancho, alto, titulo }: { html: string; anch
           title={titulo}
           srcDoc={html}
           sandbox="allow-scripts"
-          loading="lazy"
           width={ancho}
           height={alto}
           style={{ width: ancho, height: alto, transform: `scale(${escala})` }}
