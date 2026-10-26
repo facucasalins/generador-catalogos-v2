@@ -8,7 +8,27 @@ export type Filas = Celda[][];
 // Sheets (misma cuenta de servicio): 60 s evita que cada recarga del panel
 // gaste lecturas y sigue mostrando datos frescos.
 const TTL_MS = 60_000;
+// Los nombres de pestañas casi nunca cambian: cachearlos ahorra la mitad de las lecturas.
+const TTL_PESTANAS_MS = 10 * 60_000;
 const cache = new Map<string, { vence: number; valor: Promise<Record<string, Filas>> }>();
+// Última lectura buena de cada clave: si Google corta por cuota, se muestra esto.
+const ultimaBuena = new Map<string, Record<string, Filas>>();
+const cachePestanas = new Map<string, { vence: number; valor: Promise<Set<string>> }>();
+const ESPERAS_429_MS = [1_500, 4_000, 8_000];
+
+const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** GET a la API de Sheets reintentando si Google limita por cuota (429). */
+async function getSheets(url: string, token: string, sheetId: string): Promise<Response> {
+  for (let intento = 0; ; intento++) {
+    const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+    if (resp.status !== 429 || intento >= ESPERAS_429_MS.length) {
+      if (!resp.ok) throw await errorDeRespuesta(resp, sheetId);
+      return resp;
+    }
+    await dormir(ESPERAS_429_MS[intento]);
+  }
+}
 
 export class ErrorSheets extends Error {
   constructor(
@@ -31,9 +51,21 @@ export async function leerPestanas(sheetId: string, pestanas: string[]): Promise
   const enCache = cache.get(clave);
   if (enCache && enCache.vence > ahora) return enCache.valor;
 
-  const valor = leerSinCache(sheetId, pestanas);
+  const valor = leerSinCache(sheetId, pestanas)
+    .then((v) => {
+      ultimaBuena.set(clave, v);
+      return v;
+    })
+    .catch((e) => {
+      const previa = ultimaBuena.get(clave);
+      if (e instanceof ErrorSheets && e.status === 429 && previa) {
+        console.warn(`[sheets] Cuota agotada; muestro la última lectura de ${sheetId}.`);
+        return previa;
+      }
+      cache.delete(clave);
+      throw e;
+    });
   cache.set(clave, { vence: ahora + TTL_MS, valor });
-  valor.catch(() => cache.delete(clave));
   return valor;
 }
 
@@ -48,11 +80,7 @@ async function leerSinCache(sheetId: string, pestanas: string[]): Promise<Record
 
   const params = new URLSearchParams({ valueRenderOption: "UNFORMATTED_VALUE", majorDimension: "ROWS" });
   for (const p of aLeer) params.append("ranges", `'${p.replace(/'/g, "''")}'`);
-  const resp = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchGet?${params}`,
-    { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
-  );
-  if (!resp.ok) throw await errorDeRespuesta(resp, sheetId);
+  const resp = await getSheets(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchGet?${params}`, token, sheetId);
   const json = (await resp.json()) as { valueRanges?: { values?: Filas }[] };
   (json.valueRanges ?? []).forEach((vr, i) => {
     resultado[aLeer[i]] = vr.values ?? [];
@@ -67,13 +95,17 @@ export async function nombresPestanas(sheetId: string): Promise<string[]> {
 }
 
 async function pestanasExistentes(sheetId: string, token: string): Promise<Set<string>> {
-  const resp = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`,
-    { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
-  );
-  if (!resp.ok) throw await errorDeRespuesta(resp, sheetId);
-  const json = (await resp.json()) as { sheets?: { properties: { title: string } }[] };
-  return new Set((json.sheets ?? []).map((s) => s.properties.title));
+  const ahora = Date.now();
+  const enCache = cachePestanas.get(sheetId);
+  if (enCache && enCache.vence > ahora) return enCache.valor;
+  const valor = (async () => {
+    const resp = await getSheets(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`, token, sheetId);
+    const json = (await resp.json()) as { sheets?: { properties: { title: string } }[] };
+    return new Set((json.sheets ?? []).map((s) => s.properties.title));
+  })();
+  cachePestanas.set(sheetId, { vence: ahora + TTL_PESTANAS_MS, valor });
+  valor.catch(() => cachePestanas.delete(sheetId));
+  return valor;
 }
 
 async function errorDeRespuesta(resp: Response, sheetId: string): Promise<ErrorSheets> {
@@ -84,14 +116,15 @@ async function errorDeRespuesta(resp: Response, sheetId: string): Promise<ErrorS
     );
   }
   if (resp.status === 429) {
-    return new ErrorSheets("Google Sheets limitó las lecturas por cuota. Probá de nuevo en un minuto.", 429);
+    return new ErrorSheets("Google Sheets limitó las lecturas por cuota (suele pasar mientras corre el pipeline del cliente). Probá de nuevo en un minuto.", 429);
   }
   const texto = await resp.text().catch(() => "");
   return new ErrorSheets(`Error ${resp.status} leyendo la sheet ${sheetId}: ${texto.slice(0, 200)}`, resp.status);
 }
 
 /** Descarta lo cacheado de una sheet: después de escribir, la próxima lectura va a Google. */
-export function invalidarCache(sheetId: string): void {
+export function invalidarCache(sheetId: string, { estructura = false } = {}): void {
+  if (estructura) cachePestanas.delete(sheetId);
   for (const clave of cache.keys()) if (clave.startsWith(`${sheetId}::`)) cache.delete(clave);
 }
 
@@ -128,11 +161,7 @@ export async function escribirRangos(sheetId: string, datos: { rango: string; va
 /** ID numérico de una pestaña (lo piden las operaciones de estructura). */
 export async function idPestana(sheetId: string, pestana: string): Promise<number> {
   const token = await tokenGoogle();
-  const resp = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties(sheetId,title)`,
-    { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
-  );
-  if (!resp.ok) throw await errorDeRespuesta(resp, sheetId);
+  const resp = await getSheets(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties(sheetId,title)`, token, sheetId);
   const json = (await resp.json()) as { sheets: { properties: { sheetId: number; title: string } }[] };
   const p = json.sheets.find((s) => s.properties.title === pestana);
   if (!p) throw new ErrorSheets(`La sheet ${sheetId} no tiene la pestaña «${pestana}».`, 404);
@@ -143,7 +172,7 @@ export async function idPestana(sheetId: string, pestana: string): Promise<numbe
 export async function actualizarEstructura(sheetId: string, requests: unknown[]): Promise<void> {
   if (requests.length === 0) return;
   await llamar(sheetId, ":batchUpdate", { requests });
-  invalidarCache(sheetId);
+  invalidarCache(sheetId, { estructura: true });
 }
 
 /** Letra de columna A1 para un índice 0-based (0 → A, 26 → AA). */
