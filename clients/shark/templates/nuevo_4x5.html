@@ -13,10 +13,14 @@ descripcion: Placa Halloween Shark 4:5 (efecto, precio en tipografía chorreada)
 <!--
   HALLOWEEN "EFECTO SHARK" — basada en la pieza oficial de la marca
   (violeta + verde azulado de fondo, verde lima de acento, títulos chorreados).
-  PRECIOS (guardrail):
-  - Tachado = {precio_hotsale_formateado} (precio de la web: promo TN, o lista si no hay promo).
-  - Grande  = {precio_efectivo_formateado} = hotsale × descuento_efectivo_factor.
-    Con cupón 20% + transferencia 20% encadenados → descuento_efectivo_factor = 0.64.
+  PRECIOS (guardrail) — el descuento del CÓDIGO se calcula acá, en el template:
+  - pipeline.yaml queda como siempre: descuento_efectivo_factor = 0.80 (transferencia).
+    NO cambiarlo: lo usan también default_4x5 y cuotas_4x5.
+  - CUPON_FACTOR (script al final) = 0.80 → código HALLOWEEN 20%.
+  - Tachado     = {precio_hotsale_formateado} (precio de la web: promo TN, o lista si no hay promo).
+  - Grande      = {precio_efectivo} × CUPON_FACTOR  → hotsale × 0.80 (transf.) × 0.80 (código)
+  - Pill cuotas = {precio_promocional} × CUPON_FACTOR / cuotas  → cuotas sobre el precio con código, sin transferencia
+  - Si el script falla, queda el valor que pone el pipeline (sin el 20% del código).
   Fuentes embebidas en base64.
 -->
 <style>
@@ -157,14 +161,27 @@ descripcion: Placa Halloween Shark 4:5 (efecto, precio en tipografía chorreada)
     <div class="info-zone">
         <div class="titulo">Descuentos Tétricos</div>
         <div class="tachado">{precio_hotsale_formateado}</div>
-        <div class="precio-principal">{precio_efectivo_formateado}</div>
+        <div class="precio-principal" data-calc="total" data-base="{precio_efectivo}">{precio_efectivo_formateado}</div>
         <div class="condicion">Pagando con <b>transferencia bancaria</b> y con el</div>
         <div class="codigo">Código: <span>HALLOWEEN</span></div>
         <div class="nombre">{titulo_placa}</div>
         <div class="pills">
             <div class="pill">Envío gratis</div>
-            <div class="pill pill-cuotas">{cuotas_num} cuotas <span class="cuotas-mini">de {cuota_formateada}</span></div>
+            <div class="pill pill-cuotas">{cuotas_num} cuotas <span class="cuotas-mini">de <span data-calc="cuota" data-base="{precio_promocional}" data-cuotas="{cuotas_num}">{cuota_formateada}</span></span></div>
         </div>
     </div>
+    <script>
+        /* Descuento del código HALLOWEEN (20%), encadenado como en el checkout de Tiendanube. */
+        (function () {
+            var CUPON_FACTOR = 0.80;
+            function fmt(v) { return '$' + String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+            function num(el, attr) { var v = parseFloat(el.getAttribute(attr)); return isFinite(v) && v > 0 ? v : null; }
+            document.querySelectorAll('[data-calc]').forEach(function (el) {
+                var base = num(el, 'data-base'); if (base === null) return;
+                var cuotas = num(el, 'data-cuotas') || 1;
+                el.textContent = fmt(base * CUPON_FACTOR / (el.getAttribute('data-calc') === 'cuota' ? cuotas : 1));
+            });
+        })();
+    </script>
 </body>
 </html>
