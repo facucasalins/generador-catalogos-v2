@@ -2,10 +2,20 @@ name: ANTONIA - Pipeline completo
 
 on:
   workflow_dispatch:
+    inputs:
+      modo:
+        description: 'completo = pipeline entero; solo_inventario = solo refresca el inventario desde Tiendanube'
+        type: choice
+        options: [completo, solo_inventario]
+        default: completo
   schedule:
     # 07:13 ART = 10:13 UTC. Minuto no-redondo; escalonado con los demás
     # clientes para no pisar cuotas de APIs.
     - cron: '13 10 * * *'
+
+concurrency:
+  group: catalogos-antonia
+  cancel-in-progress: false
 
 jobs:
   pipeline:
@@ -62,8 +72,10 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OUTPUT_DIR: ${{ github.workspace }}/placas_output
+          # Corridas disparadas desde el panel con modo=solo_inventario.
+          FLAGS_MODO: ${{ inputs.modo == 'solo_inventario' && '--solo-inventario --sin-telegram' || '' }}
         run: |
-          python -m src.cli --cliente=antonia --output-dir=$OUTPUT_DIR
+          python -m src.cli --cliente=antonia --output-dir=$OUTPUT_DIR $FLAGS_MODO
 
       - name: Subir placas como artifact (para validación visual)
         if: success()

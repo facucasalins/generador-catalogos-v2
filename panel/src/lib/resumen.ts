@@ -1,11 +1,13 @@
 import "server-only";
 import { separarTemplate, type Cliente } from "./config";
 import { obtenerCorridas, obtenerInventario, obtenerSeleccion, type Corrida, type Producto } from "./datos";
+import { listarTemplates } from "./datos/templates";
 
 export type Alerta = { tipo: "error" | "alerta"; texto: string };
 
 export type ResumenCliente = {
   cliente: Cliente;
+  cantidadTemplates: number;
   productos: number;
   skusSeleccionados: number;
   placasPedidas: number;
@@ -30,7 +32,8 @@ export function motivoDescarte(p: Producto | undefined): string | null {
 
 export async function resumirCliente(cliente: Cliente): Promise<ResumenCliente> {
   const alertas: Alerta[] = [];
-  const sinMeta = cliente.templates.filter((t) => !t.tieneMeta).map((t) => t.nombre);
+  const templates = await listarTemplates(cliente).catch(() => cliente.templates);
+  const sinMeta = templates.filter((t) => !t.tieneMeta).map((t) => t.nombre);
   if (sinMeta.length) {
     alertas.push({
       tipo: "alerta",
@@ -52,7 +55,7 @@ export async function resumirCliente(cliente: Cliente): Promise<ResumenCliente> 
         texto: `${descartadas.length} ${descartadas.length === 1 ? "SKU seleccionado no va" : "SKUs seleccionados no van"} a salir: sin stock, sin publicar o fuera del inventario`,
       });
     }
-    const repo = new Set(cliente.templates.map((t) => t.nombre));
+    const repo = new Set(templates.map((t) => t.nombre));
     const huerfanas = sel.columnasTemplate.filter((c) => !repo.has(separarTemplate(c).base));
     if (huerfanas.length) {
       alertas.push({ tipo: "alerta", texto: `La Selección tiene columnas de templates que ya no existen: ${huerfanas.join(", ")}` });
@@ -63,6 +66,7 @@ export async function resumirCliente(cliente: Cliente): Promise<ResumenCliente> 
 
     return {
       cliente,
+      cantidadTemplates: templates.length,
       productos: inv.productos.length,
       skusSeleccionados: activas.length,
       placasPedidas: activas.reduce((n, f) => n + f.templates.length, 0),
@@ -75,6 +79,7 @@ export async function resumirCliente(cliente: Cliente): Promise<ResumenCliente> 
     console.error(`[resumen] ${cliente.slug}:`, error);
     return {
       cliente,
+      cantidadTemplates: templates.length,
       productos: 0,
       skusSeleccionados: 0,
       placasPedidas: 0,

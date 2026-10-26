@@ -230,3 +230,58 @@ table { border-collapse: collapse; width: 100%; }
 @media (prefers-reduced-motion: no-preference) {
   .riel-link, .pestana, .fila-cliente { transition: background-color 120ms, border-color 120ms, color 120ms; }
 }
+
+/* ---------- Operar: corridas, selección, templates ---------- */
+.boton:disabled { opacity: 0.45; cursor: not-allowed; }
+.boton-peligro { background: var(--error); border-color: var(--error); color: #fff; }
+.enlace { all: unset; cursor: pointer; color: var(--acento); font-size: var(--texto-s); font-weight: 500; }
+.enlace:hover { text-decoration: underline; }
+.enlace:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+.control-corridas { display: flex; flex-direction: column; gap: 12px; }
+.en-vivo { display: flex; flex-direction: column; gap: 8px; font-size: var(--texto-s); margin-top: 4px; }
+.pasos { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-width: 560px; }
+.pasos li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: var(--radio-s); background: #f4f5f7; }
+.pasos li[data-estado="in_progress"] { background: var(--acento-tenue); color: var(--acento); font-weight: 600; }
+.pasos li[data-estado="ok"] { color: var(--tinta-suave); }
+.pasos li[data-estado="error"] { background: var(--error-tenue); color: var(--error); }
+
+.agregar { background: var(--superficie); border: 1px solid var(--linea); border-radius: var(--radio-m); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.agregar-cabeza { display: flex; justify-content: space-between; align-items: center; }
+.agregar-cabeza h2, .sub { font-size: var(--texto-l); }
+.campo { display: flex; flex-direction: column; gap: 6px; font-size: var(--texto-s); color: var(--tinta-suave); }
+.campo textarea, .campo input { font: inherit; font-size: var(--texto-m); color: var(--tinta); padding: 8px 10px; border: 1px solid var(--linea-fuerte); border-radius: var(--radio-s); background: #fff; }
+.campo-linea { flex-direction: row; align-items: center; gap: 8px; }
+.campo-linea input { min-width: 0; flex: 1; }
+.fichas { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.fichas > li { border: 1px solid var(--linea); border-radius: var(--radio-m); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.ficha-entrada { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ficha { display: flex; gap: 10px; align-items: center; cursor: pointer; }
+.ficha[data-apagada="true"] { opacity: 0.6; cursor: default; }
+.ficha-datos { display: flex; flex-direction: column; gap: 2px; font-size: var(--texto-s); }
+
+.grilla-templates-sel { border-collapse: collapse; width: auto; min-width: 320px; font-size: var(--texto-s); }
+.grilla-templates-sel th, .grilla-templates-sel td { padding: 6px 12px; border-bottom: 1px solid var(--linea); text-align: center; }
+.grilla-templates-sel th:first-child, .grilla-templates-sel td:first-child { text-align: left; }
+.grilla-templates-sel input { width: 16px; height: 16px; accent-color: var(--acento); }
+
+.modal-fondo { position: fixed; inset: 0; background: rgb(23 32 43 / 0.45); display: grid; place-items: center; padding: 16px; z-index: 50; }
+.modal { background: var(--superficie); border-radius: var(--radio-m); padding: 22px; width: min(560px, 100%); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--sombra-placa); }
+.modal h2 { font-size: var(--texto-l); }
+.modal-pie { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.lista-efectos { margin: 0; padding-left: 18px; font-size: var(--texto-s); display: grid; gap: 4px; }
+
+.editor-template { display: flex; flex-direction: column; gap: 14px; }
+.barra-guardar { display: flex; gap: 12px; align-items: center; padding: 10px 14px; flex-wrap: wrap; position: sticky; top: 8px; z-index: 5; }
+.validacion .aviso { margin-bottom: 8px; }
+.validacion ul { margin: 4px 0 0; padding-left: 18px; }
+.editor-columnas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.codigo { display: flex; flex-direction: column; overflow: hidden; }
+.codigo-cabeza { display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--linea); font-size: var(--texto-s); }
+.codigo textarea {
+  border: 0; resize: vertical; min-height: 640px; padding: 12px; outline: none; tab-size: 2;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.55; color: var(--tinta); background: #fbfbfc;
+}
+.editor.compacto { grid-template-columns: 1fr; }
+.editor.compacto .editor-lateral { position: static; }
+@media (max-width: 1080px) { .editor-columnas { grid-template-columns: 1fr; } .codigo textarea { min-height: 360px; } }

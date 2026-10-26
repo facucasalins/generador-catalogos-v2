@@ -4,20 +4,28 @@ import { AvisoError, intentar } from "@/components/Estados";
 import { HtmlEscalado, Prueba } from "@/components/Prueba";
 import { buscarCliente, separarTemplate } from "@/lib/config";
 import { obtenerInventario, obtenerSeleccion } from "@/lib/datos";
+import { listarTemplates } from "@/lib/datos/templates";
 import { aProductoRender, productoMuestra } from "@/lib/render/preparar";
 import { construirVariables, reemplazarVariables } from "@/lib/render/variables";
 import { filasActivas } from "@/lib/resumen";
 
 export const dynamic = "force-dynamic";
 
-export default async function Templates({ params }: { params: Promise<{ slug: string }> }) {
+export default async function Templates({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ eliminado?: string; corrida?: string }>;
+}) {
   const { slug } = await params;
+  const { eliminado, corrida } = await searchParams;
   const c = buscarCliente(slug);
   if (!c) notFound();
 
-  const r = await intentar(() => Promise.all([obtenerInventario(c), obtenerSeleccion(c)]));
+  const r = await intentar(() => Promise.all([obtenerInventario(c), obtenerSeleccion(c), listarTemplates(c)]));
   if (!r.ok) return <AvisoError error={r.error} que="los productos para la vista previa" />;
-  const [inv, sel] = r.valor;
+  const [inv, sel, templates] = r.valor;
 
   const activas = filasActivas(sel.filas);
   const uso = new Map<string, { meta: number; tiktok: number }>();
@@ -34,6 +42,20 @@ export default async function Templates({ params }: { params: Promise<{ slug: st
   const vars = muestra ? construirVariables(aProductoRender(muestra), c.estilo) : null;
 
   return (
+    <>
+    {eliminado && (
+      <div className="aviso aviso-info" role="status">
+        <b>{eliminado} eliminado.</b>{" "}
+        {corrida === "1"
+          ? "Ya se disparó una corrida: cuando termine, sus placas dejan de estar en los feeds. Seguila en Corridas."
+          : "Sus placas salen del feed en la próxima corrida."}
+      </div>
+    )}
+    <div className="filtros" style={{ justifyContent: "flex-end", marginBottom: 12 }}>
+      <Link className="boton" href={`/c/${c.slug}/templates/nuevo`}>
+        Nuevo template
+      </Link>
+    </div>
     <section className="mesa">
       <p style={{ marginBottom: 24 }}>
         <span className="suave">Vista previa con </span>
@@ -41,7 +63,7 @@ export default async function Templates({ params }: { params: Promise<{ slug: st
         <span className="suave">. Abrí un template para probarlo con otros productos.</span>
       </p>
       <div className="grilla-templates">
-        {c.templates.map((t) => {
+        {templates.map((t) => {
           const render = vars ? reemplazarVariables(t.html, vars) : null;
           const u = uso.get(t.nombre);
           return (
@@ -72,5 +94,6 @@ export default async function Templates({ params }: { params: Promise<{ slug: st
         })}
       </div>
     </section>
+    </>
   );
 }
