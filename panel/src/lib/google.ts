@@ -20,8 +20,8 @@ function obtenerCliente(): JWT {
   cliente = new JWT({
     email: cred.client_email,
     key: cred.private_key,
-    // Etapa 0 solo lee. La escritura de Selección se habilita en la Etapa 1.
-    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+    // Lee inventario e historial; escribe Selección y la pestaña Templates.
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
   return cliente;
 }

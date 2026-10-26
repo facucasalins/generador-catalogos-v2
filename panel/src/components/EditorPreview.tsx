@@ -27,7 +27,9 @@ export function EditorPreview({
   nombre,
   productos,
   estilo,
+  compacto = false,
 }: {
+  compacto?: boolean;
   html: string;
   ancho: number;
   alto: number;
@@ -53,7 +55,7 @@ export function EditorPreview({
   const visibles = Object.entries(variables).filter(([k]) => !k.endsWith("_b64"));
 
   return (
-    <div className="editor">
+    <div className={compacto ? "editor compacto" : "editor"}>
       <div className="mesa" style={{ display: "grid", placeItems: "center" }}>
         <div style={{ width: "100%", maxWidth: ancho >= alto ? 760 : 520 }}>
           <Prueba ancho={ancho} alto={alto}>

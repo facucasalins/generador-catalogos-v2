@@ -2,10 +2,20 @@ name: MoraShop v2 - Pipeline completo
 
 on:
   workflow_dispatch:
+    inputs:
+      modo:
+        description: 'completo = pipeline entero; solo_inventario = solo refresca el inventario desde Tiendanube'
+        type: choice
+        options: [completo, solo_inventario]
+        default: completo
   schedule:
     # 06:07 ART = 09:07 UTC. Minuto no-redondo a propósito: los cron en :00
     # sufren más retraso/skips en GitHub Actions por congestión.
     - cron: '7 9 * * *'
+
+concurrency:
+  group: catalogos-morashop
+  cancel-in-progress: false
 
 jobs:
   pipeline:
@@ -68,8 +78,10 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OUTPUT_DIR: ${{ github.workspace }}/placas_output
+          # Corridas disparadas desde el panel con modo=solo_inventario.
+          FLAGS_MODO: ${{ inputs.modo == 'solo_inventario' && '--solo-inventario --sin-telegram' || '' }}
         run: |
-          python -m src.cli --cliente=morashop --output-dir=$OUTPUT_DIR
+          python -m src.cli --cliente=morashop --output-dir=$OUTPUT_DIR $FLAGS_MODO
 
       - name: Subir placas como artifact (para validación visual)
         if: success()

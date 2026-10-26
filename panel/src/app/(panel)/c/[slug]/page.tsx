@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AvisoError, intentar } from "@/components/Estados";
+import { AgregarProductos, EditarSeleccion } from "@/components/Seleccion";
+import { listarTemplates } from "@/lib/datos/templates";
 import { buscarCliente, separarTemplate } from "@/lib/config";
 import { obtenerInventario, obtenerSeleccion } from "@/lib/datos";
 import { pesos } from "@/lib/formato";
@@ -24,9 +26,10 @@ export default async function Productos({
   const filtro: Filtro = f === "todos" || f === "problemas" ? f : "seleccionados";
   const busqueda = (q ?? "").trim().toLowerCase();
 
-  const r = await intentar(() => Promise.all([obtenerInventario(c), obtenerSeleccion(c)]));
+  const r = await intentar(() => Promise.all([obtenerInventario(c), obtenerSeleccion(c), listarTemplates(c)]));
   if (!r.ok) return <AvisoError error={r.error} que="el inventario o la selección" />;
-  const [inv, sel] = r.valor;
+  const [inv, sel, tpls] = r.valor;
+  const nombresTemplates = tpls.map((t) => t.nombre);
 
   const seleccion = new Map(filasActivas(sel.filas).map((f) => [f.sku, f]));
   const placasPorSku = new Map<string, number>();
@@ -46,6 +49,10 @@ export default async function Productos({
   const url = (nuevo: Filtro) => `/c/${c.slug}?f=${nuevo}${busqueda ? `&q=${encodeURIComponent(busqueda)}` : ""}`;
 
   return (
+    <>
+    <div style={{ marginBottom: 16 }}>
+      <AgregarProductos slug={c.slug} templates={nombresTemplates} />
+    </div>
     <section className="hoja">
       <div className="hoja-cabeza">
         <div className="segmentos" role="group" aria-label="Filtrar productos">
@@ -87,6 +94,7 @@ export default async function Productos({
                 <th className="der">Stock</th>
                 <th>Templates tildados</th>
                 <th className="der">Placas</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -130,6 +138,9 @@ export default async function Productos({
                     </div>
                   </td>
                   <td className="der num">{placasPorSku.get(p.sku) ?? 0}</td>
+                  <td className="der">
+                    <EditarSeleccion slug={c.slug} sku={p.sku} nombre={p.tituloPlaca || p.nombre} templates={nombresTemplates} actuales={s?.templates ?? []} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -137,5 +148,6 @@ export default async function Productos({
         </div>
       )}
     </section>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Pestanas } from "@/components/Navegacion";
 import { buscarCliente } from "@/lib/config";
 import { cronLegible } from "@/lib/formato";
+import { listarTemplates } from "@/lib/datos/templates";
 
 const sheet = (id: string | null) => (id ? `https://docs.google.com/spreadsheets/d/${id}/edit` : null);
 
@@ -10,6 +11,7 @@ export default async function ClienteLayout({ children, params }: { children: Re
   const c = buscarCliente(slug);
   if (!c) notFound();
   const base = `/c/${c.slug}`;
+  const cantidadTemplates = (await listarTemplates(c).catch(() => c.templates)).length;
   const efectivo = c.estilo.descuentoEfectivoFactor;
   const enlaces = [
     ["Selección", sheet(c.seleccionSheetId)],
@@ -46,7 +48,7 @@ export default async function ClienteLayout({ children, params }: { children: Re
         items={[
           { href: base, texto: "Productos", exacto: true },
           { href: `${base}/placas`, texto: "Placas" },
-          { href: `${base}/templates`, texto: "Templates", cuenta: c.templates.length },
+          { href: `${base}/templates`, texto: "Templates", cuenta: cantidadTemplates },
           { href: `${base}/corridas`, texto: "Corridas" },
         ]}
       />

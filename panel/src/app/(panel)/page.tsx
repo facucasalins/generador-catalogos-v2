@@ -35,7 +35,7 @@ export default async function Inicio() {
           <Link key={r.cliente.slug} href={`/c/${r.cliente.slug}`} className="hoja fila-cliente">
             <div className="dato">
               <h2>{r.cliente.nombre}</h2>
-              <span className="rotulo">{r.cliente.templates.length} templates</span>
+              <span className="rotulo">{r.cantidadTemplates} templates</span>
             </div>
             <div className="dato">
               <span className="valor">{r.skusSeleccionados}</span>

@@ -90,6 +90,78 @@ async function errorDeRespuesta(resp: Response, sheetId: string): Promise<ErrorS
   return new ErrorSheets(`Error ${resp.status} leyendo la sheet ${sheetId}: ${texto.slice(0, 200)}`, resp.status);
 }
 
+/** Descarta lo cacheado de una sheet: después de escribir, la próxima lectura va a Google. */
+export function invalidarCache(sheetId: string): void {
+  for (const clave of cache.keys()) if (clave.startsWith(`${sheetId}::`)) cache.delete(clave);
+}
+
+/** Lectura sin caché (para leer-modificar-escribir sin pisar cambios ajenos). */
+export async function leerPestanasFresco(sheetId: string, pestanas: string[]): Promise<Record<string, Filas>> {
+  invalidarCache(sheetId);
+  return leerPestanas(sheetId, pestanas);
+}
+
+async function llamar<T>(sheetId: string, ruta: string, body: unknown): Promise<T> {
+  const token = await tokenGoogle();
+  const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}${ruta}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  if (!resp.ok) throw await errorDeRespuesta(resp, sheetId);
+  return (await resp.json()) as T;
+}
+
+const citar = (pestana: string) => `'${pestana.replace(/'/g, "''")}'`;
+
+/** Escribe varios rangos de una vez. Los booleanos quedan como checkbox TRUE/FALSE. */
+export async function escribirRangos(sheetId: string, datos: { rango: string; valores: Celda[][] }[]): Promise<void> {
+  if (datos.length === 0) return;
+  await llamar(sheetId, "/values:batchUpdate", {
+    valueInputOption: "RAW",
+    data: datos.map((d) => ({ range: d.rango, majorDimension: "ROWS", values: d.valores })),
+  });
+  invalidarCache(sheetId);
+}
+
+/** ID numérico de una pestaña (lo piden las operaciones de estructura). */
+export async function idPestana(sheetId: string, pestana: string): Promise<number> {
+  const token = await tokenGoogle();
+  const resp = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties(sheetId,title)`,
+    { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+  );
+  if (!resp.ok) throw await errorDeRespuesta(resp, sheetId);
+  const json = (await resp.json()) as { sheets: { properties: { sheetId: number; title: string } }[] };
+  const p = json.sheets.find((s) => s.properties.title === pestana);
+  if (!p) throw new ErrorSheets(`La sheet ${sheetId} no tiene la pestaña «${pestana}».`, 404);
+  return p.properties.sheetId;
+}
+
+/** Operaciones de estructura (insertar o borrar columnas, checkboxes). */
+export async function actualizarEstructura(sheetId: string, requests: unknown[]): Promise<void> {
+  if (requests.length === 0) return;
+  await llamar(sheetId, ":batchUpdate", { requests });
+  invalidarCache(sheetId);
+}
+
+/** Letra de columna A1 para un índice 0-based (0 → A, 26 → AA). */
+export function letraColumna(indice: number): string {
+  let n = indice + 1;
+  let s = "";
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
+export function rango(pestana: string, a1: string): string {
+  return `${citar(pestana)}!${a1}`;
+}
+
 /** Convierte filas con header en objetos { columna: valor }. */
 export function aObjetos(filas: Filas): Record<string, Celda>[] {
   if (filas.length < 2) return [];
