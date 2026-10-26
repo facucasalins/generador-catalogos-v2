@@ -3,7 +3,7 @@ nombre: halloween_4x5
 aspect_ratio: 4:5
 width: 1080
 height: 1350
-descripcion: Placa Halloween Flint 4:5 - noche oscura, luna amarilla, producto en lápida sticker, "NO TRICKS. JUST POWER." Desmarcar después del 31/10.
+descripcion: Halloween Flint 4:5 - noche, luna, producto en lápida sticker. Oferta cupón HALLOWEEN 10% + 10% transferencia. Desmarcar después del 31/10.
 -->
 <!DOCTYPE html>
 <html>
@@ -21,184 +21,127 @@ descripcion: Placa Halloween Flint 4:5 - noche oscura, luna amarilla, producto e
     --cream: #EFE8CE;
     --deal: #249C55;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
-    width: 1080px;
-    height: 1350px;
+    width: 1080px; height: 1350px; position: relative; overflow: hidden;
+    font-family: 'Archivo', system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+  }
+  .display { font-family: 'Big Shoulders Display', Impact, sans-serif; text-transform: uppercase; }
+  .logo { position: absolute; height: auto; z-index: 6; }
+
+  /* ===== BLOQUE DE OFERTA (común) ===== */
+  .offer {
+    position: absolute; left: 56px; right: 56px; z-index: 6;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 28px;
+  }
+  .o-left { min-width: 0; flex: 1; }
+  .o-label { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 800; font-size: 32px;
+    line-height: 1; text-transform: uppercase; letter-spacing: .5px; color: var(--o-label); margin-bottom: 24px; }
+  .o-price { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 900; font-size: 168px;
+    line-height: .82; letter-spacing: -2px; color: var(--o-price); white-space: nowrap; }
+  .o-sub { margin-top: 16px; font-size: 25px; font-weight: 600; color: var(--o-sub); white-space: nowrap; }
+  .o-sub s { opacity: .7; text-decoration-thickness: 2px; margin-right: 10px; }
+  .o-sub b { font-weight: 800; }
+  .o-title { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 800; font-size: 40px;
+    line-height: 1; text-transform: uppercase; color: var(--o-sub); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; margin-bottom: 14px; }
+
+  /* Ticket del cupón */
+  .o-tw { position: relative; flex: none; width: 320px; transform: rotate(3deg); filter: drop-shadow(10px 10px 0 #000); margin-bottom: 6px; }
+  .o-ticket {
     position: relative;
-    overflow: hidden;
-    background:
-      radial-gradient(ellipse 620px 520px at 50% 58%, rgba(246,176,29,.20) 0%, rgba(246,176,29,0) 70%),
-      var(--night);
-    font-family: 'Archivo', system-ui, sans-serif;
-    color: var(--cream);
-    -webkit-font-smoothing: antialiased;
+    background: var(--t-bg); color: var(--t-ink);
+    border: 6px solid var(--ink);
+    padding: 22px 18px 18px; text-align: center;
+    -webkit-mask: radial-gradient(circle 16px at 0 50%, transparent 15px, #000 16px) left / 51% 100% no-repeat,
+                  radial-gradient(circle 16px at 100% 50%, transparent 15px, #000 16px) right / 51% 100% no-repeat;
+  }
+  .o-ticket::after { content: ""; position: absolute; inset: 9px; border: 3px dashed var(--t-ink); opacity: .45; pointer-events: none; }
+  .t-k { font-size: 20px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; }
+  .t-code { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 900; font-size: 50px;
+    line-height: .95; text-transform: uppercase; margin: 4px 0 6px; white-space: nowrap; overflow: hidden; }
+  .t-pct { font-size: 19px; font-weight: 700; line-height: 1.25; }
+  .o-off {
+    position: absolute; top: -40px; right: -26px; width: 104px; height: 104px; border-radius: 50%;
+    background: var(--red); color: var(--cream); border: 6px solid var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 900; font-size: 42px; transform: rotate(-10deg);
   }
 
-  /* LUNA */
-  .moon {
-    position: absolute;
-    top: -70px; right: -60px;
-    width: 400px; height: 400px;
-    border-radius: 50%;
-    background:
-      radial-gradient(circle at 30% 62%, rgba(0,0,0,.10) 0 34px, transparent 35px),
-      radial-gradient(circle at 62% 74%, rgba(0,0,0,.08) 0 22px, transparent 23px),
-      radial-gradient(circle at 45% 38%, rgba(0,0,0,.07) 0 16px, transparent 17px),
-      var(--yellow);
-    box-shadow: 0 0 120px rgba(246,176,29,.35);
-  }
-
-  .bat { position: absolute; fill: var(--footer); }
-  .bat.light { fill: var(--cream); opacity: .9; }
-
-  .logo {
-    position: absolute;
-    top: 38px; left: 44px;
-    width: 172px;
-    height: auto;
-    z-index: 5;
-  }
-
-  .headline {
-    position: absolute;
-    top: 210px; left: 56px;
-    font-family: 'Big Shoulders Display', Impact, sans-serif;
-    font-weight: 900;
-    font-size: 124px;
-    line-height: .86;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    z-index: 5;
-  }
+  body { background: radial-gradient(ellipse 620px 480px at 50% 46%, rgba(246,176,29,.20) 0%, rgba(246,176,29,0) 70%), var(--night); color: var(--cream);
+    --o-label: var(--yellow); --o-price: var(--yellow); --o-sub: var(--cream); --t-bg: var(--cream); --t-ink: var(--ink); }
+  .moon { position: absolute; top: -80px; right: -70px; width: 380px; height: 380px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 62%, rgba(0,0,0,.10) 0 32px, transparent 33px), radial-gradient(circle at 62% 74%, rgba(0,0,0,.08) 0 20px, transparent 21px), var(--yellow);
+    box-shadow: 0 0 120px rgba(246,176,29,.35); }
+  .bat { position: absolute; fill: var(--footer); } .bat.light { fill: var(--cream); opacity: .85; }
+  .logo { top: 38px; left: 44px; width: 166px; }
+  .headline { position: absolute; top: 196px; left: 56px; font-weight: 900; font-size: 112px; line-height: .86; z-index: 5; }
   .headline .y { color: var(--yellow); display: block; }
-
-  /* LÁPIDA sticker: borde negro grueso + sombra dura, como el logo */
-  .stone {
-    position: absolute;
-    left: 50%;
-    top: 474px;
-    width: 720px;
-    height: 600px;
-    margin-left: -360px;
-    border-radius: 300px 300px 26px 26px;
-    border: 10px solid var(--ink);
-    box-shadow: 0 0 0 9px var(--yellow), 20px 20px 0 9px var(--red), 0 0 110px rgba(246,176,29,.30);
-    overflow: hidden;
-    background: var(--cream);
-    transform: rotate(-3deg);
-    z-index: 3;
-  }
-  .stone img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center 30%;
-  }
-  .stone .tag {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    background: var(--ink);
-    color: var(--cream);
-    font-family: 'Big Shoulders Display', Impact, sans-serif;
-    font-weight: 800;
-    font-size: 42px;
-    line-height: 1;
-    text-transform: uppercase;
-    text-align: center;
-    padding: 16px 30px 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .info {
-    position: absolute;
-    left: 56px; right: 56px; bottom: 54px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    z-index: 4;
-  }
-  .strike {
-    font-size: 30px;
-    font-weight: 600;
-    color: rgba(239,232,206,.6);
-    text-decoration: line-through;
-    text-decoration-thickness: 2px;
-    margin-bottom: 12px;
-  }
-  .price {
-    font-family: 'Big Shoulders Display', Impact, sans-serif;
-    font-weight: 900;
-    font-size: 138px;
-    line-height: .82;
-    color: var(--yellow);
-    letter-spacing: -1px;
-  }
-  .pills { display: flex; flex-direction: column; gap: 12px; align-items: flex-end; }
-  .pill {
-    font-size: 26px;
-    font-weight: 700;
-    padding: 14px 24px;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-  .pill b { font-weight: 800; margin-left: 6px; }
-  .pill-deal { background: var(--deal); color: #fff; }
-  .pill-cuotas { border: 3px solid var(--cream); color: var(--cream); }
+  .stone { position: absolute; left: 50%; top: 440px; width: 600px; height: 494px; margin-left: -300px;
+    border-radius: 250px 250px 24px 24px; border: 10px solid var(--ink); overflow: hidden; background: var(--cream);
+    box-shadow: 0 0 0 9px var(--yellow), 20px 20px 0 9px var(--red), 0 0 110px rgba(246,176,29,.30); transform: rotate(-3deg); z-index: 3; }
+  .stone img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+  .stone .tag { position: absolute; left: 0; right: 0; bottom: 0; background: var(--ink); color: var(--cream); font-weight: 800; font-size: 34px;
+    line-height: 1; text-align: center; padding: 14px 24px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  
 </style>
 </head>
 <body>
   <div class="moon"></div>
-
-  <!-- murciélagos (silueta genérica) -->
-  <svg class="bat" style="top:96px; right:150px; width:150px; transform:rotate(-10deg)" viewBox="0 0 48 20"><path d="M0 10C6 4 12 4 16 8C18 4 20 2 22 4L24 0 26 4C28 2 30 4 32 8C36 4 42 4 48 10C42 10 38 14 36 18C32 14 28 14 26 18L24 16 22 18C20 14 16 14 12 18C10 14 6 10 0 10Z"/></svg>
-  <svg class="bat" style="top:236px; right:60px; width:84px; transform:rotate(12deg)" viewBox="0 0 48 20"><path d="M0 10C6 4 12 4 16 8C18 4 20 2 22 4L24 0 26 4C28 2 30 4 32 8C36 4 42 4 48 10C42 10 38 14 36 18C32 14 28 14 26 18L24 16 22 18C20 14 16 14 12 18C10 14 6 10 0 10Z"/></svg>
-  <svg class="bat light" style="top:520px; left:40px; width:96px; transform:rotate(-16deg)" viewBox="0 0 48 20"><path d="M0 10C6 4 12 4 16 8C18 4 20 2 22 4L24 0 26 4C28 2 30 4 32 8C36 4 42 4 48 10C42 10 38 14 36 18C32 14 28 14 26 18L24 16 22 18C20 14 16 14 12 18C10 14 6 10 0 10Z"/></svg>
-  <svg class="bat light" style="top:470px; right:44px; width:64px; transform:rotate(14deg); opacity:.6" viewBox="0 0 48 20"><path d="M0 10C6 4 12 4 16 8C18 4 20 2 22 4L24 0 26 4C28 2 30 4 32 8C36 4 42 4 48 10C42 10 38 14 36 18C32 14 28 14 26 18L24 16 22 18C20 14 16 14 12 18C10 14 6 10 0 10Z"/></svg>
-
+  <svg class="bat" style="top:92px; right:140px; width:140px; transform:rotate(-10deg)" viewBox="0 0 48 20"><path d="M0 10C6 4 12 4 16 8C18 4 20 2 22 4L24 0 26 4C28 2 30 4 32 8C36 4 42 4 48 10C42 10 38 14 36 18C32 14 28 14 26 18L24 16 22 18C20 14 16 14 12 18C10 14 6 10 0 10Z"/></svg><svg class="bat" style="top:226px; right:56px; width:80px; transform:rotate(12deg)" viewBox="0 0 48 20"><path d="M0 10C6 4 12 4 16 8C18 4 20 2 22 4L24 0 26 4C28 2 30 4 32 8C36 4 42 4 48 10C42 10 38 14 36 18C32 14 28 14 26 18L24 16 22 18C20 14 16 14 12 18C10 14 6 10 0 10Z"/></svg><svg class="bat light" style="top:520px; left:46px; width:90px; transform:rotate(-16deg)" viewBox="0 0 48 20"><path d="M0 10C6 4 12 4 16 8C18 4 20 2 22 4L24 0 26 4C28 2 30 4 32 8C36 4 42 4 48 10C42 10 38 14 36 18C32 14 28 14 26 18L24 16 22 18C20 14 16 14 12 18C10 14 6 10 0 10Z"/></svg><svg class="bat light" style="top:470px; right:60px; width:60px; transform:rotate(14deg); opacity:.6" viewBox="0 0 48 20"><path d="M0 10C6 4 12 4 16 8C18 4 20 2 22 4L24 0 26 4C28 2 30 4 32 8C36 4 42 4 48 10C42 10 38 14 36 18C32 14 28 14 26 18L24 16 22 18C20 14 16 14 12 18C10 14 6 10 0 10Z"/></svg>
   <img class="logo" src="{logo_b64}" alt="Flint">
+  <div class="headline display">No tricks.<span class="y">Just power.</span></div>
+  <div class="stone"><img src="{imagen_b64}" alt="producto"><div class="tag display tag-fit">{titulo_placa}</div></div>
 
-  <div class="headline">No tricks.<span class="y">Just power.</span></div>
-
-  <div class="stone">
-    <img src="{imagen_b64}" alt="producto">
-    <div class="tag">{titulo_placa}</div>
-  </div>
-
-  <div class="info">
-    <div>
-      <div class="strike" data-orig>{precio_original_formateado}</div>
-      <!-- PRECIO: hotsale = promocional TN -->
-      <div class="price" data-hot>{precio_hotsale_formateado}</div>
+  <!-- OFERTA: precio grande = hotsale x (1 - cupón) x factor transferencia (precio_efectivo / hotsale).
+       Cuotas = hotsale x (1 - cupón) / cuotas_num (sin transferencia). Cupón: editar CUPON abajo. -->
+  <div class="offer" style="bottom: 56px;">
+    <div class="o-left">
+      
+      <div class="o-label" data-label>Con cupón + transferencia</div>
+      <div class="o-price" data-best>{precio_hotsale_formateado}</div>
+      <div class="o-sub"><s data-hot>{precio_hotsale_formateado}</s><span>{cuotas_num} cuotas sin interés de <b data-cuota>-</b></span></div>
     </div>
-    <div class="pills">
-      <!-- TRANSFERENCIA: precio_efectivo = hotsale x 0.90 -->
-      <div class="pill pill-deal" data-efe-wrap><span class="pct-efe">10</span>% OFF transf.<b data-efe>{precio_efectivo_formateado}</b></div>
-      <div class="pill pill-cuotas">{cuotas_num} cuotas s/interés<b>{cuota_formateada}</b></div>
+    <div class="o-tw">
+      <div class="o-ticket">
+        <div class="t-k">Cupón</div>
+        <div class="t-code" data-code>CUPON</div>
+        <div class="t-pct"><span data-cpct>10</span>% OFF<span data-tline> + <span data-tpct>10</span>% transferencia</span></div>
+      </div>
+      <div class="o-off">-<span data-total>19</span>%</div>
     </div>
   </div>
+  <span hidden data-efe>{precio_efectivo_formateado}</span>
+  <span hidden data-n>{cuotas_num}</span>
 
   <script>
+  var CUPON = ['HALLOWEEN', 10];   /* [código, % de descuento] */
   function num(s) { return parseInt((s || '').replace(/[^0-9]/g, ''), 10) || 0; }
+  function money(v) { return '$' + Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function q(s) { return document.querySelector(s); }
   function shrink(el, min) {
     if (!el) return;
     var s = parseFloat(getComputedStyle(el).fontSize), g = 0;
     while (el.scrollWidth > el.clientWidth + 1 && s > min && g < 200) { s -= 1; el.style.fontSize = s + 'px'; g++; }
   }
   function adjust() {
-    var o = document.querySelector('[data-orig]');
-    var h = document.querySelector('[data-hot]');
-    var e = document.querySelector('[data-efe]');
-    var vo = num(o && o.textContent), vh = num(h && h.textContent), ve = num(e && e.textContent);
-    if (!(vo > vh)) { if (o) o.style.visibility = 'hidden'; }
-    var pe = vh > 0 && ve > 0 ? Math.round((1 - ve / vh) * 100) : 0;
-    if (pe < 1) { var w = document.querySelector('[data-efe-wrap]'); if (w) w.style.display = 'none'; }
-    else document.querySelectorAll('.pct-efe').forEach(function (n) { n.textContent = pe; });
-    shrink(document.querySelector('.stone .tag'), 30);
+    var vh = num(q('[data-hot]').textContent), ve = num(q('[data-efe]').textContent), n = num(q('[data-n]').textContent) || 1;
+    var cf = 1 - CUPON[1] / 100;
+    var tf = (vh > 0 && ve > 0 && ve < vh) ? ve / vh : 1;
+    q('[data-code]').textContent = CUPON[0];
+    q('[data-cpct]').textContent = CUPON[1];
+    q('[data-best]').textContent = money(vh * cf * tf);
+    q('[data-cuota]').textContent = money(vh * cf / n);
+    q('[data-total]').textContent = Math.round((1 - cf * tf) * 100);
+    var tp = Math.round((1 - tf) * 100);
+    if (tp < 1) { q('[data-tline]').style.display = 'none'; q('[data-label]').textContent = 'Con cupón ' + CUPON[0]; }
+    else q('[data-tpct]').textContent = tp;
+    shrink(q('.o-title'), 28);
+    shrink(q('.t-code'), 30);
+    shrink(q('.tag-fit'), 22);
+    var p = q('[data-best]'); var box = q('.o-left');
+    var s = parseFloat(getComputedStyle(p).fontSize), g = 0;
+    while (p.scrollWidth > box.clientWidth + 1 && s > 110 && g < 120) { s -= 2; p.style.fontSize = s + 'px'; g++; }
   }
   if (document.fonts && document.fonts.ready) { document.fonts.ready.then(adjust); } else { window.addEventListener('load', adjust); }
   </script>
