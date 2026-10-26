@@ -133,8 +133,9 @@ descripcion: Cyber Flint 4:5 - fondo negro, CYBER gigante en amarillo, producto 
     q('[data-cpct]').textContent = CUPON[1];
     q('[data-best]').textContent = money(vh * cf * tf);
     q('[data-cuota]').textContent = money(vh * cf / n);
-    q('[data-total]').textContent = Math.round((1 - cf * tf) * 100);
     var tp = Math.round((1 - tf) * 100);
+    /* Sello: suma de los dos descuentos (cupón + transferencia), como se comunica la promo */
+    q('[data-total]').textContent = CUPON[1] + tp;
     if (tp < 1) { q('[data-tline]').style.display = 'none'; q('[data-label]').textContent = 'Con cupón ' + CUPON[0]; }
     else q('[data-tpct]').textContent = tp;
     shrink(q('.o-title'), 28);
