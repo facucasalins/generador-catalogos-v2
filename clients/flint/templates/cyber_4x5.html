@@ -1,0 +1,151 @@
+<!-- META
+nombre: cyber_4x5
+aspect_ratio: 4:5
+width: 1080
+height: 1350
+descripcion: Cyber Flint 4:5 - fondo negro, CYBER gigante en amarillo, producto en sticker. Oferta cupón CYBERFLINT 10% + 10% transferencia.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Archivo:wght@400;600;700;800&display=swap');
+
+  :root {
+    --ink: #000000;
+    --footer: #1D1D1B;
+    --night: #121010;
+    --yellow: #F6B01D;
+    --red: #E84542;
+    --cream: #EFE8CE;
+    --deal: #249C55;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px; height: 1350px; position: relative; overflow: hidden;
+    font-family: 'Archivo', system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+  }
+  .display { font-family: 'Big Shoulders Display', Impact, sans-serif; text-transform: uppercase; }
+  .logo { position: absolute; height: auto; z-index: 6; }
+
+  /* ===== BLOQUE DE OFERTA (común) ===== */
+  .offer {
+    position: absolute; left: 56px; right: 56px; z-index: 6;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 28px;
+  }
+  .o-left { min-width: 0; flex: 1; }
+  .o-label { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 800; font-size: 32px;
+    line-height: 1; text-transform: uppercase; letter-spacing: .5px; color: var(--o-label); margin-bottom: 24px; }
+  .o-price { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 900; font-size: 168px;
+    line-height: .82; letter-spacing: -2px; color: var(--o-price); white-space: nowrap; }
+  .o-sub { margin-top: 16px; font-size: 25px; font-weight: 600; color: var(--o-sub); white-space: nowrap; }
+  .o-sub s { opacity: .7; text-decoration-thickness: 2px; margin-right: 10px; }
+  .o-sub b { font-weight: 800; }
+  .o-title { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 800; font-size: 40px;
+    line-height: 1; text-transform: uppercase; color: var(--o-sub); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; margin-bottom: 14px; }
+
+  /* Ticket del cupón */
+  .o-tw { position: relative; flex: none; width: 320px; transform: rotate(3deg); filter: drop-shadow(10px 10px 0 #000); margin-bottom: 6px; }
+  .o-ticket {
+    position: relative;
+    background: var(--t-bg); color: var(--t-ink);
+    border: 6px solid var(--ink);
+    padding: 22px 18px 18px; text-align: center;
+    -webkit-mask: radial-gradient(circle 16px at 0 50%, transparent 15px, #000 16px) left / 51% 100% no-repeat,
+                  radial-gradient(circle 16px at 100% 50%, transparent 15px, #000 16px) right / 51% 100% no-repeat;
+  }
+  .o-ticket::after { content: ""; position: absolute; inset: 9px; border: 3px dashed var(--t-ink); opacity: .45; pointer-events: none; }
+  .t-k { font-size: 20px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; }
+  .t-code { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 900; font-size: 50px;
+    line-height: .95; text-transform: uppercase; margin: 4px 0 6px; white-space: nowrap; overflow: hidden; }
+  .t-pct { font-size: 19px; font-weight: 700; line-height: 1.25; }
+  .o-off {
+    position: absolute; top: -40px; right: -26px; width: 104px; height: 104px; border-radius: 50%;
+    background: var(--red); color: var(--cream); border: 6px solid var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 900; font-size: 42px; transform: rotate(-10deg);
+  }
+
+  body { background: var(--ink); color: var(--cream); --o-label: var(--yellow); --o-price: var(--yellow); --o-sub: var(--cream); --t-bg: var(--yellow); --t-ink: var(--ink); }
+  body::before { content: ""; position: absolute; inset: 0; z-index: 0;
+    background-image: linear-gradient(rgba(246,176,29,.10) 2px, transparent 2px), linear-gradient(90deg, rgba(246,176,29,.10) 2px, transparent 2px);
+    background-size: 60px 60px; -webkit-mask: linear-gradient(180deg, #000 0%, transparent 75%); }
+  .logo { top: 40px; left: 44px; width: 166px; }
+  .kicker { position: absolute; top: 64px; right: 56px; z-index: 5; background: var(--red); color: var(--cream); font-weight: 900; font-size: 40px;
+    padding: 10px 20px 8px; border: 5px solid var(--cream); transform: rotate(3deg); }
+  .cyber { position: absolute; top: 150px; left: 0; right: 0; text-align: center; font-weight: 900; font-size: 280px; line-height: .8;
+    color: var(--yellow); letter-spacing: 4px; z-index: 1; }
+  .cyber-o { position: absolute; top: 150px; left: 0; right: 0; text-align: center; font-weight: 900; font-size: 280px; line-height: .8;
+    color: transparent; -webkit-text-stroke: 3px var(--red); letter-spacing: 4px; transform: translate(14px, 14px); z-index: 0; }
+  .card { position: absolute; left: 50%; top: 392px; width: 600px; height: 494px; margin-left: -300px; border: 10px solid var(--ink);
+    border-radius: 26px; box-shadow: 0 0 0 8px var(--cream), 20px 20px 0 8px var(--red); overflow: hidden; background: var(--cream); transform: rotate(-2.5deg); z-index: 3; }
+  .card img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+  .spark { position: absolute; z-index: 4; fill: var(--yellow); }
+  
+</style>
+</head>
+<body>
+  <img class="logo" src="{logo_b64}" alt="Flint">
+  <div class="cyber-o display">Cyber</div>
+  <div class="cyber display">Cyber</div>
+  <svg class="spark" style="top:380px; left:70px; width:90px; transform:rotate(-14deg)" viewBox="0 0 24 24"><path d="M13 0L3 14h7l-2 10 11-15h-7z"/></svg>
+  <svg class="spark" style="top:820px; right:60px; width:70px; transform:rotate(12deg)" viewBox="0 0 24 24"><path d="M13 0L3 14h7l-2 10 11-15h-7z"/></svg>
+  <div class="card"><img src="{imagen_b64}" alt="producto"></div>
+
+  <!-- OFERTA: precio grande = hotsale x (1 - cupón) x factor transferencia (precio_efectivo / hotsale).
+       Cuotas = hotsale x (1 - cupón) / cuotas_num (sin transferencia). Cupón: editar CUPON abajo. -->
+  <div class="offer" style="bottom: 56px;">
+    <div class="o-left">
+      <div class="o-title">{titulo_placa}</div>
+      <div class="o-label" data-label>Con cupón + transferencia</div>
+      <div class="o-price" data-best>{precio_hotsale_formateado}</div>
+      <div class="o-sub"><s data-hot>{precio_hotsale_formateado}</s><span>{cuotas_num} cuotas sin interés de <b data-cuota>-</b></span></div>
+    </div>
+    <div class="o-tw">
+      <div class="o-ticket">
+        <div class="t-k">Cupón</div>
+        <div class="t-code" data-code>CUPON</div>
+        <div class="t-pct"><span data-cpct>10</span>% OFF<span data-tline> + <span data-tpct>10</span>% transferencia</span></div>
+      </div>
+      <div class="o-off">-<span data-total>19</span>%</div>
+    </div>
+  </div>
+  <span hidden data-efe>{precio_efectivo_formateado}</span>
+  <span hidden data-n>{cuotas_num}</span>
+
+  <script>
+  var CUPON = ['CYBERFLINT', 10];   /* [código, % de descuento] */
+  function num(s) { return parseInt((s || '').replace(/[^0-9]/g, ''), 10) || 0; }
+  function money(v) { return '$' + Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function q(s) { return document.querySelector(s); }
+  function shrink(el, min) {
+    if (!el) return;
+    var s = parseFloat(getComputedStyle(el).fontSize), g = 0;
+    while (el.scrollWidth > el.clientWidth + 1 && s > min && g < 200) { s -= 1; el.style.fontSize = s + 'px'; g++; }
+  }
+  function adjust() {
+    var vh = num(q('[data-hot]').textContent), ve = num(q('[data-efe]').textContent), n = num(q('[data-n]').textContent) || 1;
+    var cf = 1 - CUPON[1] / 100;
+    var tf = (vh > 0 && ve > 0 && ve < vh) ? ve / vh : 1;
+    q('[data-code]').textContent = CUPON[0];
+    q('[data-cpct]').textContent = CUPON[1];
+    q('[data-best]').textContent = money(vh * cf * tf);
+    q('[data-cuota]').textContent = money(vh * cf / n);
+    var tp = Math.round((1 - tf) * 100);
+    /* Sello: suma de los dos descuentos (cupón + transferencia), como se comunica la promo */
+    q('[data-total]').textContent = CUPON[1] + tp;
+    if (tp < 1) { q('[data-tline]').style.display = 'none'; q('[data-label]').textContent = 'Con cupón ' + CUPON[0]; }
+    else q('[data-tpct]').textContent = tp;
+    shrink(q('.o-title'), 28);
+    shrink(q('.t-code'), 30);
+    shrink(q('.tag-fit'), 22);
+    var p = q('[data-best]'); var box = q('.o-left');
+    var s = parseFloat(getComputedStyle(p).fontSize), g = 0;
+    while (p.scrollWidth > box.clientWidth + 1 && s > 110 && g < 120) { s -= 2; p.style.fontSize = s + 'px'; g++; }
+  }
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(adjust); } else { window.addEventListener('load', adjust); }
+  </script>
+</body>
+</html>
