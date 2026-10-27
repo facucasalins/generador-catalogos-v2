@@ -17,6 +17,11 @@ inventario:
     sheet_destino:
       id: "1iRy8tQHPB_qDD-Hd3NjnAKWmGa3dARnFQn0sA_ycGX0"
       pestaña: Inventario
+  # Precios Cyber 2027: pisan precio_lista / precio_promocional de TN por URL.
+  # Para volver a precios de TN, borrar este bloque.
+  precios_override:
+    sheet_id: "1B6xSOMG2VfR67FzsDfHJPW4aEmK1xdkUFqCmZlWhQUk"
+    pestaña: "MAESTRA CYBER"
 
 # ============ BLOQUE 2: SELECCIÓN ============
 seleccion:
