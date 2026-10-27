@@ -416,3 +416,23 @@ def test_tiktok_filtra_decisiones_meta(
 
     resultados = tiktok.publicar(productos, placas, decisiones)
     assert "Meta_default_4x5" not in resultados
+
+
+# ---------- id consolidado: largo máximo de Meta (100) ----------
+
+def test_id_consolidado_corto_no_cambia():
+    from src.distribucion.destinos._common import armar_id_consolidado
+    assert armar_id_consolidado("creatina-300g", "Meta_cyber_4x5") == "creatina-300g__Meta_cyber_4x5"
+
+
+def test_id_consolidado_largo_se_acorta_estable_y_unico():
+    from src.distribucion.destinos._common import armar_id_consolidado
+    sku1 = "pre-entreno-300g-flint-beta-alanina-alta-concentracion-explosiva-frutilla-con-lima-2rpj0"
+    sku2 = "pre-entreno-300g-flint-beta-alanina-alta-concentracion-explosiva-mango-con-limonada-tn7ni"
+    a = armar_id_consolidado(sku1, "Meta_halloween_4x5")
+    b = armar_id_consolidado(sku2, "Meta_halloween_4x5")
+    assert len(a) <= 100 and len(b) <= 100
+    assert a.endswith("__Meta_halloween_4x5")
+    assert a != b
+    assert a == armar_id_consolidado(sku1, "Meta_halloween_4x5")
+    assert a != armar_id_consolidado(sku1, "Meta_cyber_4x5")

@@ -101,6 +101,27 @@ producto_a_fila = producto_a_fila_individual
 
 # ===================== FILAS: PESTAÑA MAESTRA CONSOLIDADA =====================
 
+# Meta rechaza ids de más de 100 caracteres ("RetailerID is too long").
+MAX_LEN_ID_CONSOLIDADO = 100
+
+
+def armar_id_consolidado(sku: str, template: str, max_len: int = MAX_LEN_ID_CONSOLIDADO) -> str:
+    """sku + '__' + template, acortado de forma estable si supera max_len.
+
+    Los ids que ya entran quedan IGUAL (no cambia nada en catálogos existentes).
+    Si no entra, se recorta el sku y se le agrega un hash corto del sku completo,
+    así el id sigue siendo único y siempre el mismo para ese producto/template
+    (Meta no lo toma como producto nuevo en cada corrida).
+    Ej.: handles largos de Tiendanube como los pre entrenos de Flint (oct 2026).
+    """
+    completo = f"{sku}__{template}"
+    if len(completo) <= max_len:
+        return completo
+    import hashlib
+    hash_corto = hashlib.sha1(sku.encode("utf-8")).hexdigest()[:8]
+    sufijo = f"-{hash_corto}__{template}"
+    return sku[: max(1, max_len - len(sufijo))].rstrip("-") + sufijo
+
 def producto_a_fila_maestra(
     producto: Producto,
     template: str,
@@ -140,7 +161,7 @@ def producto_a_fila_maestra(
         or producto.nombre
     )
 
-    id_consolidado = f"{producto.sku}__{template}"
+    id_consolidado = armar_id_consolidado(producto.sku, template)
 
     tn_product_id = enriq.get("tn_product_id")
     if tn_product_id:
