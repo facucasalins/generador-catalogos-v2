@@ -20,7 +20,8 @@ concurrency:
 jobs:
   pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Cyber 2027: ~500 productos x 2 plataformas (~1000 placas) + enriquecimiento.
+    timeout-minutes: 240
     steps:
       # Salvaguarda: este pipeline pisa producción (Cloudinary + Sheets con
       # public_id determinístico). Solo debe correr desde main. El schedule
