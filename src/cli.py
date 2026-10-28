@@ -62,6 +62,9 @@ from src.distribucion.historial import (
 from src.distribucion import telegram_notifier
 from src.enriquecimiento.base import ErrorEnriquecimiento
 from src.enriquecimiento.gemini import ConfigGemini, GeminiEnriquecimiento
+from src.enriquecimiento.fallback import (
+    enriquecimiento_desde_tienda, es_falta_de_credito, freno_de_seguridad,
+)
 from src.enriquecimiento.sheet_cache import (
     CacheEnriquecimiento, calcular_hash_input,
     enriquecimiento_a_entrada_cache,
@@ -374,6 +377,8 @@ def correr_pipeline(
 
         skus_a_enriquecer = {d.sku for d in decisiones_validas}
         skus_enriquecidos_ok = set()
+        errores_credito = 0  # Gemini sin crédito → dejamos de llamarlo este run
+        metricas.setdefault("enriquecimientos_fallback", 0)
 
         for sku in skus_a_enriquecer:
             producto = productos_por_sku_para_enriq.get(sku)
@@ -387,19 +392,33 @@ def correr_pipeline(
                 enr = entrada_vieja.a_enriquecimiento()
                 metricas["enriquecimientos_reusados"] += 1
             else:
-                try:
-                    enr = proveedor.enriquecer(producto)
-                    enr.hash_input = hash_actual
-                    cache_nuevo[sku] = enriquecimiento_a_entrada_cache(
-                        enr, hash_actual,
-                    )
-                    metricas["enriquecimientos_nuevos"] += 1
-                    log.info("[Bloque 3] %s enriquecido: %s", sku, enr.titulo_corto)
-                except ErrorEnriquecimiento as e:
-                    log.error("[Bloque 3] Falló %s: %s", sku, e)
-                    resultado.errores.append((sku, f"enriquecimiento: {e}"))
-                    metricas["enriquecimientos_fallidos"] += 1
-                    continue
+                enr = None
+                if errores_credito < 3:
+                    try:
+                        enr = proveedor.enriquecer(producto)
+                        enr.hash_input = hash_actual
+                        cache_nuevo[sku] = enriquecimiento_a_entrada_cache(
+                            enr, hash_actual,
+                        )
+                        metricas["enriquecimientos_nuevos"] += 1
+                        log.info("[Bloque 3] %s enriquecido: %s", sku, enr.titulo_corto)
+                        errores_credito = 0
+                    except ErrorEnriquecimiento as e:
+                        log.error("[Bloque 3] Falló %s: %s", sku, str(e)[:200])
+                        resultado.errores.append((sku, f"enriquecimiento: {str(e)[:200]}"))
+                        metricas["enriquecimientos_fallidos"] += 1
+                        if es_falta_de_credito(e):
+                            errores_credito += 1
+                            if errores_credito == 3:
+                                log.error("[Bloque 3] Gemini sin crédito: dejo de llamarlo en este run "
+                                          "y uso textos anteriores o de Tiendanube.")
+                if enr is None:
+                    # Plan B: nunca sacar un producto del catálogo por falta de texto.
+                    if entrada_vieja and not entrada_vieja.error:
+                        enr = entrada_vieja.a_enriquecimiento()
+                    else:
+                        enr = enriquecimiento_desde_tienda(producto, proveedor.cfg)
+                    metricas["enriquecimientos_fallback"] += 1
 
             producto.enriquecimiento = {
                 **(producto.enriquecimiento or {}),
@@ -602,6 +621,21 @@ def correr_pipeline(
     keys_anteriores = set(historial_actual.keys())
     huerfanas = keys_anteriores - keys_activas
 
+    # Freno: si algo falló y el catálogo se achicaría a menos de la mitad,
+    # no borramos placas ni publicamos feeds. Queda vigente el run anterior.
+    frenado = freno_de_seguridad(len(keys_activas), len(keys_anteriores), bool(resultado.errores))
+    if frenado:
+        log.error(
+            "[Freno] El run dejaría %d placas de %d anteriores con %d errores. "
+            "No borro nada ni publico feeds; queda vigente lo anterior.",
+            len(keys_activas), len(keys_anteriores), len(resultado.errores),
+        )
+        resultado.errores.append(("freno_de_seguridad",
+                                  f"{len(keys_activas)} de {len(keys_anteriores)} placas"))
+        for key in huerfanas:
+            historial_nuevo[key] = historial_actual[key]
+        huerfanas = set()
+
     if huerfanas and storage:
         log.info("[Limpieza Cloudinary] %d placas huérfanas detectadas", len(huerfanas))
         borrados_ok = []
@@ -629,7 +663,7 @@ def correr_pipeline(
         return resultado, metricas
 
     # ============ BLOQUE 5.2: DESTINOS ============
-    if sin_feeds:
+    if sin_feeds or frenado:
         resultado.fin = datetime.now()
         return resultado, metricas
 
