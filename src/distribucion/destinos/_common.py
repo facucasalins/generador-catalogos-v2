@@ -122,6 +122,28 @@ def armar_id_consolidado(sku: str, template: str, max_len: int = MAX_LEN_ID_CONS
     sufijo = f"-{hash_corto}__{template}"
     return sku[: max(1, max_len - len(sufijo))].rstrip("-") + sufijo
 
+def headers_maestra(headers: list[str], con_etiqueta_descuento: bool) -> list[str]:
+    """Agrega custom_label_0 antes de internal_label (que queda última)."""
+    if not con_etiqueta_descuento:
+        return headers
+    return headers[:-1] + ["custom_label_0"] + headers[-1:]
+
+
+def porcentaje_descuento(producto: Producto) -> int:
+    """% de descuento redondeado (lista vs promocional). 0 si no hay promo."""
+    lista = producto.precio_lista or 0
+    promo = producto.precio_promocional or 0
+    if lista > 0 and 0 < promo < lista:
+        return int((1 - promo / lista) * 100 + 0.5)
+    return 0
+
+
+def etiqueta_descuento(producto: Producto) -> str:
+    """'50dto' si tiene 50% off; 'sindto' si no tiene descuento."""
+    pct = porcentaje_descuento(producto)
+    return f"{pct}dto" if pct > 0 else "sindto"
+
+
 def producto_a_fila_maestra(
     producto: Producto,
     template: str,
@@ -131,6 +153,7 @@ def producto_a_fila_maestra(
     brand_fallback: str = "",
     internal_label: str = "",
     incluir_cantidad: bool = False,
+    con_etiqueta_descuento: bool = False,
 ) -> list:
     """Fila para pestaña MAESTRA (Meta_Feed / TikTok_Feed).
 
@@ -161,7 +184,11 @@ def producto_a_fila_maestra(
         or producto.nombre
     )
 
-    id_consolidado = armar_id_consolidado(producto.sku, template)
+    # con_etiqueta_descuento: el id termina en '_50dto' (si hay descuento) y se
+    # agrega custom_label_0 = '50dto' / 'sindto' para armar conjuntos en Meta.
+    etiqueta = etiqueta_descuento(producto) if con_etiqueta_descuento else ""
+    sufijo_id = f"_{etiqueta}" if etiqueta and etiqueta != "sindto" else ""
+    id_consolidado = armar_id_consolidado(producto.sku, template + sufijo_id)
 
     tn_product_id = enriq.get("tn_product_id")
     if tn_product_id:
@@ -201,6 +228,9 @@ def producto_a_fila_maestra(
                 else CANTIDAD_FALLBACK_IN_STOCK
             )
         fila.append(cantidad)
+
+    if con_etiqueta_descuento:
+        fila.append(etiqueta)  # custom_label_0
 
     fila.append(internal_label)
     return fila
@@ -272,6 +302,7 @@ def escribir_pestaña_maestra(
     calcular_availability_por_stock: bool,
     brand_fallback: str = "",
     internal_label: str = "",
+    con_etiqueta_descuento: bool = False,
 ) -> int:
     """Escribe la pestaña MAESTRA consolidada (Meta_Feed o TikTok_Feed).
 
@@ -302,6 +333,7 @@ def escribir_pestaña_maestra(
             brand_fallback=brand_fallback,
             internal_label=internal_label,
             incluir_cantidad=incluir_cantidad,
+            con_etiqueta_descuento=con_etiqueta_descuento,
         ))
 
     if sin_placa:

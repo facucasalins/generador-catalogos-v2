@@ -27,6 +27,7 @@ from src.core.modelo_datos import Producto, PlacaSubida, DecisionSeleccion
 from src.core.sheets_client import ConfigSheets, SheetsClient
 from src.distribucion.destinos.base import DestinoFeed, ErrorDestino
 from src.distribucion.destinos._common import (
+    headers_maestra,
     agrupar_decisiones_por_template,
     escribir_pestaña_feed,
     escribir_pestaña_maestra,
@@ -86,6 +87,8 @@ class ConfigMetaCatalog:
     # Etiqueta fija para filtrar el feed (distingue origen 'placa' del feed
     # nativo de Tiendanube en el mismo catálogo). Configurable por cliente.
     internal_label: str = "nusa_placa"
+    # Opt-in: id con sufijo _50dto y columna custom_label_0 (50dto / sindto).
+    etiqueta_descuento: bool = False
 
 
 class MetaCatalogDestino(DestinoFeed):
@@ -137,7 +140,7 @@ class MetaCatalogDestino(DestinoFeed):
             n_maestra = escribir_pestaña_maestra(
                 sheet_id=self.cfg.sheet_id,
                 pestaña=PESTAÑA_MAESTRA,
-                headers=HEADERS_META_MAESTRA,
+                headers=headers_maestra(HEADERS_META_MAESTRA, self.cfg.etiqueta_descuento),
                 decisiones_plataforma=decisiones_meta,
                 productos_por_sku=productos_por_sku,
                 placas_por_sku_template=placas_por_sku_template,
@@ -145,6 +148,7 @@ class MetaCatalogDestino(DestinoFeed):
                 calcular_availability_por_stock=self.cfg.calcular_availability_por_stock,
                 brand_fallback=self.cfg.brand_fallback,
                 internal_label=self.cfg.internal_label,
+                con_etiqueta_descuento=self.cfg.etiqueta_descuento,
             )
             resultados[PESTAÑA_MAESTRA] = n_maestra
 

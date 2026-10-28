@@ -64,6 +64,8 @@ distribucion:
   # Etiqueta fija del feed: distingue las placas de este pipeline del feed
   # nativo de Tiendanube cuando conviven en el mismo catálogo (filtro/retargeting).
   internal_label: "nusa_placa"
+  # Cyber: id termina en _50dto y custom_label_0 = 50dto / sindto (conjuntos en Meta).
+  etiqueta_descuento: true
   storage:
     backend: cloudinary
     config:
