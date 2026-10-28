@@ -152,6 +152,7 @@ def construir_storage(cfg_storage: dict):
 
 def construir_destino(
     destino_config: dict, brand_fallback: str = "", internal_label: str = "nusa_placa",
+    etiqueta_descuento: bool = False,
 ):
     tipo = destino_config.get("tipo")
     inner = destino_config.get("config", {})
@@ -165,6 +166,7 @@ def construir_destino(
             aspect_ratios_aceptados=inner.get("aspect_ratios_aceptados", []),
             brand_fallback=brand_fallback,
             internal_label=internal_label,
+            etiqueta_descuento=etiqueta_descuento,
         ))
     if tipo == "tiktok_catalog":
         return TikTokCatalogDestino(ConfigTikTokCatalog(
@@ -176,6 +178,7 @@ def construir_destino(
             aspect_ratios_aceptados=inner.get("aspect_ratios_aceptados", []),
             brand_fallback=brand_fallback,
             internal_label=internal_label,
+            etiqueta_descuento=etiqueta_descuento,
         ))
     log.error("Destino no soportado: %s", tipo)
     sys.exit(50)
@@ -650,6 +653,7 @@ def correr_pipeline(
     for destino_config in destinos_cfg:
         destino = construir_destino(
             destino_config, brand_fallback=brand_fallback, internal_label=internal_label,
+            etiqueta_descuento=bool(cfg_dist.get("etiqueta_descuento", False)),
         )
         log.info("[Bloque 5.2] Destino: %s", destino.nombre())
         try:

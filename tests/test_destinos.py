@@ -436,3 +436,50 @@ def test_id_consolidado_largo_se_acorta_estable_y_unico():
     assert a != b
     assert a == armar_id_consolidado(sku1, "Meta_halloween_4x5")
     assert a != armar_id_consolidado(sku1, "Meta_cyber_4x5")
+
+
+# ===================== Etiqueta de descuento (Cyber) =====================
+
+from src.distribucion.destinos._common import (  # noqa: E402
+    etiqueta_descuento, headers_maestra, porcentaje_descuento, producto_a_fila_maestra,
+)
+
+
+def _prod(lista, promo):
+    return Producto(sku="afrodita-cuero-negro", nombre="Afrodita", precio_lista=lista,
+                    precio_promocional=promo)
+
+
+def test_porcentaje_y_etiqueta_descuento():
+    assert porcentaje_descuento(_prod(155000, 77500)) == 50
+    assert etiqueta_descuento(_prod(176900, 141520)) == "20dto"
+    assert etiqueta_descuento(_prod(100000, None)) == "sindto"
+    assert etiqueta_descuento(_prod(100000, 120000)) == "sindto"
+
+
+def test_fila_maestra_con_etiqueta_descuento():
+    fila = producto_a_fila_maestra(_prod(155000, 77500), "Meta_6_juanita_cyber_cuotas_4x5",
+                                   "u", "ARS", False, internal_label="nusa_placa",
+                                   con_etiqueta_descuento=True)
+    assert fila[0] == "afrodita-cuero-negro__Meta_6_juanita_cyber_cuotas_4x5_50dto"
+    assert fila[-2:] == ["50dto", "nusa_placa"]
+
+
+def test_fila_maestra_sin_descuento_no_cambia_id():
+    fila = producto_a_fila_maestra(_prod(100000, None), "Meta_x", "u", "ARS", False,
+                                   internal_label="nusa_placa", con_etiqueta_descuento=True)
+    assert fila[0] == "afrodita-cuero-negro__Meta_x"
+    assert fila[-2] == "sindto"
+
+
+def test_fila_maestra_sin_opcion_queda_igual():
+    fila = producto_a_fila_maestra(_prod(155000, 77500), "Meta_x", "u", "ARS", False,
+                                   internal_label="nusa_placa")
+    assert fila[0] == "afrodita-cuero-negro__Meta_x" and fila[-1] == "nusa_placa"
+    assert "50dto" not in fila
+
+
+def test_headers_maestra():
+    h = ["id", "price", "internal_label"]
+    assert headers_maestra(h, False) == h
+    assert headers_maestra(h, True) == ["id", "price", "custom_label_0", "internal_label"]
