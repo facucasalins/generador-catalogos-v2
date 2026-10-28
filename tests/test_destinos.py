@@ -462,6 +462,7 @@ def test_fila_maestra_con_etiqueta_descuento():
                                    "u", "ARS", False, internal_label="nusa_placa",
                                    con_etiqueta_descuento=True)
     assert fila[0] == "afrodita-cuero-negro__Meta_6_juanita_cyber_cuotas_4x5_50dto"
+    assert fila[2] == "Afrodita · 50% OFF"
     assert fila[-2:] == ["50dto", "nusa_placa"]
 
 
@@ -470,6 +471,7 @@ def test_fila_maestra_sin_descuento_no_cambia_id():
                                    internal_label="nusa_placa", con_etiqueta_descuento=True)
     assert fila[0] == "afrodita-cuero-negro__Meta_x"
     assert fila[-2] == "sindto"
+    assert fila[2] == "Afrodita"
 
 
 def test_fila_maestra_sin_opcion_queda_igual():

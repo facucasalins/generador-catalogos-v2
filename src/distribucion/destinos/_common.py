@@ -188,6 +188,8 @@ def producto_a_fila_maestra(
     # agrega custom_label_0 = '50dto' / 'sindto' para armar conjuntos en Meta.
     etiqueta = etiqueta_descuento(producto) if con_etiqueta_descuento else ""
     sufijo_id = f"_{etiqueta}" if etiqueta and etiqueta != "sindto" else ""
+    if sufijo_id:
+        title = f"{title} · {porcentaje_descuento(producto)}% OFF"
     id_consolidado = armar_id_consolidado(producto.sku, template + sufijo_id)
 
     tn_product_id = enriq.get("tn_product_id")
