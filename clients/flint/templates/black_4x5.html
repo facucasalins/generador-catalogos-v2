@@ -1,0 +1,135 @@
+<!-- META
+nombre: black_4x5
+aspect_ratio: 4:5
+width: 1080
+height: 1350
+descripcion: Black Flint 4:5 - producto arriba sobre crema, cintas BLACKFLINT cruzadas, franja negra con la oferta. Cupón BLACKFLINT 10% + 10% transferencia. 24 al 28/11, desmarcar después.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Archivo:wght@400;600;700;800&display=swap');
+
+  :root {
+    --ink: #000000;
+    --yellow: #F6B01D;
+    --red: #E84542;
+    --cream: #EFE8CE;
+    --grey: #B9B4A4;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px; height: 1350px; position: relative; overflow: hidden;
+    font-family: 'Archivo', system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+    background: var(--ink); color: var(--cream);
+  }
+  .display { font-family: 'Big Shoulders Display', Impact, sans-serif; text-transform: uppercase; }
+
+  /* ===== ARRIBA: producto sobre crema ===== */
+  .top { position: absolute; top: 0; left: 0; right: 0; height: 900px; background: var(--cream); overflow: hidden; }
+  .top img { width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
+  .logo { position: absolute; top: 40px; left: 44px; width: 170px; height: auto; z-index: 6; }
+  .fecha { position: absolute; top: 52px; right: 56px; z-index: 6; background: var(--red); color: var(--cream);
+    font-weight: 900; font-size: 46px; line-height: 1; padding: 12px 22px 10px; border: 5px solid var(--ink);
+    transform: rotate(-3deg); box-shadow: 6px 6px 0 var(--ink); }
+
+  /* Cintas BLACKFLINT */
+  .cinta { position: absolute; left: -60px; width: 1200px; z-index: 4; white-space: nowrap; overflow: hidden;
+    font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 900; font-size: 64px; line-height: 1;
+    text-transform: uppercase; letter-spacing: 1px; padding: 12px 0 10px; box-shadow: 0 10px 0 rgba(0,0,0,.18); }
+  .cinta span { display: inline-block; }
+  .cinta i { font-style: normal; display: inline-block; margin: 0 22px; transform: translateY(-4px); font-size: 48px; }
+  .c1 { top: 250px; background: var(--ink); color: var(--yellow); transform: rotate(-5deg); }
+  .c2 { top: 650px; background: var(--yellow); color: var(--ink); transform: rotate(3.5deg); }
+
+  /* ===== ABAJO: franja negra con la oferta ===== */
+  .band { position: absolute; left: 0; right: 0; bottom: 0; height: 490px; background: var(--ink); z-index: 5;
+    clip-path: polygon(0 18px, 100% 0, 100% 100%, 0 100%); }
+  .offer { position: absolute; left: 64px; right: 56px; bottom: 58px; z-index: 6;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  .o-left { min-width: 0; flex: 1; }
+  .o-title { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 800; font-size: 46px; line-height: 1;
+    text-transform: uppercase; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 18px; }
+  .o-label { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 800; font-size: 36px; line-height: 1;
+    text-transform: uppercase; color: var(--yellow); margin-bottom: 8px; }
+  .o-price { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 900; font-size: 196px; line-height: .82;
+    letter-spacing: -2px; color: var(--yellow); white-space: nowrap; padding: 16px 0 12px; }
+  .o-sub { margin-top: 14px; font-size: 27px; font-weight: 600; color: var(--cream); white-space: nowrap; }
+  .o-sub s { opacity: .6; text-decoration-thickness: 2px; margin-right: 10px; }
+  .o-sub b { font-weight: 800; }
+  .o-envio { margin-top: 10px; font-size: 20px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--grey); }
+
+  /* Sello rojo */
+  .sello { flex: none; width: 250px; height: 250px; border-radius: 50%; background: var(--red); color: var(--cream);
+    border: 8px solid var(--cream); box-shadow: 0 0 0 6px var(--ink);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    transform: rotate(-8deg); margin-bottom: 40px; }
+  .s-pct { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 900; font-size: 88px; line-height: .9; }
+  .s-k { font-size: 17px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-top: 6px; }
+  .s-code { font-family: 'Big Shoulders Display', Impact, sans-serif; font-weight: 900; font-size: 38px; line-height: 1;
+    text-transform: uppercase; max-width: 200px; white-space: nowrap; overflow: hidden; }
+</style>
+</head>
+<body>
+  <div class="top"><img src="{imagen_b64}" alt="producto"></div>
+  <img class="logo" src="{logo_b64}" alt="Flint">
+  <div class="fecha display">24 al 28/11</div>
+
+  <div class="cinta c1"><span data-cinta>BLACKFLINT<i>✦</i>BLACKFLINT<i>✦</i>BLACKFLINT<i>✦</i>BLACKFLINT<i>✦</i>BLACKFLINT<i>✦</i></span></div>
+  <div class="cinta c2"><span data-cinta>BLACKFLINT<i>✦</i>BLACKFLINT<i>✦</i>BLACKFLINT<i>✦</i>BLACKFLINT<i>✦</i>BLACKFLINT<i>✦</i></span></div>
+
+  <div class="band"></div>
+
+  <!-- OFERTA: precio grande = hotsale x (1 - cupón) x factor transferencia (precio_efectivo / hotsale).
+       Cuotas = hotsale x (1 - cupón) / cuotas_num (sin transferencia). Cupón: editar CUPON abajo.
+       Sello = suma de cupón + transferencia, como se comunica la promo. -->
+  <div class="offer">
+    <div class="o-left">
+      <div class="o-title">{titulo_placa}</div>
+      <div class="o-label" data-label>Con cupón + transferencia</div>
+      <div class="o-price" data-best>{precio_hotsale_formateado}</div>
+      <div class="o-sub"><s data-hot>{precio_hotsale_formateado}</s><span>{cuotas_num} cuotas sin interés de <b data-cuota>-</b></span></div>
+      <div class="o-envio">Envío gratis +$50.000 en AMBA</div>
+    </div>
+    <div class="sello">
+      <div class="s-pct">-<span data-total>20</span>%</div>
+      <div class="s-k">Con código</div>
+      <div class="s-code" data-code>CUPON</div>
+    </div>
+  </div>
+  <span hidden data-efe>{precio_efectivo_formateado}</span>
+  <span hidden data-n>{cuotas_num}</span>
+
+  <script>
+  var CUPON = ['BLACKFLINT', 10];   /* [código, % de descuento] */
+  function num(s) { return parseInt((s || '').replace(/[^0-9]/g, ''), 10) || 0; }
+  function money(v) { return '$' + Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function q(s) { return document.querySelector(s); }
+  function shrink(el, min) {
+    if (!el) return;
+    var s = parseFloat(getComputedStyle(el).fontSize), g = 0;
+    while (el.scrollWidth > el.clientWidth + 1 && s > min && g < 200) { s -= 1; el.style.fontSize = s + 'px'; g++; }
+  }
+  function adjust() {
+    var vh = num(q('[data-hot]').textContent), ve = num(q('[data-efe]').textContent), n = num(q('[data-n]').textContent) || 1;
+    var cf = 1 - CUPON[1] / 100;
+    var tf = (vh > 0 && ve > 0 && ve < vh) ? ve / vh : 1;
+    q('[data-code]').textContent = CUPON[0];
+    q('[data-best]').textContent = money(vh * cf * tf);
+    q('[data-cuota]').textContent = money(vh * cf / n);
+    var tp = Math.round((1 - tf) * 100);
+    q('[data-total]').textContent = CUPON[1] + tp;
+    if (tp < 1) q('[data-label]').textContent = 'Con cupón ' + CUPON[0];
+    shrink(q('.o-title'), 30);
+    shrink(q('.s-code'), 24);
+    var p = q('[data-best]'); var box = q('.o-left');
+    var s = parseFloat(getComputedStyle(p).fontSize), g = 0;
+    while (p.scrollWidth > box.clientWidth + 1 && s > 120 && g < 120) { s -= 2; p.style.fontSize = s + 'px'; g++; }
+  }
+  function go() { adjust(); setTimeout(adjust, 150); }
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(go); } else { window.addEventListener('load', go); }
+  </script>
+</body>
+</html>
