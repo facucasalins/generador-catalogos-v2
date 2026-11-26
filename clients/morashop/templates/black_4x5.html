@@ -1,0 +1,174 @@
+<!-- META
+nombre: black_4x5
+aspect_ratio: 4:5
+width: 1080
+height: 1350
+descripcion: Placa BLACK MORA 4:5 — negro y dorado (banda de precio dorada). Estructura de la placa genérica Mora. Tachado = precio de lista; principal = precio efectivo; % OFF = efectivo vs lista (se oculta si es menor a 5%). Válido del 27 al 30/11/2026: desmarcar después.
+-->
+<!-- PRICING: tachado = {precio_original_formateado} (precio de LISTA, como en los artes Black) | principal = {precio_efectivo_formateado} (promo TN x descuento_efectivo_factor) | cuotas sobre promo. El % se calcula en el script de abajo. -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;700&family=Archivo+Black&display=swap');
+
+    :root {
+        --black: #0b0b0f;
+        --red: #e63946;
+        --gold: #D4AF37;
+        --gold-hi: #F7E39C;
+        --gold-grad: linear-gradient(135deg, #F7E39C 0%, #D4AF37 38%, #B8922A 62%, #F2D77E 100%);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        width: 1080px;
+        height: 1350px;
+        background: var(--black);
+        font-family: 'Archivo', sans-serif;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .deco-x {
+        position: absolute; top: 30px; left: 30px; z-index: 2;
+        color: var(--gold); font-size: 32px; letter-spacing: 8px; font-weight: bold;
+    }
+
+    .deco-circle {
+        position: absolute; top: 30px; right: 30px; z-index: 2;
+        width: 60px; height: 60px; border: 3px dotted var(--gold); border-radius: 50%;
+    }
+
+    .logo {
+        position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+        width: 150px; height: auto; z-index: 10;
+    }
+
+    .product-zone {
+        position: absolute; top: 210px; left: 80px; right: 80px; height: 690px; z-index: 3;
+        background: #ffffff; border-radius: 8px;
+        box-shadow: 0 0 0 4px var(--gold);
+        display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+
+    .product-image { max-width: 104%; max-height: 100%; object-fit: contain; }
+
+    /* Sello de % — se oculta si el descuento es menor a 5% */
+    .pct-seal {
+        position: absolute; top: 160px; right: 48px; z-index: 8;
+        width: 210px; height: 210px; border-radius: 50%;
+        background: var(--black); color: var(--gold-hi);
+        box-shadow: 0 0 0 5px var(--gold), 0 0 0 11px var(--black);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        transform: rotate(-6deg);
+    }
+    .pct-seal b { font-family: 'Archivo Black', sans-serif; font-size: 76px; line-height: 0.95; letter-spacing: -3px; }
+    .pct-seal span { font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: 4px; color: var(--red); }
+
+    .product-name {
+        position: absolute; top: 912px; left: 60px; right: 60px; height: 48px;
+        color: var(--gold-hi);
+        font-family: 'Archivo Black', sans-serif; font-size: 36px; line-height: 48px; letter-spacing: -0.5px;
+        text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .price-band {
+        position: absolute; top: 970px; left: 0; right: 0; height: 280px;
+        background: var(--gold-grad); color: var(--black);
+        display: flex; align-items: center; justify-content: space-between; padding: 0 60px;
+    }
+
+    .price-left { display: flex; flex-direction: column; align-items: flex-start; }
+
+    .desde { font-family: 'Archivo Black', sans-serif; font-size: 32px; letter-spacing: 2px; margin-bottom: 4px; }
+
+    .precio-tachado {
+        font-family: 'Archivo', sans-serif; font-size: 38px; font-weight: 700;
+        text-decoration: line-through; color: #3a2f10; margin-bottom: 4px;
+    }
+
+    .precio-principal {
+        font-family: 'Archivo Black', sans-serif; font-size: 130px; line-height: 1; letter-spacing: -2px;
+    }
+
+    .price-right { display: flex; flex-direction: column; align-items: flex-end; }
+
+    .sin-interes {
+        background: var(--red); color: #fff;
+        font-family: 'Archivo Black', sans-serif; font-size: 14px; letter-spacing: 1px;
+        padding: 4px 12px; transform: rotate(6deg); margin-bottom: 8px;
+    }
+
+    .cuotas-num { font-family: 'Archivo Black', sans-serif; font-size: 56px; line-height: 1; }
+    .cuotas-monto { font-family: 'Archivo', sans-serif; font-size: 28px; margin-top: 4px; }
+
+    .bottom-banner {
+        position: absolute; bottom: 0; left: 0; right: 0; height: 100px;
+        background: var(--black); border-top: 2px solid var(--gold); color: #fff;
+        display: flex; align-items: center; justify-content: space-between; padding: 0 60px;
+    }
+
+    .banner-left { display: flex; flex-direction: column; }
+    .banner-legal { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; line-height: 1.2; }
+    .banner-legal-small { font-size: 14px; font-weight: 400; margin-top: 2px; opacity: 0.9; }
+
+    .banner-brand { font-family: 'Archivo Black', sans-serif; font-size: 36px; letter-spacing: 2px; color: var(--gold-hi); }
+    .banner-brand .x { color: var(--red); }
+</style>
+</head>
+<body>
+    <span id="po" style="display:none">{precio_original_formateado}</span>
+    <span id="efe" style="display:none">{precio_efectivo_formateado}</span>
+
+    <div class="deco-x">× × ×<br>× × ×</div>
+    <div class="deco-circle"></div>
+
+    <img class="logo" src="{logo_b64}" alt="logo">
+
+    <div class="product-zone">
+        <img class="product-image" src="{imagen_b64}" alt="producto">
+    </div>
+
+    <div class="pct-seal"><b class="pct">-0%</b><span>OFF</span></div>
+
+    <div class="product-name">{titulo_placa}</div>
+
+    <div class="price-band">
+        <div class="price-left">
+            <div class="desde">DESDE</div>
+            <!-- Tachado = precio de LISTA (no el hotsale como en la genérica) -->
+            <div class="precio-tachado">{precio_original_formateado}</div>
+            <div class="precio-principal">{precio_efectivo_formateado}</div>
+        </div>
+        <div class="price-right">
+            <div class="sin-interes">SIN INTERÉS</div>
+            <div class="cuotas-num">{cuotas_num} CUOTAS</div>
+            <div class="cuotas-monto">de {cuota_formateada}</div>
+        </div>
+    </div>
+
+    <div class="bottom-banner">
+        <div class="banner-left">
+            <div class="banner-legal">Precio final abonando en Efectivo.</div>
+            <div class="banner-legal-small">Válido del 27 al 30/11/2026 o hasta agotar stock.</div>
+        </div>
+        <div class="banner-brand"><span class="x">×</span> BLACK MORA</div>
+    </div>
+
+<script>
+function adjust(){
+  var num=function(s){return parseFloat((s||'').replace(/[^0-9,]/g,'').replace(',','.'))||0;};
+  var o=num(document.getElementById('po').textContent), e=num(document.getElementById('efe').textContent);
+  // % OFF: precio efectivo vs precio de lista
+  var p=(o>0&&e>0&&e<o)?Math.round((1-e/o)*100):0;
+  var seal=document.querySelector('.pct-seal'), t=document.querySelector('.precio-tachado');
+  if(p<5){ seal.style.display='none'; t.style.visibility='hidden'; }
+  else { document.querySelector('.pct').textContent='-'+p+'%'; }
+}
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(adjust);}else{window.addEventListener('load',adjust);}
+</script>
+</body>
+</html>
